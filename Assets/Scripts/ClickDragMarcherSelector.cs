@@ -10,8 +10,6 @@ public class ClickDragMarcherSelector : MonoBehaviour
     public SelectedMarchers selectMarcher;
     private Vector2 startMousePos;
     private Vector2 endMousePos;
-    private bool isDragging = false;
-
     void Start(){
         director = GetComponent<EnsembleDirector2>();
         selectMarcher = GetComponent<SelectedMarchers>();
@@ -22,9 +20,6 @@ public class ClickDragMarcherSelector : MonoBehaviour
     }
     void HandleMouseInput()
     {
-        
-        isDragging = false; // Reset dragging state
-
         if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))
         {
             startMousePos = Input.mousePosition;
