@@ -24,7 +24,7 @@ public class GoogleSheetsManager : MonoBehaviour
 
     void AuthenticateGoogleAPI()
     {
-        string jsonPath = Path.Combine(Application.dataPath, "Resources", "service_account.json");
+        string jsonPath = Path.Combine(Application.streamingAssetsPath, "service_account.json");
 
         GoogleCredential credential;
         using (var stream = new FileStream(jsonPath, FileMode.Open, FileAccess.Read))
