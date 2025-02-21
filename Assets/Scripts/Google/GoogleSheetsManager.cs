@@ -19,7 +19,7 @@ public class GoogleSheetsManager : MonoBehaviour
     void Start()
     {
         AuthenticateGoogleAPI();
-        AddNewUser("U12345", "Miguel", "miguel@email.com", "securepass123");
+        AddNewUser("U12345", "Shawn", "shawn@email.com", "securepassXYZ");
     }
 
     void AuthenticateGoogleAPI()
