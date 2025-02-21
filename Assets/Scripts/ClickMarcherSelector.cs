@@ -6,9 +6,11 @@ public class ClickMarcherSelector : MonoBehaviour
     
     private Vector3 mousePos;
     public SelectedMarchers selectedMarchers;
+    public MarcherMovement moveMarchers;
 
     void Start(){
         selectedMarchers = GetComponent<SelectedMarchers>();
+        moveMarchers = GetComponent<MarcherMovement>();
     }
     void Update()
     {
@@ -19,51 +21,72 @@ public class ClickMarcherSelector : MonoBehaviour
     {
         mousePos = Input.mousePosition;
 
-        if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))
+        // Handle Ctrl+Click deselection
+        if (Input.GetMouseButtonUp(0) && Input.GetKey(KeyCode.LeftControl) && !moveMarchers.transformGizmo)
         {
-            //Debug.Log("MarcherSelector: Left mouse button down - Starting mouse input handling.");
-
             Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
             RaycastHit hit;
 
             if (Physics.Raycast(ray, out hit, Mathf.Infinity, selectedMarchers.marcherLayer))
             {
-                Debug.Log($"MarcherSelector: Raycast hit on {hit.collider.gameObject.name}.");
-
-                if (hit.collider.gameObject != null && hit.collider.gameObject.CompareTag("Gizmo"))
+                if (hit.collider != null && hit.collider.gameObject != null && hit.collider.gameObject.GetComponent<Unit>())
                 {
-                    Debug.Log("MarcherSelector: Gizmo clicked - Skipping selection logic.");
-                    // Skip selection logic if gizmo is clicked
-                    return;
-                }
-
-                if (selectedMarchers.marcherLayer == (selectedMarchers.marcherLayer | (1 << hit.collider.gameObject.layer)))
-                {
-                    if (Input.GetKey(KeyCode.LeftControl))
-                    {
-                        selectedMarchers.DeselectMarcher(hit.collider.gameObject);
-                        Debug.Log($"MarcherSelector: Ctrl key pressed - Deselecting marcher {hit.collider.gameObject.name}.");
-
-                    }
-                    else if (Input.GetKey(KeyCode.LeftShift))
-                    {
-                        Debug.Log($"MarcherSelector: Shift key pressed - Adding marcher {hit.collider.gameObject.name} to selection.");
-                        selectedMarchers.SelectMarcher(hit.collider.gameObject);
-                    }
-                    else
-                    {
-                        Debug.Log($"MarcherSelector: Selecting marcher {hit.collider.gameObject.name}.");
-                        selectedMarchers.ClearSelection();
-                        selectedMarchers.SelectMarcher(hit.collider.gameObject);
-                    }
+                    selectedMarchers.DeselectMarcher(hit.collider.gameObject);
                     selectedMarchers.UpdateCameraFocus();
+                    return; // Exit after handling Ctrl+Click deselection
                 }
             }
-            else if (!Input.GetKey(KeyCode.LeftAlt) && selectedMarchers.moveMarcher.transformGizmo == null) // Prevent clearing selection if Alt is pressed
+        }
+
+        // Handle normal click selection (only if not dragging)
+        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && !moveMarchers.transformGizmo)
+        {
+            Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
+            RaycastHit hit;
+
+            if (!Physics.Raycast(ray, out hit, Mathf.Infinity, selectedMarchers.marcherLayer) && !Input.GetKey(KeyCode.LeftShift))
             {
-                selectedMarchers.ClearSelection();
+                if (!Input.GetKey(KeyCode.LeftControl)) // Only clear if Ctrl is not held
+                {
+                    selectedMarchers.ClearSelection();
+                }
+                return;
+            }
+
+            if (hit.collider == null || hit.collider.gameObject == null)
+            {
+                return;
+            }
+
+            if (!hit.collider.gameObject.GetComponent<Renderer>() || !hit.collider.gameObject.GetComponent<Unit>())
+            {
+                return;
+            }
+
+            Debug.Log($"MarcherSelector: Raycast hit on {hit.collider.gameObject.name}.");
+
+            if (hit.collider.gameObject.CompareTag("Gizmo"))
+            {
+                Debug.Log("MarcherSelector: Gizmo clicked - Skipping selection logic.");
+                // Skip selection logic if gizmo is clicked
+                return;
+            }
+
+            if (selectedMarchers.marcherLayer == (selectedMarchers.marcherLayer | (1 << hit.collider.gameObject.layer)))
+            {
+                // Handle only Shift selection on mouse down
+                if (Input.GetKey(KeyCode.LeftShift))
+                {
+                    Debug.Log($"MarcherSelector: Shift key pressed - Adding marcher {hit.collider.gameObject.name} to selection.");
+                    selectedMarchers.SelectMarcher(hit.collider.gameObject);
+                }
+                else if (!Input.GetKey(KeyCode.LeftControl)) // Only select if Ctrl is not pressed
+                {
+                    Debug.Log($"MarcherSelector: Selecting marcher {hit.collider.gameObject.name}.");
+                    selectedMarchers.ClearSelection();
+                    selectedMarchers.SelectMarcher(hit.collider.gameObject);
+                }
                 selectedMarchers.UpdateCameraFocus();
-                //Debug.Log("MarcherSelector: Clicked on empty space - Clearing selection.");
             }
         }
     }

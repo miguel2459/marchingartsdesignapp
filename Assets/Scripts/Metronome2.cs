@@ -61,7 +61,7 @@ public class Metronome2 : MonoBehaviour
             {
                 counterText.text = count.ToString(); // Update counter text with the current count
                 audioSource.Play(); // Play the metronome sound
-                setText.text = $"Set {cycleCount}"; // Update set text with the current set
+                setText.text = $"{cycleCount}"; // Update set text with the current set
                 Debug.Log("count: " + count + " cycle: " + cycleCount);
 
                 if (count == 1 && cycleCount == 1)
@@ -101,7 +101,7 @@ public class Metronome2 : MonoBehaviour
 
         // Reset the counter and set text when the metronome stops
         counterText.text = "Complete";
-        setText.text = "Sets: " + cycleCount.ToString();
+        setText.text = "" + cycleCount.ToString();
 
         cycleCount = 0;
 

@@ -9,16 +9,23 @@ public class EnsembleDirector2 : MonoBehaviour
     public int numberOfSets; // Total number of sets
     public int countsPerSet; // Number of counts per set
     public float bpm; // Beats per minute for the metronome
-    public float marcherSpacing = 2.0f; // Spacing between each marcher in the line
+    public float interval;
     public GameObject marcherPrefab; // Prefab of the marcher
     public GameObject positionSpherePrefab; // Prefab for the position spheres
+    public ShapeMarchers shapeMarchers; // Reference to ShapeMarchers script
+    public ShapeGroup shapeGroup;
+    public ShapeUIManager shapeUI;
+    public IntervalManager intervalManager;
 
     public InputField numberOfMarchersInputField; // UI InputField for number of marchers
     public InputField numberOfSetsInputField; // UI InputField for number of sets
     public InputField countsPerSetInputField; // UI InputField for counts per set
     public InputField bpmInputField; // UI InputField for BPM
+    public InputField intervalField;
 
     public Metronome2 metronome; // Reference to the Metronome script
+    public SnapToGridLines snapToGrid;
+    public SetProgressBar setBar;
 
     public List<MarcherPositionsManager> marchers; // List of instantiated marchers
 
@@ -29,9 +36,17 @@ public class EnsembleDirector2 : MonoBehaviour
         numberOfSetsInputField.text = numberOfSets.ToString();
         countsPerSetInputField.text = countsPerSet.ToString();
         bpmInputField.text = bpm.ToString();
+        intervalField.text = interval.ToString();
 
-        // Populate marchers based on initial values
-        PopulateMarchers();
+        snapToGrid = FindObjectOfType<SnapToGridLines>();
+
+        // Initialize ShapeMarchers
+        shapeMarchers = FindObjectOfType<ShapeMarchers>();
+        shapeUI = FindObjectOfType<ShapeUIManager>();
+        intervalManager = FindObjectOfType<IntervalManager>();
+        setBar = FindObjectOfType<SetProgressBar>();
+        shapeMarchers.InitializeShapeManagers(marcherPrefab, positionSpherePrefab, interval);
+        setBar.OnTotalSetsChanged(numberOfSets);
     }
 
     public void ApplyUpdates()
@@ -41,12 +56,18 @@ public class EnsembleDirector2 : MonoBehaviour
         int updatedNumberOfSets = Mathf.Max(1, int.Parse(numberOfSetsInputField.text));
         int updatedCountsPerSet = Mathf.Max(1, int.Parse(countsPerSetInputField.text)); // Ensure at least one count per set
         float updatedBpm = Mathf.Clamp(float.Parse(bpmInputField.text), 20f, 300f); // Clamp BPM to a reasonable range
+        float updateInterval = Mathf.Clamp(float.Parse(intervalField.text),1f, 4f);
+
 
         // Apply new values
         numberOfMarchers = updatedNumberOfMarchers;
         numberOfSets = updatedNumberOfSets;
         countsPerSet = updatedCountsPerSet;
         bpm = updatedBpm;
+        interval = updateInterval;
+
+        setBar.OnTotalSetsChanged(numberOfSets);
+
 
         // Update the marchers and metronome settings based on the new values
         PopulateMarchers();
@@ -88,20 +109,33 @@ public class EnsembleDirector2 : MonoBehaviour
 
         // Ensure the number of marchers in the inspector matches the actual number in the scene
         numberOfMarchers = marchers.Count;
+
+        if (shapeMarchers != null)
+        {
+            // Initialize shapeMarchers.marchers and copy over the GameObjects from marchers
+            shapeGroup.marchers = new List<GameObject>(marchers.Count);
+            foreach (var marcher in marchers)
+            {
+                shapeGroup.marchers.Add(marcher.gameObject);
+                Debug.Log($"Added marcher: {marcher.gameObject.name} to ShapeMarchers list.");
+            }
+
+            // Set the default shape, e.g., a box shape
+            shapeMarchers.ArrangeFormation(
+                shapeUI.GetCurrentShape(),  // We need to get latest shape update from ShapeUIManager
+                intervalManager.GetIntervalType(interval), shapeGroup.marchers  //We need to get latest interval update from inputfield then from interval manager
+            );
+        }
+        else
+        {
+            Debug.LogWarning("ShapeMarchers is null; cannot initialize or arrange formation.");
+        }
     }
 
     void CreateMarcher(int index, Color color, int sets)
     {
-        // Instantiate a temporary sphere to determine initial position
-        GameObject tempSphere = Instantiate(positionSpherePrefab);
-        tempSphere.GetComponent<Renderer>().material.color = color;
-
-        // Calculate the position for the first sphere
-        Vector3 marcherPosition = new Vector3(index * marcherSpacing, 0, 0);
-        tempSphere.transform.position = marcherPosition;
-
-        // Instantiate the marcher at the position of the first sphere
-        GameObject marcherObject = Instantiate(marcherPrefab, tempSphere.transform.position, Quaternion.identity, transform);
+        // Instantiate the marcher at the snapped position
+        GameObject marcherObject = Instantiate(marcherPrefab, Vector3.zero, Quaternion.identity, transform);
         marcherObject.name = "Marcher" + (index + 1); // Name the marcher for identification
 
         // Get the marcher controller and initialize it
@@ -115,8 +149,6 @@ public class EnsembleDirector2 : MonoBehaviour
         }
 
         marchers.Add(marcher);
-        // Destroy the tempSphere after use
-        DestroyImmediate(tempSphere);
     }
 
     void UpdateMarcherSets()
