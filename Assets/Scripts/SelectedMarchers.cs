@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class SelectedMarchers : MonoBehaviour
 {
@@ -55,7 +56,7 @@ public class SelectedMarchers : MonoBehaviour
                     moveMarcher.MoveGizmoToFirstSelectedMarcher(firstSelectedMarcher);
                 }
             }
-            Debug.Log($"MarcherSelector: Marcher {marcher.name} selected and highlighted.");
+            Debug.Log($"MarcherSelector: {marcher.name} selected and highlighted.");
         }
     }
 
@@ -71,23 +72,48 @@ public class SelectedMarchers : MonoBehaviour
             {
                 marcher.transform.SetParent(transform);
             }
-            Debug.Log($"MarcherSelector: Marcher {marcher.name} deselected and color reverted.");
+            Debug.Log($"MarcherSelector: {marcher.name} deselected and color reverted.");
         }
     }
 
     public void ClearSelection()
     {
-        foreach (var marcher in selectedMarchers)
+        if (selectedMarchers == null) return;
+
+        foreach (var marcher in selectedMarchers.ToList()) // Create a copy of the list to iterate
         {
-            marcher.GetComponent<Renderer>().material.color = normalColor;
-            marcher.GetComponent<Unit>().SetSelector(false);
-            marcher.transform.SetParent(transform);
+            if (marcher != null)
+            {
+                var renderer = marcher.GetComponent<Renderer>();
+                var unit = marcher.GetComponent<Unit>();
+                
+                if (renderer != null)
+                {
+                    renderer.material.color = normalColor;
+                }
+                
+                if (unit != null)
+                {
+                    unit.SetSelector(false);
+                }
+
+                if (moveMarcher != null && moveMarcher.transformGizmo != null)
+                {
+                    marcher.transform.SetParent(transform);
+                }
+            }
         }
 
         selectedMarchers.Clear();
         firstSelectedMarcher = null;
-        moveMarcher.HideTransformGizmo();
-        //Debug.Log("MarcherSelector: All marchers deselected and list cleared.");
+        
+        if (moveMarcher != null)
+        {
+            moveMarcher.isMoving = false; // Reset isMoving flag
+            moveMarcher.HideTransformGizmo();
+        }
+        
+        Debug.Log("MarcherSelector: All marchers deselected and list cleared.");
     }
 
     public void CheckForSpaceBarSetPosition()

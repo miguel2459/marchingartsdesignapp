@@ -70,7 +70,7 @@ public class MarcherPositionsManager : MonoBehaviour
 
 
         // Position the sphere along the negative z-axis (front)
-        Vector3 localPosition = new Vector3(0, 0, 0); // Adjust the distance between positions as needed
+        Vector3 localPosition = new Vector3(0, -0.016f, 0); // Adjust the distance between positions as needed
         sphere.transform.localPosition = localPosition; // Local position relative to the marcher
 
         // Store the new sphere's position and add it to the arrays

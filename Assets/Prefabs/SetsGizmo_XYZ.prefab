@@ -141,7 +141,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: bd4d80e79c15dd1458f461576a5f8472, type: 2}
+  - {fileID: 2100000, guid: 701bf1e876c473544ab3c6a588b0ce8f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -186,7 +186,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6528232287218714431}
   m_Layer: 8
-  m_Name: Gizmo_XYZ
+  m_Name: SetsGizmo_XYZ
   m_TagString: Gizmo
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -270,7 +270,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 787fab445430f1241af78fc1c901aeca, type: 2}
+  - {fileID: 2100000, guid: 9cfc59ba5b4028144a43f310d87d0cc2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
