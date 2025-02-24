@@ -13,7 +13,7 @@ public class SignUpManager : MonoBehaviour
     public LoginPanelsManager panelsManager;
     public Button createAccountButton;
 
-    private string backendURL = "https://script.google.com/macros/s/AKfycbx62DyyXl1WKRX2X8h94oo3LC0sqfEZNMtCcVVHHceXnj9FC1Itu-Drrl9uV13yN7Holw/exec"; // Update with latest deployed URL
+    private string backendURL = "https://script.google.com/macros/s/AKfycbzjq9Od5--Dt8CxdTI4fcjXSEehNVet_vvowbs34SGf0QtYwLksIZx1HjJ0wxNEF_ROMw/exec"; // Update with latest deployed URL
 
     private void Start()
     {
@@ -75,6 +75,14 @@ public class SignUpManager : MonoBehaviour
             {
                 Debug.Log("✅ Account Created! User ID: " + response.userId);
                 PlayerPrefs.SetString("UserID", response.userId);
+                PlayerPrefs.SetString("UserEmail", email);
+                PlayerPrefs.SetString("UserName", name);
+                PlayerPrefs.SetString("AccountSheetID", response.userSheetID);
+                PlayerPrefs.Save();
+
+                // 🔹 Initialize session after account creation
+                SessionManager.instance.InitializeUser(response.userId, email, name, response.userSheetID);
+
                 SceneController.instance.SwitchScene(3);
             }
             else if (response.status == "email_exists")
@@ -107,5 +115,6 @@ public class SignUpManager : MonoBehaviour
     {
         public string status;
         public string userId;
+        public string userSheetID;
     }
 }
