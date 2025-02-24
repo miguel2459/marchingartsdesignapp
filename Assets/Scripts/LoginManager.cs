@@ -12,7 +12,7 @@ public class LoginManager : MonoBehaviour
     public LoginPanelsManager panelsManager;
     public Button loginButton;
 
-    private string backendURL = "https://script.google.com/macros/s/AKfycbx62DyyXl1WKRX2X8h94oo3LC0sqfEZNMtCcVVHHceXnj9FC1Itu-Drrl9uV13yN7Holw/exec";
+    private string backendURL = "https://script.google.com/macros/s/AKfycbzjq9Od5--Dt8CxdTI4fcjXSEehNVet_vvowbs34SGf0QtYwLksIZx1HjJ0wxNEF_ROMw/exec";
 
     private void Start()
     {
@@ -56,23 +56,24 @@ public class LoginManager : MonoBehaviour
         string rawResponse = request.downloadHandler.text;
         Debug.Log("📥 Response from server:\n" + rawResponse); // ✅ Log FULL response
 
-        // ✅ Detect if the response is HTML instead of JSON
-        if (rawResponse.TrimStart().StartsWith("<!DOCTYPE html") || rawResponse.TrimStart().StartsWith("<html"))
-        {
-            Debug.LogError("🚨 ERROR: Received an HTML page instead of JSON! Possible redirect or server error.");
-            ShowError("Unexpected response from server.");
-            yield break; // Stop execution
-        }
-
         try
         {
             LoginResponse response = JsonUtility.FromJson<LoginResponse>(rawResponse);
 
             if (response.status == "success")
             {
-                Debug.Log("✅ Login Successful! User ID: " + response.userId);
+                Debug.Log($"✅ Login Successful! User: {response.userName} | ID: {response.userId} | SheetID: {response.userSheetID}");
+
+                // 🔹 Store user details in PlayerPrefs for persistence
                 PlayerPrefs.SetString("UserID", response.userId);
+                PlayerPrefs.SetString("UserEmail", email);
+                PlayerPrefs.SetString("UserName", response.userName);
+                PlayerPrefs.SetString("AccountSheetID", response.userSheetID);
                 PlayerPrefs.Save();
+
+                // 🔹 Initialize session after login
+                SessionManager.instance.InitializeUser(response.userId, email, response.userName, response.userSheetID);
+
                 SceneController.instance.SwitchScene(3);
             }
             else
@@ -103,5 +104,7 @@ public class LoginManager : MonoBehaviour
     {
         public string status;
         public string userId;
+        public string userName;
+        public string userSheetID;
     }
 }
