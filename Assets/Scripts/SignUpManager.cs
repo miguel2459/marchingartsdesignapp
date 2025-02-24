@@ -10,8 +10,10 @@ public class SignUpManager : MonoBehaviour
     public TMP_InputField emailField;
     public TMP_InputField passwordField;
     public TextMeshProUGUI errorMessage;
+    public LoginPanelsManager panelsManager;
     public Button createAccountButton;
-    private string backendURL = "https://script.google.com/macros/s/AKfycbwLDHix4FxcdOSFJQXnQi-yLi-6yFVqUcTJU6hBMdytoX5dxCUys4oKzo0ZFNLAawYHoQ/exec"; // Set this to the deployed API URL
+
+    private string backendURL = "https://script.google.com/macros/s/AKfycbx62DyyXl1WKRX2X8h94oo3LC0sqfEZNMtCcVVHHceXnj9FC1Itu-Drrl9uV13yN7Holw/exec"; // Update with latest deployed URL
 
     private void Start()
     {
@@ -30,49 +32,80 @@ public class SignUpManager : MonoBehaviour
             return;
         }
 
+        panelsManager.ShowLoading(false);
         StartCoroutine(CreateNewAccount(name, email, password));
     }
 
-private IEnumerator CreateNewAccount(string name, string email, string password)
-{
-    string url = backendURL + "?action=signup&name=" + UnityWebRequest.EscapeURL(name) + "&email=" + UnityWebRequest.EscapeURL(email) + "&password=" + UnityWebRequest.EscapeURL(password);
-    UnityWebRequest request = UnityWebRequest.Get(url);
-
-    yield return request.SendWebRequest();
-
-    if (request.result != UnityWebRequest.Result.Success)
+    private IEnumerator CreateNewAccount(string name, string email, string password)
     {
-        ShowError("Network error. Please try again.");
-    }
-    else
-    {
-        string jsonResponse = request.downloadHandler.text;
-        SignUpResponse response = JsonUtility.FromJson<SignUpResponse>(jsonResponse);
+        string url = backendURL + "?action=signup&name=" + UnityWebRequest.EscapeURL(name) + "&email=" + UnityWebRequest.EscapeURL(email) + "&password=" + UnityWebRequest.EscapeURL(password);
+        
+        Debug.Log("📡 Sending Sign-Up Request to: " + url); // ✅ Debug URL
 
-        if (response.status == "email_exists")
+        UnityWebRequest request = UnityWebRequest.Get(url);
+        request.SetRequestHeader("User-Agent", "UnityWebRequest"); // ✅ Prevent Google from blocking Unity
+
+        yield return request.SendWebRequest();
+
+        // ✅ Handle Network Errors
+        if (request.result != UnityWebRequest.Result.Success)
         {
-            ShowError("Email already in use.");
+            Debug.LogError("❌ Network error: " + request.error);
+            panelsManager.HideLoading(false);
+            ShowError("Network error. Please try again.");
+            yield break; // Stop execution here
         }
-        else
+
+        string rawResponse = request.downloadHandler.text;
+        Debug.Log("📥 Response from server:\n" + rawResponse); // ✅ Log full response
+
+        // ✅ Detect if the response is HTML instead of JSON
+        if (rawResponse.TrimStart().StartsWith("<!DOCTYPE html") || rawResponse.TrimStart().StartsWith("<html"))
         {
-            Debug.Log("Account Created! User ID: " + response.userId);
-            PlayerPrefs.SetString("UserID", response.userId);
-            SceneController.instance.SwitchScene(3);
+            Debug.LogError("🚨 ERROR: Received an HTML page instead of JSON! Possible redirect or server error.");
+            ShowError("Unexpected response from server.");
+            yield break;
+        }
+
+        try
+        {
+            SignUpResponse response = JsonUtility.FromJson<SignUpResponse>(rawResponse);
+
+            if (response.status == "success")
+            {
+                Debug.Log("✅ Account Created! User ID: " + response.userId);
+                PlayerPrefs.SetString("UserID", response.userId);
+                SceneController.instance.SwitchScene(3);
+            }
+            else if (response.status == "email_exists")
+            {
+                panelsManager.HideLoading(false);
+                ShowError("Email already in use.");
+            }
+            else
+            {
+                panelsManager.HideLoading(false);
+                ShowError("Error creating account.");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("🚨 JSON Parse Error: " + e.Message);
+            Debug.LogError("📝 Raw Response:\n" + rawResponse);
+            ShowError("Error parsing response.");
         }
     }
-}
-
-[System.Serializable]
-private class SignUpResponse
-{
-    public string status;
-    public string userId;
-}
-
 
     private void ShowError(string message)
     {
         errorMessage.text = message;
         errorMessage.gameObject.SetActive(true);
+    }
+
+    [System.Serializable]
+    private class SignUpResponse
+    {
+        public string status;
+        public string userId;
     }
 }
