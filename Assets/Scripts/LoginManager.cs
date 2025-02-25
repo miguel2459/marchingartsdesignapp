@@ -85,7 +85,7 @@ public class LoginManager : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError("🚨 JSON Parse Error: " + e.Message);
-            Debug.LogError("📝 Raw Response (for debugging):\n" + rawResponse);
+            Debug.LogError("📝 Raw Response:\n" + rawResponse);
             ShowError("Error parsing response.");
             panelsManager.HideLoading(true);
         }
