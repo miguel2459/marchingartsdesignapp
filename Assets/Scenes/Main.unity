@@ -169,7 +169,12 @@ MonoBehaviour:
   userId: 
   userEmail: 
   userName: 
-  savedShows: []
+  accountSheetID: 
+  savedShows:
+  - showID: 
+    showTitle: 
+    showSheetID: 
+    lastModified: 
 --- !u!1 &431454371
 GameObject:
   m_ObjectHideFlags: 0
