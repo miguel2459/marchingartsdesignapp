@@ -7,13 +7,33 @@ using SimpleJSON;
 public class SessionManager : MonoBehaviour
 {
     private string apiKey;
+    public static string backendURL;
     public static SessionManager instance;
 
     public string userId;      // Unique User ID (e.g., "U123456789")
+    public string userFolderId;
     public string userEmail;   // User's Email
     public string userName;    // User's Name
     public string accountSheetID;
     public List<ShowData> savedShows = new List<ShowData>(); // List of show Google Sheets
+
+    public  string currentShowID;
+    public  string showTitle;
+    public  string groupName;
+    public  string createdBy;
+    public  string fieldType;
+    public  string productionYear;
+    public  int numberOfMarchers;
+    public  int numberOfSets;
+    public  int numberOfProps;
+    public  string lastModified;
+    public  string showStatus;
+
+    public  List<string> setsData = new List<string>();
+    public  List<string> marchersData = new List<string>();
+
+    public  Dictionary<string, Vector3> marchersCoordinates = new Dictionary<string, Vector3>();
+
 
     private void Awake()
     {
@@ -33,9 +53,10 @@ public class SessionManager : MonoBehaviour
     }
 
     // Called when the user logs in
-    public void InitializeUser(string id, string email, string name, string sheetID)
+    public void InitializeUser(string id, string email, string name, string sheetID, string folderId)
     {
         userId = id;
+        userFolderId = folderId;
         userEmail = email;
         userName = name;
         accountSheetID = sheetID;
@@ -95,7 +116,7 @@ public class SessionManager : MonoBehaviour
                 if (numberOfShows > 0)
                 {
                     // Fetch show data from "Shows" sheet
-                    string showsSheetUrl = $"https://sheets.googleapis.com/v4/spreadsheets/{accountSheetID}/values/Shows!A2:D?key={apiKey}";
+                    string showsSheetUrl = $"https://sheets.googleapis.com/v4/spreadsheets/{accountSheetID}/values/Shows!A2:E?key={apiKey}";
 
                     using (UnityWebRequest showsRequest = UnityWebRequest.Get(showsSheetUrl))
                     {
@@ -108,25 +129,29 @@ public class SessionManager : MonoBehaviour
                         }
 
                         string showsJsonResponse = showsRequest.downloadHandler.text;
+                        Debug.Log($"📥 Raw 'Shows' API Response: {showsJsonResponse}"); // ✅ Debug full response
                         var showsResponse = JSON.Parse(showsJsonResponse);
 
-                        if (showsResponse["values"] != null)
+                        if (showsResponse["values"] != null && showsResponse["values"].Count > 0)
                         {
                             savedShows.Clear();
                             foreach (JSONNode  row in showsResponse["values"].AsArray)
                             {
-                            if (row.AsArray.Count >= 4) // Ensure all required fields are present
+                                Debug.Log($"🔍 Checking row: {row.ToString()}"); // ✅ Log each row
+
+                            if (row.AsArray.Count >= 5) // Ensure all required fields are present
                                 {
                                     ShowData show = new ShowData
                                     {
                                         showID = row[0],
                                         showTitle = row[1],
-                                        showSheetID = row[2],
-                                        lastModified = row[3],
-                                        creator = creatorName
+                                        group = row[2],
+                                        showSheetID = row[3],
+                                        lastModified = row[4],
                                     };
 
                                     savedShows.Add(show);
+                                    Debug.Log($"✅ Added show: {show.showID} | Title: {show.showTitle}");
                                 }
                             }
 
@@ -150,6 +175,7 @@ public class SessionManager : MonoBehaviour
             string configContent = File.ReadAllText(configPath);
             var configJson = JSON.Parse(configContent);
             apiKey = configJson["googleApiKey"];
+            backendURL = configJson["backendURL"]; // ✅ Load backend URL
             Debug.Log("✅ API key loaded successfully.");
         }
         else
@@ -165,6 +191,6 @@ public class SessionManager : MonoBehaviour
         public string showTitle;
         public string showSheetID;
         public string lastModified;
-        public string creator;  // New attribute: Account Name (Creator)
+        public string group;  
     }
 }
