@@ -12,7 +12,7 @@ public class LoginManager : MonoBehaviour
     public LoginPanelsManager panelsManager;
     public Button loginButton;
 
-    private string backendURL = "https://script.google.com/macros/s/AKfycbzjq9Od5--Dt8CxdTI4fcjXSEehNVet_vvowbs34SGf0QtYwLksIZx1HjJ0wxNEF_ROMw/exec";
+    private string backendURL => SessionManager.backendURL;
 
     private void Start()
     {
@@ -67,12 +67,13 @@ public class LoginManager : MonoBehaviour
                 // 🔹 Store user details in PlayerPrefs for persistence
                 PlayerPrefs.SetString("UserID", response.userId);
                 PlayerPrefs.SetString("UserEmail", email);
+                PlayerPrefs.SetString("FolderID", response.folderId);
                 PlayerPrefs.SetString("UserName", response.userName);
                 PlayerPrefs.SetString("AccountSheetID", response.userSheetID);
                 PlayerPrefs.Save();
 
                 // 🔹 Initialize session after login
-                SessionManager.instance.InitializeUser(response.userId, email, response.userName, response.userSheetID);
+                SessionManager.instance.InitializeUser(response.userId, email, response.userName, response.userSheetID, response.folderId);
 
                 SceneController.instance.SwitchScene(3);
             }
@@ -106,5 +107,6 @@ public class LoginManager : MonoBehaviour
         public string userId;
         public string userName;
         public string userSheetID;
+        public string folderId;
     }
 }
