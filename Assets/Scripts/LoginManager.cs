@@ -29,6 +29,7 @@ public class LoginManager : MonoBehaviour
             ShowError("Email and password cannot be empty.");
             return;
         }
+
         panelsManager.ShowLoading(true);
         StartCoroutine(ValidateLogin(email, password));
     }
@@ -37,24 +38,23 @@ public class LoginManager : MonoBehaviour
     {
         string url = backendURL + "?action=login&email=" + UnityWebRequest.EscapeURL(email) + "&password=" + UnityWebRequest.EscapeURL(password);
         
-        Debug.Log("📡 Request URL: " + url); // ✅ Check request in Unity Console
+        Debug.Log("📡 Request URL: " + url);
 
         UnityWebRequest request = UnityWebRequest.Get(url);
-        request.SetRequestHeader("User-Agent", "UnityWebRequest"); // ✅ Prevent Google from blocking Unity
+        request.SetRequestHeader("User-Agent", "UnityWebRequest");
 
         yield return request.SendWebRequest();
 
-        // ✅ Handle Network Errors
         if (request.result != UnityWebRequest.Result.Success)
         {
             Debug.LogError("❌ Network error: " + request.error);
             panelsManager.HideLoading(true);
             ShowError("Network error. Please try again.");
-            yield break; // Stop execution here
+            yield break;
         }
 
         string rawResponse = request.downloadHandler.text;
-        Debug.Log("📥 Response from server:\n" + rawResponse); // ✅ Log FULL response
+        Debug.Log("📥 Response from server:\n" + rawResponse);
 
         try
         {
@@ -64,7 +64,8 @@ public class LoginManager : MonoBehaviour
             {
                 Debug.Log($"✅ Login Successful! User: {response.userName} | ID: {response.userId} | SheetID: {response.userSheetID}");
 
-                // 🔹 Store user details in PlayerPrefs for persistence
+                // 🔹 Store login state for auto-login
+                PlayerPrefs.SetInt("IsLoggedIn", 1);
                 PlayerPrefs.SetString("UserID", response.userId);
                 PlayerPrefs.SetString("UserEmail", email);
                 PlayerPrefs.SetString("FolderID", response.folderId);
@@ -72,9 +73,10 @@ public class LoginManager : MonoBehaviour
                 PlayerPrefs.SetString("AccountSheetID", response.userSheetID);
                 PlayerPrefs.Save();
 
-                // 🔹 Initialize session after login
+                // 🔹 Initialize session
                 SessionManager.instance.InitializeUser(response.userId, email, response.userName, response.userSheetID, response.folderId);
 
+                // 🔹 Move to Show Selection Scene
                 SceneController.instance.SwitchScene(3);
             }
             else
@@ -91,8 +93,6 @@ public class LoginManager : MonoBehaviour
             panelsManager.HideLoading(true);
         }
     }
-
-
 
     private void ShowError(string message)
     {

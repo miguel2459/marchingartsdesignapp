@@ -20,16 +20,7 @@ public class SelectedMarchers : MonoBehaviour
 
     void Start()
     {
-        cam = Camera.main;
-        
-        moveMarcher = GetComponent<MarcherMovement>();
-
-        // Ensure the cameraControl reference is assigned
-        if (cameraControl == null)
-        {
-            cameraControl = cam.GetComponent<CameraControl>();
-        }
-        //Debug.Log("MarcherSelector: Start method called - Camera and selection box initialized.");
+       
     }
 
     void Update()

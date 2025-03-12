@@ -31,7 +31,7 @@ public class SetProgressBar : MonoBehaviour
         foreach (Transform child in scrollRect.content)
         {
             Destroy(child.gameObject); // Destroy each child (button) under content
-            Debug.Log("Destroying Button");
+            //Debug.Log("Destroying Button");
         }
         setButtons.Clear();
     }

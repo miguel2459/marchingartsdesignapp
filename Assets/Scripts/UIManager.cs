@@ -11,7 +11,7 @@ public class UIManager : MonoBehaviour
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject); // Keep UIManager persistent across scenes
+            //DontDestroyOnLoad(gameObject); // Keep UIManager persistent across scenes
         }
         else
         {
