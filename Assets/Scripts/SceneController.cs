@@ -6,7 +6,7 @@ public class SceneController : MonoBehaviour
 {
     public static SceneController instance;
 
-    // Define scene build indices for clarity
+    // Scene build indices for clarity
     private const int MAIN_SCENE = 0;
     private const int STARTUP_SCENE = 1;
     private const int LOGIN_SCENE = 2;
@@ -18,7 +18,7 @@ public class SceneController : MonoBehaviour
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject); // Keep SceneController alive across all scenes
+            DontDestroyOnLoad(gameObject);
         }
         else
         {
@@ -28,16 +28,31 @@ public class SceneController : MonoBehaviour
 
     private void Start()
     {
-        // If StartupScene is not already loaded, load it
-        if (!IsSceneCurrentlyLoaded(STARTUP_SCENE))
+        HandleInitialSceneLoad();
+    }
+
+    private void HandleInitialSceneLoad()
+    {
+        if (PlayerPrefs.GetInt("IsLoggedIn", 0) == 1)
         {
-            LoadSceneAdditive(STARTUP_SCENE);
+            SessionManager.instance.AutoLogin();
+
+            Debug.Log($"🔄 Resuming session, loading Show Selection Scene");
+            int sceneToLoad = 3;            
+            SwitchScene(sceneToLoad);
+        }
+        else
+        {
+            if (!IsSceneCurrentlyLoaded(STARTUP_SCENE))
+            {
+                LoadSceneAdditive(STARTUP_SCENE);
+            }
         }
     }
 
     public void LoadSceneAdditive(int sceneIndex)
     {
-        if (!SceneExists(sceneIndex)) return;
+        if (!SceneExists(sceneIndex) || IsSceneCurrentlyLoaded(sceneIndex)) return;
         SceneManager.LoadScene(sceneIndex, LoadSceneMode.Additive);
     }
 
@@ -45,10 +60,9 @@ public class SceneController : MonoBehaviour
     {
         for (int i = 0; i < SceneManager.sceneCount; i++)
         {
-            Scene loadedScene = SceneManager.GetSceneAt(i);
-            if (loadedScene.buildIndex == sceneIndex)
+            if (SceneManager.GetSceneAt(i).buildIndex == sceneIndex)
             {
-                return true; // Scene is already loaded
+                return true;
             }
         }
         return false;
@@ -56,26 +70,24 @@ public class SceneController : MonoBehaviour
 
     public void UnloadScene(int sceneIndex)
     {
-        if (!SceneExists(sceneIndex)) return;
+        if (!SceneExists(sceneIndex) || !IsSceneCurrentlyLoaded(sceneIndex)) return;
         SceneManager.UnloadSceneAsync(sceneIndex);
     }
 
     public void SwitchScene(int newSceneIndex)
     {
-        if (!SceneExists(newSceneIndex)) return;
+        if (!SceneExists(newSceneIndex) || IsSceneCurrentlyLoaded(newSceneIndex)) return;
         StartCoroutine(SwitchSceneRoutine(newSceneIndex));
     }
 
     private IEnumerator SwitchSceneRoutine(int newSceneIndex)
     {
-        if (UIManager.instance != null)
-        {
-            UIManager.instance.FadeToBlack(); // Optional transition effect
-        }
+        Debug.Log($"🔄 Switching to Scene: {newSceneIndex}");
 
+        // Optional: Implement fade-out UI effect here
         yield return new WaitForSeconds(1f);
 
-        // Unload all scenes except the main scene
+        // Unload all scenes except MAIN_SCENE
         for (int i = 0; i < SceneManager.sceneCount; i++)
         {
             Scene scene = SceneManager.GetSceneAt(i);
@@ -87,10 +99,11 @@ public class SceneController : MonoBehaviour
 
         SceneManager.LoadScene(newSceneIndex, LoadSceneMode.Additive);
 
-        if (UIManager.instance != null)
-        {
-            UIManager.instance.FadeFromBlack();
-        }
+        // Save last visited scene for auto-login redirection
+        PlayerPrefs.SetString("LastScene", newSceneIndex.ToString());
+        PlayerPrefs.Save();
+
+        // Optional: Implement fade-in UI effect here
     }
 
     private bool SceneExists(int sceneIndex)

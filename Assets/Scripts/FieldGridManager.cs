@@ -4,127 +4,87 @@ using System.Collections.Generic;
 [ExecuteInEditMode]
 public class FieldGridManager : MonoBehaviour
 {
+    public enum FieldType { FootballField, WinterFloor }
+    public enum StepSize { Freeform, SixteenSteps, TwelveSteps, EightSteps, SixSteps, FiveSteps, FourSteps, ThreeAndHalfSteps }
+
+    [Header("Field Settings")]
+    public FieldType currentFieldType = FieldType.FootballField;
     public StepSize currentStepSize = StepSize.Freeform;
-    public float yardLength = 5f; // Yard length in Unity units
-    public int footballFieldWidthInYards = 53; // Field width in yards
-    public int footballFieldLengthInYards = 120; // Field length in yards (including end zones)
-    public Color gridColor = Color.green; // Color for the grid lines
+    public float yardLength = 5f;
+    public int footballFieldWidthInYards = 53;
+    public int footballFieldLengthInYards = 120;
+    public Color gridColor = Color.green;
     public float lineWidth = 0.05f;
 
-    private float intervalX; // Interval size along X-axis
-    private float intervalZ; // Interval size along Z-axis
+    [Header("Field References")]
+    public GameObject footballField;
+    public GameObject footballGrid;
+    public GameObject winterFloor;
+    public GameObject winterGrid;
     public GameObject Grid8_5;
 
-    public enum FieldType
-{
-    FootballField,
-    WinterFloor
-}
+    private float intervalX;
+    private float intervalZ;
 
-    public FieldType currentFieldType = FieldType.FootballField; // Default to football
-
-    public GameObject footballField; // 3D football field object
-    public GameObject footballGrid;  // 8-to-5 gridlines for football field
-
-    public GameObject winterFloor; // 3D winter floor object
-    public GameObject winterGrid;  // 8-to-5 gridlines for winter floor
-
-    public SnapToGridLines snapToGrid; // Reference to SnapToGridLines
-
-    // Lists to store LineRenderers for different step sizes
-    public List<LineRenderer> gridLines = new List<LineRenderer>();
-    public List<LineRenderer> fieldGrid8_5 = new List<LineRenderer>();
+    private SnapToGridLines snapToGrid;
+    private List<LineRenderer> gridLines = new List<LineRenderer>();
+    private List<LineRenderer> fieldGrid8_5 = new List<LineRenderer>();
 
     void Start()
     {
-        snapToGrid = GetComponent<SnapToGridLines>(); // Get reference to SnapToGrid
-        SetFieldType(currentFieldType); // Ensure the correct field is enabled
+        snapToGrid = GetComponent<SnapToGridLines>();
+        SetFieldType(GetFieldTypeFromSession());
+    }
+
+    private FieldType GetFieldTypeFromSession()
+    {
+        return SessionManager.instance.fieldType switch
+        {
+            "Football Field" => FieldType.FootballField,
+            "Winter Floor" => FieldType.WinterFloor,
+            _ => FieldType.FootballField
+        };
     }
 
     public void SetFieldType(FieldType fieldType)
     {
         currentFieldType = fieldType;
 
-        if (fieldType == FieldType.FootballField)
-        {
-            footballField.SetActive(true);
-            footballGrid.SetActive(true);
-            winterFloor.SetActive(false);
-            winterGrid.SetActive(false);
-        }
-        else if (fieldType == FieldType.WinterFloor)
-        {
-            footballField.SetActive(false);
-            footballGrid.SetActive(false);
-            winterFloor.SetActive(true);
-            winterGrid.SetActive(true);
-        }
+        bool isFootball = (fieldType == FieldType.FootballField);
+        footballField.SetActive(isFootball);
+        footballGrid.SetActive(isFootball);
+        winterFloor.SetActive(!isFootball);
+        winterGrid.SetActive(!isFootball);
 
-        // Inform SnapToGridLines of the new field type
-        if (snapToGrid != null)
-        {
-            snapToGrid.SetFieldBoundaries(currentFieldType);
-        }
+        snapToGrid?.SetFieldBoundaries(fieldType);
     }
-
 
     public void SetStepSize(StepSize stepSize)
     {
         currentStepSize = stepSize;
-
-        // Calculate interval sizes based on step size
-        switch (stepSize)
+        intervalX = intervalZ = stepSize switch
         {
-            case StepSize.SixteenSteps:
-                intervalX = yardLength / 16;
-                intervalZ = yardLength / 16;
-                break;
-            case StepSize.TwelveSteps:
-                intervalX = yardLength / 12;
-                intervalZ = yardLength / 12;
-                break;
-            case StepSize.EightSteps:
-                intervalX = yardLength / 8;
-                intervalZ = yardLength / 8;
-                break;
-            case StepSize.SixSteps:
-                intervalX = yardLength / 6;
-                intervalZ = yardLength / 6;
-                break;
-            case StepSize.FiveSteps:
-                intervalX = yardLength / 5;
-                intervalZ = yardLength / 5;
-                break;
-            case StepSize.FourSteps:
-                intervalX = yardLength / 4;
-                intervalZ = yardLength / 4;
-                break;
-            case StepSize.ThreeAndHalfSteps:
-                intervalX = yardLength / 3.5f;
-                intervalZ = yardLength / 3.5f;
-                break;
-            default: // Freeform or unspecified step size
-                intervalX = 1f;
-                intervalZ = 1f;
-                break;
-        }
+            StepSize.SixteenSteps => yardLength / 16,
+            StepSize.TwelveSteps => yardLength / 12,
+            StepSize.EightSteps => yardLength / 8,
+            StepSize.SixSteps => yardLength / 6,
+            StepSize.FiveSteps => yardLength / 5,
+            StepSize.FourSteps => yardLength / 4,
+            StepSize.ThreeAndHalfSteps => yardLength / 3.5f,
+            _ => 1f
+        };
     }
 
     public void UpdateGridStepSize()
     {
-        //SetStepSize(currentStepSize);
-        FindPreGeneratedGrids(); // Check for pre-generated grids before generating new ones
-        //GenerateGrid(); // Generate new grid if needed
+        FindPreGeneratedGrids();
     }
 
     private void FindPreGeneratedGrids()
     {
-        // Clear existing lists
         fieldGrid8_5.Clear();
 
-        // Look for specific child objects with the names "Field Grid 5_5", "Field Grid 6_5", "Field Grid 8_5"
         Transform grid8_5 = transform.Find("Field Grid 8_5");
-
         if (grid8_5 != null)
         {
             Debug.Log("Found pre-generated Field Grid 8_5.");
@@ -136,58 +96,38 @@ public class FieldGridManager : MonoBehaviour
     private List<LineRenderer> GetLineRenderers(Transform parentTransform)
     {
         List<LineRenderer> lines = new List<LineRenderer>();
-
         foreach (Transform child in parentTransform)
         {
-            LineRenderer lineRenderer = child.GetComponent<LineRenderer>();
-            if (lineRenderer != null)
+            if (child.TryGetComponent(out LineRenderer lineRenderer))
             {
                 lines.Add(lineRenderer);
             }
         }
-
         return lines;
     }
 
-    private void GenerateGrid()
+    public void GenerateGrid()
     {
-        // Clear existing LineRenderers if they exist
-        foreach (var line in gridLines)
-        {
-            if (line != null)
-                DestroyImmediate(line.gameObject);
-        }
-        gridLines.Clear();
-
-        // Calculate total units for the field dimensions based on yard length
-        float fieldWidthInUnits = footballFieldWidthInYards;  // Should be 265 for 53 yards with 5 units per yard
-        float fieldLengthInUnits = footballFieldLengthInYards; // Should be 600 for 120 yards with 5 units per yard
-
-        // Calculate exact number of intervals within the field boundaries
+        ClearExistingGrid();
+        float fieldWidthInUnits = footballFieldWidthInYards;
+        float fieldLengthInUnits = footballFieldLengthInYards;
+        
         int numVerticalLines = Mathf.CeilToInt(fieldWidthInUnits / intervalX);
         int numHorizontalLines = Mathf.CeilToInt(fieldLengthInUnits / intervalZ);
 
-        // Generate vertical grid lines along the width of the field
         for (int i = 0; i <= numVerticalLines; i++)
-        {
-            float x = i * intervalX;
-            if (x > fieldWidthInUnits) x = fieldWidthInUnits; // Snap to boundary if exceeding
+            CreateLine(new Vector3(i * intervalX, 0, 0), new Vector3(i * intervalX, 0, fieldLengthInUnits));
 
-            Vector3 startPos = new Vector3(x, 0, 0);
-            Vector3 endPos = new Vector3(x, 0, fieldLengthInUnits);
-            CreateLine(startPos, endPos);
-        }
-
-        // Generate horizontal grid lines along the length of the field
         for (int j = 0; j <= numHorizontalLines; j++)
-        {
-            float z = j * intervalZ;
-            if (z > fieldLengthInUnits) z = fieldLengthInUnits; // Snap to boundary if exceeding
+            CreateLine(new Vector3(0, 0, j * intervalZ), new Vector3(fieldWidthInUnits, 0, j * intervalZ));
+    }
 
-            Vector3 startPos = new Vector3(0, 0, z);
-            Vector3 endPos = new Vector3(fieldWidthInUnits, 0, z);
-            CreateLine(startPos, endPos);
-        }
+    private void ClearExistingGrid()
+    {
+        foreach (var line in gridLines)
+            if (line != null) DestroyImmediate(line.gameObject);
+        
+        gridLines.Clear();
     }
 
     private void CreateLine(Vector3 start, Vector3 end)

@@ -70,7 +70,7 @@ public class CreateShowManager : MonoBehaviour
             int numProps = int.Parse(inputNumProps.text);
 
             // Save Show Data Locally in SessionManager
-            SaveToSessionManager(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus);
+            SessionManager.instance.SaveToSessionManager(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus);
 
             // Copy the Marching Show Template Google Sheet
             StartCoroutine(CopyShowTemplateToGoogleDrive(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus));
@@ -94,20 +94,6 @@ public class CreateShowManager : MonoBehaviour
                  string.IsNullOrWhiteSpace(inputNumMarchers.text) ||
                  string.IsNullOrWhiteSpace(inputNumSets.text) ||
                  string.IsNullOrWhiteSpace(inputNumProps.text));
-    }
-
-    private void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status)
-    {
-        SessionManager.instance.currentShowID = id;
-        SessionManager.instance.showTitle = title;
-        SessionManager.instance.groupName = group;
-        SessionManager.instance.fieldType = field;
-        SessionManager.instance.productionYear = year;
-        SessionManager.instance.numberOfMarchers = marchers;
-        SessionManager.instance.numberOfSets = sets;
-        SessionManager.instance.numberOfProps = props;
-        SessionManager.instance.lastModified = modified;
-        SessionManager.instance.showStatus = status;
     }
 
     private IEnumerator CopyShowTemplateToGoogleDrive(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status)

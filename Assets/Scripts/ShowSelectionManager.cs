@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking;
+using SimpleJSON;
 
 public class ShowSelectionManager : MonoBehaviour
 {
@@ -61,7 +63,87 @@ public class ShowSelectionManager : MonoBehaviour
 
     private void OnShowSelected(SessionManager.ShowData show)
     {
-        Debug.Log($"Selected Show: {show.showTitle}");
-        // Handle loading the show details in a separate UI panel
+        Debug.Log($"Selected Show: {show.showTitle} - Field Type: {SessionManager.instance.fieldType}");
+        
+        // Store selected show data in a static variable or SessionManager
+        SessionManager.instance.selectedShow = show;
+        // Fetch additional show details from API and update SessionManager
+        StartCoroutine(FetchShowDetails(show.showSheetID));
+
+        // Switch to Show Manager Scene
+        SceneController.instance.SwitchScene(4); // Assuming SHOW_MANAGER_SCENE = 4
+    }
+
+    private IEnumerator FetchShowDetails(string sheetID)
+    {
+        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B11?key={SessionManager.instance.apiKey}";
+        Debug.Log($"🔗 Fetching show details from: {url}");
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError($"❌ Failed to fetch show details: {request.error}");
+                yield break;
+            }
+
+            string jsonResponse = request.downloadHandler.text;
+            var showDataResponse = JSON.Parse(jsonResponse);
+
+            if (showDataResponse["values"] != null && showDataResponse["values"].Count >= 10)
+            {
+                Debug.Log($"📥 Show Details Fetched: {showDataResponse.ToString()}");
+
+                // Convert JSONNode values to strings before trimming
+                string showID = showDataResponse["values"][0][0].Value.Trim();       // B2
+                string title = showDataResponse["values"][1][0].Value.Trim();        // B3
+                string group = showDataResponse["values"][2][0].Value.Trim();        // B4
+                string fieldType = showDataResponse["values"][4][0].Value.Trim();    // B6
+                string year = showDataResponse["values"][5][0].Value.Trim();         // B7
+                
+                // Safely parse integer values
+                int marchers = TryParseInt(showDataResponse["values"][6][0].Value); // B8
+                int sets = TryParseInt(showDataResponse["values"][7][0].Value);     // B9
+                int props = TryParseInt(showDataResponse["values"][8][0].Value);    // B10
+                
+                string modified = showDataResponse["values"][9][0].Value.Trim();         // B11
+                string status = showDataResponse["values"][10][0].Value.Trim();          // B12
+
+                // Save to SessionManager
+                SessionManager.instance.SaveToSessionManager(
+                    showID, title, group, fieldType, year, marchers, sets, props, modified, status
+                );
+
+                // Switch to Show Manager Scene after data is loaded
+                SceneController.instance.SwitchScene(4);
+            }
+            else
+            {
+                Debug.LogError("❌ Error: No valid show data found or missing expected rows.");
+            }
+        }
+    }
+
+
+    private int TryParseInt(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            Debug.LogWarning($"⚠️ Empty or null value for integer conversion, defaulting to 0.");
+            return 0;
+        }
+
+        int result;
+        if (int.TryParse(value.Trim(), out result))
+        {
+            return result;
+        }
+        else
+        {
+            Debug.LogWarning($"⚠️ Failed to parse integer from: '{value}', defaulting to 0.");
+            return 0; // Default to 0 if parsing fails
+        }
     }
 }
