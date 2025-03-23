@@ -23,11 +23,17 @@ public class ShapeMarchers : MonoBehaviour
 
     public void InitializeShapeManagers(GameObject marcherPrefab, GameObject positionSpherePrefab, float marcherSpacing)
     {
-        linesManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
-        curvesManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
-        boxManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
-        circleManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+        // Initialize shape managers before they are used
+        if (boxManager != null) 
+            boxManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+        if (linesManager != null) 
+            linesManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+        if (curvesManager != null) 
+            curvesManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+        if (circleManager != null) 
+            circleManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
     }
+
 
     // Main method to set a marching formation and add it to the shapes list
     public void ArrangeFormation(ShapeGroup shapeGroup)

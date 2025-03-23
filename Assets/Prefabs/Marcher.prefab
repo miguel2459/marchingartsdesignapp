@@ -105,12 +105,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5783072409151532744}
-  - component: {fileID: 2295259889982513144}
   - component: {fileID: 1380147373992394969}
+  - component: {fileID: 942577037629190339}
+  - component: {fileID: 2976084566100136744}
   - component: {fileID: 5783072409151532747}
   - component: {fileID: 5783072409151532746}
   - component: {fileID: 5783072409151532745}
-  - component: {fileID: 2976084566100136744}
   m_Layer: 6
   m_Name: Marcher
   m_TagString: Marcher
@@ -133,23 +133,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2295259889982513144
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5783072409151532751}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 927bf2d012317564ca9cb2f23f95b5d6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  PositionSpheres: []
-  setSpheres: []
-  positions: []
-  isSet: 
-  responsibilities: 
 --- !u!114 &1380147373992394969
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -171,6 +154,38 @@ MonoBehaviour:
   elapsedTime: 0
   completedRepeats: 0
   stepDuration: 0
+  marcherPositionsManager: {fileID: 0}
+  director: {fileID: 0}
+--- !u!114 &942577037629190339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5783072409151532751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 927bf2d012317564ca9cb2f23f95b5d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  PositionSpheres: []
+  setSpheres: []
+  positions: []
+  isSet: 
+  responsibilities: 
+--- !u!114 &2976084566100136744
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5783072409151532751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b90a4b917f8262a42ae0413d942cdfa7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  selector: {fileID: 2312121084481125493}
 --- !u!33 &5783072409151532747
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -234,16 +249,3 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
---- !u!114 &2976084566100136744
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5783072409151532751}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b90a4b917f8262a42ae0413d942cdfa7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  selector: {fileID: 2312121084481125493}

@@ -3,21 +3,13 @@ using UnityEngine;
 
 public class BoxManager : MonoBehaviour
 {
-    private SnapToGridLines snapToGrid;
-    private IntervalManager intervalManager;
-    private GameObject marcherPrefab;
-    private GameObject positionSpherePrefab;
+    public SnapToGridLines snapToGrid;
+    public FieldGridManager fieldManager;
+    public IntervalManager intervalManager;
 
     // Initialize method to set up necessary references
     public void Initialize(GameObject marcherPrefab, GameObject positionSpherePrefab, float marcherSpacing)
     {
-        this.marcherPrefab = marcherPrefab;
-        this.positionSpherePrefab = positionSpherePrefab;
-
-        // Get necessary components in the scene if not already assigned
-        snapToGrid = FindObjectOfType<SnapToGridLines>();
-        intervalManager = FindObjectOfType<IntervalManager>();
-
         if (snapToGrid == null)
         {
             Debug.LogError("SnapToGridLines component not found in the scene.");
@@ -25,13 +17,15 @@ public class BoxManager : MonoBehaviour
 
         if (intervalManager == null)
         {
-            Debug.LogError("IntervalManager component not found in the scene.");
+            Debug.LogError("IntervalManager component not found in the scene. Trying to assign manually...");
+            intervalManager = new GameObject("IntervalManager").AddComponent<IntervalManager>(); // Create dynamically if missing
         }
     }
 
     // Method to create a box formation for marchers
     public void CreateBoxFormation(List<GameObject> marchers, IntervalManager.IntervalType interval, bool isFilled)
     {
+        Vector3 center = fieldManager.GetFieldCenter();
         float count = marchers.Count;
         float spacing = intervalManager.GetIntervalSpacing(interval);
 
@@ -54,72 +48,63 @@ public class BoxManager : MonoBehaviour
 
         if (isFilled)
         {
-            ArrangeFilledBox(marchers, numRows, numCols, spacing);
+            ArrangeFilledBox(marchers, numRows, numCols, spacing, center);
         }
         else
         {
-            ArrangeHollowBox(marchers, numRows, numCols, spacing);
+            ArrangeHollowBox(marchers, numRows, numCols, spacing, center);
         }
     }
 
     // Arrange marchers in a filled grid pattern within the box
-    private void ArrangeFilledBox(List<GameObject> marchers, int rows, int columns, float spacing)
+    private void ArrangeFilledBox(List<GameObject> marchers, int rows, int columns, float spacing, Vector3 center)
     {
-        int marcherIndex = 0;   //This variable tracks which marcher in the list is currently being positioned.
+        int marcherIndex = 0;
 
-        Debug.Log($"Arranging filled box with adjusted Rows: {rows}, Columns: {columns}");
+        // Calculate the offset to center the formation
+        float totalWidth = (columns - 1) * spacing;
+        float totalHeight = (rows - 1) * spacing;
+        Vector3 startOffset = center - new Vector3(totalWidth / 2, 0, totalHeight / 2);
 
-        //This loop iterates over each row in the grid.
+        Debug.Log($"Arranging filled box at center {center}, starting from {startOffset}, with {rows} rows and {columns} columns.");
+
+        // Place marchers in a filled grid
         for (int row = 0; row < rows && marcherIndex < marchers.Count; row++)
         {
-            //This loop iterates over each column in the current row.
             for (int col = 0; col < columns && marcherIndex < marchers.Count; col++)
             {
-                // Calculate the position in the box pattern based on spacing and number of marchers
-                Vector3 position = new Vector3(col * spacing, 0, row * spacing);
-
-                // Snap the position to the grid if necessary, then set the marcher's position
+                Vector3 position = startOffset + new Vector3(col * spacing, 0, row * spacing);
                 marchers[marcherIndex++].transform.position = snapToGrid.GetSnappedPosition(position);
+
                 Debug.Log($"Positioning Marcher {marcherIndex} at {position} (Row: {row}, Col: {col})");
             }
-        }
-
-        // Account for remaining marchers that didn't fit in the perfect square
-        while (marcherIndex < marchers.Count)
-        {
-            int additionalRow = marcherIndex / columns;
-            int additionalCol = marcherIndex % columns;
-
-            // Place remaining marchers in the next row
-            Vector3 offset = new Vector3(additionalCol * spacing, 0, additionalRow * spacing);
-
-            Vector3 position = new Vector3(offset.x, 0, offset.z);
-            marchers[marcherIndex].transform.position = snapToGrid.GetSnappedPosition(position);
-
-            Debug.Log($"Positioning Remaining Marcher {marcherIndex} at {position} (Row: {additionalRow}, Col: {additionalCol})");
-
-            marcherIndex++;
         }
     }
 
     // Arrange marchers in a hollow box pattern around the edges
-    private void ArrangeHollowBox(List<GameObject> marchers, int rows, int columns, float spacing)
+    private void ArrangeHollowBox(List<GameObject> marchers, int rows, int columns, float spacing, Vector3 center)
     {
         int marcherIndex = 0;
+
+        // Calculate the offset to center the formation
+        float totalWidth = (columns - 1) * spacing;
+        float totalHeight = (rows - 1) * spacing;
+        Vector3 startOffset = center - new Vector3(totalWidth / 2, 0, totalHeight / 2);
+
+        Debug.Log($"Arranging hollow box at center {center}, starting from {startOffset}, with {rows} rows and {columns} columns.");
 
         for (int row = 0; row < rows; row++)
         {
             for (int col = 0; col < columns; col++)
             {
-                // Only place marchers on the outer edges of the box
-                if ((row == 0 || row == rows - 1) || (col == 0 || col == columns - 1))
+                // Only place marchers on the outer edges
+                if (row == 0 || row == rows - 1 || col == 0 || col == columns - 1)
                 {
                     if (marcherIndex >= marchers.Count) return;
 
-                    Vector3 offset = new Vector3(col * spacing, 0, row * spacing);
-                    Vector3 rotatedOffset = Quaternion.Euler(0, 0, 0) * offset;
+                    Vector3 position = startOffset + new Vector3(col * spacing, 0, row * spacing);
+                    position = snapToGrid.GetSnappedPosition(position);
 
-                    Vector3 position = snapToGrid != null ? snapToGrid.GetSnappedPosition(rotatedOffset) : rotatedOffset;
                     Debug.Log($"Positioning Marcher {marcherIndex} at {position} (Row: {row}, Col: {col})");
 
                     marchers[marcherIndex++].transform.position = position;

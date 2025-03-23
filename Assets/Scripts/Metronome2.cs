@@ -27,6 +27,7 @@ public class Metronome2 : MonoBehaviour
     public void UpdateBPM(float bpm)
     {
         beatInterval = 60f / bpm;
+        setText.text = SessionManager.instance.lastSet;
         MarcherController[] marcherControllers = FindObjectsOfType<MarcherController>();
         foreach (var marcherController in marcherControllers)
         {

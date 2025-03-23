@@ -1,12 +1,9 @@
 using UnityEngine;
+using System;
 using System.Collections.Generic;
-
-[ExecuteInEditMode]
 public class SnapToGridLines : MonoBehaviour
 {
-    public FieldGridManager gridManager; // Reference to FieldGridManager for grid data
-    public EnsembleDirector2 director;
-    public MarcherMovement marcherMove;
+    public FieldGridManager gridManager; // Reference to FieldGridManager for field boundaries
     public float snapThreshold = 0.1f; // Threshold for snapping (optional)
 
     // Lists for 8_5 grid positions on X and Z axes
@@ -14,124 +11,88 @@ public class SnapToGridLines : MonoBehaviour
     public List<float> zPositions8_5 = new List<float>();
 
     // Define field boundaries based on the selected field type
-    private Vector2 footballFieldMin = new Vector2(0, 0);
-    private Vector2 footballFieldMax = new Vector2(120, 53);
-
-    private Vector2 winterFieldMin = new Vector2(45, 0);
-    private Vector2 winterFieldMax = new Vector2(75, 20);
-
-    // Adjust based on current field type
     public Vector2 currentFieldMin;
     public Vector2 currentFieldMax;
 
+    public static event Action OnGridReady; // Event to notify when the grid is ready
+
     void Start()
     {
-        gridManager = GetComponent<FieldGridManager>();
-        director = FindObjectOfType<EnsembleDirector2>();
-        marcherMove = FindObjectOfType <MarcherMovement>();
+        //SetFieldBoundaries(gridManager.currentFieldType);
     }
 
+    /// <summary>
+    /// Retrieves and sets field boundaries based on the selected field type from FieldGridManager.
+    /// </summary>
     public void SetFieldBoundaries(FieldGridManager.FieldType fieldType)
     {
         switch (fieldType)
         {
             case FieldGridManager.FieldType.FootballField:
-                currentFieldMin = footballFieldMin;
-                currentFieldMax = footballFieldMax;
+                currentFieldMin = new Vector2(0, 0);
+                currentFieldMax = new Vector2(53, 120);
                 break;
+
             case FieldGridManager.FieldType.WinterFloor:
-                currentFieldMin = winterFieldMin;
-                currentFieldMax = winterFieldMax;
+                currentFieldMin = new Vector2(0, 45);
+                currentFieldMax = new Vector2(20, 75);
+                break;
+
+            default:
+                Debug.LogWarning("SnapToGridLines: Unrecognized field type.");
+                currentFieldMin = Vector2.zero;
+                currentFieldMax = Vector2.zero;
                 break;
         }
+        Debug.Log($"SnapToGridLines: Field boundaries updated: Min {currentFieldMin}, Max {currentFieldMax}");
+        GenerateGridPositions();       
     }
 
-    // Method to get the closest snapped position based on the selected grid type
+
+    /// <summary>
+    /// Snaps a given position to the nearest 8-to-5 grid point while considering field boundaries.
+    /// </summary>
     public Vector3 GetSnappedPosition(Vector3 position)
     {
-        float closestX = FindClosestXPosition(position.x, xPositions8_5);
-        float closestZ = FindClosestZPosition(position.z, zPositions8_5);
+        float closestX = FindClosestPosition(position.x, xPositions8_5);
+        float closestZ = FindClosestPosition(position.z, zPositions8_5);
 
-        // Clamp values to stay within the selected field's boundaries
+        // Clamp snapped values within the current field boundaries
         closestX = Mathf.Clamp(closestX, currentFieldMin.x, currentFieldMax.x);
         closestZ = Mathf.Clamp(closestZ, currentFieldMin.y, currentFieldMax.y);
 
-        // Return the snapped position
         return new Vector3(closestX, 0.76f, closestZ);
     }
 
-    private float FindClosestXPosition(float current, List<float> positions)
-    {
-        if (positions == null || positions.Count == 0)
-        {
-            Debug.LogWarning("No grid positions available for snapping.");
-            return current;
-        }
-
-        float closest = positions[28];
-        float minDistance = Mathf.Abs(current - closest);
-
-        foreach (float pos in positions)
-        {
-            float distance = Mathf.Abs(current - pos);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closest = pos + positions[28];
-            }
-        }
-        return closest;
-    }
-
-    private float FindClosestZPosition(float current, List<float> positions)
-    {
-        if (positions == null || positions.Count == 0)
-        {
-            Debug.LogWarning("No grid positions available for snapping.");
-            return current;
-        }
-
-        float closest = positions[80];
-        Debug.Log("position [80]: " + positions[80] + "current positionz: " + current);
-        float minDistance = Mathf.Abs(current - closest);
-
-        foreach (float pos in positions)
-        {
-            float distance = Mathf.Abs(current - pos);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closest = pos + positions[80];
-            }
-        }
-        return closest;
-    }
-
+    /// <summary>
+    /// Snaps a given gizmo position to the nearest valid grid point.
+    /// </summary>
     public Vector3 GetSnappedGizmoPosition(Vector3 position)
     {
-        // Find the closest X and Z positions from the selected grid lines
-        float closestX = FindClosestXGizmoPosition(position.x, xPositions8_5);
-        float closestZ = FindClosestZGizmoPosition(position.z, zPositions8_5);
+        float closestX = FindClosestPosition(position.x, xPositions8_5);
+        float closestZ = FindClosestPosition(position.z, zPositions8_5);
 
-        // Clamp values to stay within the selected field's boundaries
         closestX = Mathf.Clamp(closestX, currentFieldMin.x, currentFieldMax.x);
         closestZ = Mathf.Clamp(closestZ, currentFieldMin.y, currentFieldMax.y);
 
-        // Return the snapped position
         return new Vector3(closestX, 0.76f, closestZ);
     }
 
-    private float FindClosestXGizmoPosition(float current, List<float> positions)
+    /// <summary>
+    /// Finds the closest grid-aligned position for X or Z values.
+    /// </summary>
+    private float FindClosestPosition(float current, List<float> positions)
     {
         if (positions == null || positions.Count == 0)
         {
-            Debug.LogWarning("No grid positions available for snapping.");
-            return current;
+            Debug.LogWarning("SnapToGridLines: No grid positions available for snapping.");
+            return current; // Return current if no positions exist
         }
 
-        float closest = positions[28];
-        float minDistance = Mathf.Abs(current - closest);
+        float closest = positions[0]; // Start with the first value in the list
+        float minDistance = Mathf.Abs(current - closest); // Initialize min distance
 
+        // Iterate through positions to find the closest one
         foreach (float pos in positions)
         {
             float distance = Mathf.Abs(current - pos);
@@ -141,30 +102,55 @@ public class SnapToGridLines : MonoBehaviour
                 closest = pos;
             }
         }
+
+        Debug.Log($"SnapToGridLines: Snapping {current} to closest grid position {closest}");
         return closest;
     }
 
-    private float FindClosestZGizmoPosition(float current, List<float> positions)
-    {
-        if (positions == null || positions.Count == 0)
-        {
-            Debug.LogWarning("No grid positions available for snapping.");
-            return current;
-        }
 
-        float closest = positions[80];
-        Debug.Log("position [80]: " + positions[80] + "current positionz: " + current);
-        float minDistance = Mathf.Abs(current - closest);
-
-        foreach (float pos in positions)
+    /// <summary>
+    /// Generates 8-to-5 grid positions for X and Z axes if they are not already defined.
+    /// </summary>
+    public void GenerateGridPositions()
+    {        
+        xPositions8_5.Clear();
+        zPositions8_5.Clear();
+        
+        if (xPositions8_5.Count == 0 || zPositions8_5.Count == 0)
         {
-            float distance = Mathf.Abs(current - pos);
-            if (distance < minDistance)
+            Debug.Log("SnapToGridLines: Generating 8-to-5 grid positions...");
+
+
+            float stepSize = 5f / 8f; // Standard 8-to-5 step size
+
+            if (gridManager != null)
             {
-                minDistance = distance;
-                closest = pos;
+                Vector2 fieldMin = currentFieldMin;
+                Vector2 fieldMax = currentFieldMax;
+
+                // Populate X positions (horizontal lines)
+                for (float x = fieldMin.x; x <= fieldMax.x; x += stepSize)
+                {
+                    xPositions8_5.Add(x);
+                }
+
+                // Populate Z positions (vertical lines)
+                for (float z = fieldMin.y; z <= fieldMax.y; z += stepSize)
+                {
+                    zPositions8_5.Add(z);
+                }
             }
+            else
+            {
+                Debug.LogError("SnapToGridLines: GridManager reference is missing, cannot generate grid positions.");
+            }
+
+            Debug.Log($"SnapToGridLines: Generated {xPositions8_5.Count} X positions and {zPositions8_5.Count} Z positions.");
+            OnGridReady?.Invoke(); // Fire event when grid is fully initialized
         }
-        return closest;
     }
+    
 }
+
+
+   // private Vector2 footballFieldMax = new Vector2(120, 53);

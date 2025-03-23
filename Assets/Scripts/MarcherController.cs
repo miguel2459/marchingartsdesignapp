@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using UnityEngine.UI;
+using System.Collections;
 
 public class MarcherController : MonoBehaviour
 {
@@ -16,23 +16,22 @@ public class MarcherController : MonoBehaviour
     public int completedRepeats = 0;
     public float stepDuration; // Duration of each step in seconds
 
-    private MarcherPositionsManager marcherPositionsManager; // Reference to the MarcherPositionsManager script
-    private EnsembleDirector2 director;
+    public MarcherPositionsManager marcherPositionsManager; // Reference to the MarcherPositionsManager script
+    public EnsembleDirector2 director;
 
-    void Start()
+    // Inject director dependency
+    public void InitializeMarcher(EnsembleDirector2 directorReference)
     {
-        // Reference to the MarcherPositionsManager
+        this.director = directorReference;
         marcherPositionsManager = GetComponent<MarcherPositionsManager>();
-        director = FindObjectOfType<EnsembleDirector2>();
-        // Populate the positions array with the positions of setSpheres
         SetStepDuration(director.bpm);
-
-        // Ensure the number of positions doesn't exceed maxRepeats
-        if (positions.Length > maxSets + 1)
+        if (marcherPositionsManager.setSpheres.Length == 0)
         {
-            Debug.LogError("Number of positions exceeds maxRepeats. Adjust maxRepeats to match the number of positions.");
+            Debug.LogError($"{gameObject.name}: setSpheres array is empty.");
             return;
-        }        
+        }
+
+        transform.position = marcherPositionsManager.setSpheres[0].transform.position;
     }
 
     public void SetStepDuration(float bpm)
@@ -40,14 +39,13 @@ public class MarcherController : MonoBehaviour
         stepDuration = 60f / bpm; // Calculate step duration based on the BPM
         stepsPerLine = director.countsPerSet;
         maxSets = director.numberOfSets;
-        FillPositionsArrayWithSetSpheres();
+        //FillPositionsArrayWithSetSpheres();
     }
 
     void FillPositionsArrayWithSetSpheres()
     {
         if (marcherPositionsManager != null)
         {
-            // Initialize the positions array with the size of setSpheres
             positions = new Transform[marcherPositionsManager.setSpheres.Length];
 
             for (int i = 0; i < marcherPositionsManager.setSpheres.Length; i++)
@@ -58,16 +56,31 @@ public class MarcherController : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning($"MarcherController: setSpheres[{i}] is null. Set Position before running Metronome." + gameObject.name);
+                    Debug.LogError($"{gameObject.name}: setSpheres[{i}] is NULL! Cannot set positions.");
                 }
             }
+
+            // Ensure the marcher is placed at the first valid position
+            if (positions.Length > 0 && positions[0] != null)
+            {
+                transform.position = positions[0].position;
+                Debug.Log($"{gameObject.name} snapped to first position at {transform.position}");
+            }
+            else
+            {
+                Debug.LogError($"{gameObject.name}: No valid set positions available.");
+            }
+
+            // Calculate step positions for movement
             CalculateStepPositions();
         }
         else
         {
-            Debug.LogError("MarcherController: MarcherPositionsManager reference is missing.");
+            Debug.LogError($"{gameObject.name}: MarcherPositionsManager reference is missing.");
         }
     }
+
+
 
     public void CalculateStepPositions()
     {
@@ -76,32 +89,23 @@ public class MarcherController : MonoBehaviour
 
         for (int i = 0; i < stepsPerLine; i++)
         {
-            if(positions[currentSet] != null)
+            if (positions.Length > currentSet + 1 && positions[currentSet] != null && positions[currentSet + 1] != null)
             {
-                // Calculate the positions based on the current set (between positions[currentSet] and positions[currentSet + 1])          
-                stepPositions[i] = Vector3.Lerp(positions[currentSet].position, positions[currentSet + 1].position, (float)(i + 1) / stepsPerLine);
-                Debug.Log($"Set {currentSet + 1}, Step {i + 1} Position: {stepPositions[i]}" + gameObject.name); // Log the positions to the console
+                // Calculate positions based on grid-structured positions between sets          
+                stepPositions[i] = Vector3.Lerp(
+                    positions[currentSet].position, 
+                    positions[currentSet + 1].position, 
+                    (float)(i + 1) / stepsPerLine
+                );
+                ///Debug.Log($"{gameObject.name} - Set {currentSet + 1}, Step {i + 1} Position: {stepPositions[i]}");
             }
             else
             {
-                //Debug.LogError(gameObject.name + "There are no set positions yet to calculate the steps");
+                Debug.LogWarning($"{gameObject.name}: Insufficient set positions available for step calculation.");
             }
-
         }
     }
 
-    //void DisplayStepPositions()
-    //{
-    //    if (positionsText != null)
-    //    {
-    //        string positionsString = "Step Positions:\n";
-    //        for (int i = 0; i < stepPositions.Length; i++)
-    //        {
-    //            positionsString += $"Step {i + 1}: {stepPositions[i]}\n";
-    //        }
-    //        positionsText.text = positionsString;
-    //    }
-    //}
 
     public void StartMarching(int cycle)
     {

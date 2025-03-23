@@ -1,5 +1,6 @@
 using System.IO;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Networking;
@@ -32,6 +33,7 @@ public class SessionManager : MonoBehaviour
     public int numberOfProps;
     public string lastModified;
     public string showStatus;
+    public string lastSet;
     public List<string> setsData = new List<string>();
     public List<string> marchersData = new List<string>();
 
@@ -154,12 +156,14 @@ public class SessionManager : MonoBehaviour
                 }
 
                 Debug.Log($"🎭 Total Shows Fetched: {savedShows.Count}");
+                // 🔹 Notify SceneController that session is ready
+                SceneController.instance.OnSessionInitialized();
             }
         }
     }
 
     // 🔹 Save selected show details into session
-    public void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status)
+    public void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status, string setOnExit)
     {
         currentShowID = id;
         showTitle = title;
@@ -171,6 +175,7 @@ public class SessionManager : MonoBehaviour
         numberOfProps = props;
         lastModified = modified;
         showStatus = status;
+        lastSet = setOnExit;
     }
 
     // 🔹 Load API Key from config file
@@ -193,28 +198,79 @@ public class SessionManager : MonoBehaviour
     }
 
     public void ExitShow()
-{
-    Debug.Log("🚪 Exiting Show... Resetting show-specific data.");
+    {
+        Debug.Log("🚪 Exiting Show... Saving changes before exiting...");
+        StartCoroutine(ExitShowCoroutine());
+    }
 
-    // 🔹 Reset only show-related data, keeping user session intact
-    selectedShow = null;
-    currentShowID = string.Empty;
-    showTitle = string.Empty;
-    groupName = string.Empty;
-    createdBy = string.Empty;
-    fieldType = string.Empty;
-    productionYear = string.Empty;
-    numberOfMarchers = 0;
-    numberOfSets = 0;
-    numberOfProps = 0;
-    lastModified = string.Empty;
-    showStatus = string.Empty;
+    private IEnumerator ExitShowCoroutine()
+    {
+        yield return StartCoroutine(UpdateShowSheetDetails());
+        FinalizeExit();
+    }
 
-    Debug.Log("✅ Show session cleared. Returning to Show Selection.");
+    public void SaveShow()
+    {
+        StartCoroutine(UpdateShowSheetDetails());
+    }
 
-    // 🔹 Return to Show Selection Scene
-    SceneController.instance.SwitchScene(3);
-}
+    // 🔹 Updates Show Details on Google Sheets before clearing the session
+    private IEnumerator UpdateShowSheetDetails()
+    {
+        Debug.Log($"📡 Updating Show Details for {showTitle} ({currentShowID})");
+
+        string url = backendURL;
+
+        WWWForm form = new WWWForm();
+        form.AddField("action", "UpdateShowDetails");
+        form.AddField("numberOfMarchers", numberOfMarchers);
+        form.AddField("numberOfSets", numberOfSets);
+        form.AddField("numberOfProps", numberOfProps);
+        form.AddField("lastModified", System.DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+        form.AddField("lastSet", lastSet);
+        form.AddField("showSheetId", selectedShow.showSheetID); // The user's Google Sheets ID
+
+        using (UnityWebRequest www = UnityWebRequest.Post(url, form))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log($"✅ Show Details updated successfully for {showTitle}.");
+            }
+            else
+            {
+                Debug.LogError($"❌ Error updating Show Details: {www.error}");
+            }
+        }
+    }
+
+    // 🔹 Clears session data and switches scenes
+    private void FinalizeExit()
+    {
+        Debug.Log("🧹 Finalizing Exit: Clearing Show Data...");
+
+        // 🔹 Reset only show-related data, keeping user session intact
+        selectedShow = null;
+        currentShowID = string.Empty;
+        showTitle = string.Empty;
+        groupName = string.Empty;
+        createdBy = string.Empty;
+        fieldType = string.Empty;
+        productionYear = string.Empty;
+        numberOfMarchers = 0;
+        numberOfSets = 0;
+        numberOfProps = 0;
+        lastModified = string.Empty;
+        showStatus = string.Empty;
+        lastSet = string.Empty;
+
+        Debug.Log("✅ Show session cleared. Returning to Show Selection.");
+
+        // 🔹 Return to Show Selection Scene
+        SceneController.instance.SwitchScene(3);
+    }
+
 
 
     public void AutoLogin()
@@ -280,6 +336,41 @@ public class SessionManager : MonoBehaviour
 
         // 🔹 Return to login screen
         SceneController.instance.SwitchScene(1);
+    }
+
+    public IEnumerator NewShowTemplateToGoogleDrive(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status, string setOnExit)
+    {
+        string url = backendURL;
+        WWWForm form = new WWWForm();
+        form.AddField("action", "NewShow");
+        form.AddField("showID", id);
+        form.AddField("showTitle", title);
+        form.AddField("groupName", group);
+        form.AddField("email", userEmail);
+        form.AddField("fieldType", field);
+        form.AddField("productionYear", year);
+        form.AddField("numberOfMarchers", marchers);
+        form.AddField("numberOfSets", sets);
+        form.AddField("numberOfProps", props);
+        form.AddField("lastModified", modified);
+        form.AddField("showStatus", status);
+        form.AddField("userFolderId", userFolderId);
+        form.AddField("accountSheetId", accountSheetID);
+        form.AddField("lastSet", setOnExit);
+
+        using (UnityWebRequest www = UnityWebRequest.Post(url, form))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log("Google Sheet copied successfully.");
+            }
+            else
+            {
+                Debug.LogError("Error copying Google Sheet: " + www.error);
+            }
+        }
     }
 
 

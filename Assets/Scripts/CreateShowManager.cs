@@ -1,10 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEngine.Networking;
 
 public class CreateShowManager : MonoBehaviour
 {
@@ -56,7 +55,8 @@ public class CreateShowManager : MonoBehaviour
         if (ValidateInputFields())
         {
             // Generate unique show ID
-            showID = System.Guid.NewGuid().ToString();
+            showID = "SH" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
 
             // Get current timestamp for last modified
             lastModified = System.DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss");
@@ -68,12 +68,14 @@ public class CreateShowManager : MonoBehaviour
             int numMarchers = int.Parse(inputNumMarchers.text);
             int numSets = int.Parse(inputNumSets.text);
             int numProps = int.Parse(inputNumProps.text);
+            string setOnExit = "1";
+
 
             // Save Show Data Locally in SessionManager
-            SessionManager.instance.SaveToSessionManager(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus);
+            SessionManager.instance.SaveToSessionManager(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus, setOnExit);
 
             // Copy the Marching Show Template Google Sheet
-            StartCoroutine(CopyShowTemplateToGoogleDrive(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus));
+            StartCoroutine(SessionManager.instance.NewShowTemplateToGoogleDrive(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus, setOnExit));
 
             // Populate Set and Marcher IDs
             SaveSetsData(numSets);
@@ -94,40 +96,6 @@ public class CreateShowManager : MonoBehaviour
                  string.IsNullOrWhiteSpace(inputNumMarchers.text) ||
                  string.IsNullOrWhiteSpace(inputNumSets.text) ||
                  string.IsNullOrWhiteSpace(inputNumProps.text));
-    }
-
-    private IEnumerator CopyShowTemplateToGoogleDrive(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status)
-    {
-        string url = SessionManager.backendURL;
-        WWWForm form = new WWWForm();
-        form.AddField("action", "copyTemplate");
-        form.AddField("showID", id);
-        form.AddField("showTitle", title);
-        form.AddField("groupName", group);
-        form.AddField("email", SessionManager.instance.userEmail);
-        form.AddField("fieldType", field);
-        form.AddField("productionYear", year);
-        form.AddField("numberOfMarchers", marchers);
-        form.AddField("numberOfSets", sets);
-        form.AddField("numberOfProps", props);
-        form.AddField("lastModified", modified);
-        form.AddField("showStatus", status);
-        form.AddField("userFolderId", SessionManager.instance.userFolderId);
-        form.AddField("accountSheetId", SessionManager.instance.accountSheetID);
-
-        using (UnityWebRequest www = UnityWebRequest.Post(url, form))
-        {
-            yield return www.SendWebRequest();
-
-            if (www.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log("Google Sheet copied successfully.");
-            }
-            else
-            {
-                Debug.LogError("Error copying Google Sheet: " + www.error);
-            }
-        }
     }
 
     private void SaveSetsData(int numSets)
