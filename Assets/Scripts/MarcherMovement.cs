@@ -11,7 +11,7 @@ public class MarcherMovement : MonoBehaviour
 
     public GameObject transformGizmo;
     public bool isMoving = false;
-    private Camera cam;
+    public Camera cam;
     private Vector3 offset;
     private Plane movePlane; // Plane on which the marchers will move
 
@@ -22,7 +22,6 @@ public class MarcherMovement : MonoBehaviour
 
     void Start()
     {
-        cam = Camera.main;
         marcherSelector = GetComponent<SelectedMarchers>();
         snapToGrid = FindObjectOfType<SnapToGridLines>(); // Assuming SnapToGridWithLines is on the same GameObject
     }

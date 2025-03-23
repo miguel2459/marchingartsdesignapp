@@ -13,8 +13,6 @@ public class Metronome2 : MonoBehaviour
     private AudioSource audioSource;
     private int cycleCount = 0;
     private bool isRunning = false; // Set initial state to false
-    private MarcherController[] marchers;
-
     public EnsembleDirector2 director;
 
     void Start()
@@ -28,11 +26,6 @@ public class Metronome2 : MonoBehaviour
     {
         beatInterval = 60f / bpm;
         setText.text = SessionManager.instance.lastSet;
-        MarcherController[] marcherControllers = FindObjectsOfType<MarcherController>();
-        foreach (var marcherController in marcherControllers)
-        {
-            marcherController.SetStepDuration(bpm);
-        }
     }
 
     public void StartMetronome()

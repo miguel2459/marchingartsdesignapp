@@ -31,7 +31,7 @@ public class MarcherController : MonoBehaviour
             return;
         }
 
-        transform.position = marcherPositionsManager.setSpheres[0].transform.position;
+        //transform.position = marcherPositionsManager.setSpheres[0].transform.position;
     }
 
     public void SetStepDuration(float bpm)
@@ -79,8 +79,6 @@ public class MarcherController : MonoBehaviour
             Debug.LogError($"{gameObject.name}: MarcherPositionsManager reference is missing.");
         }
     }
-
-
 
     public void CalculateStepPositions()
     {

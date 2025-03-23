@@ -11,6 +11,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
     public MarcherMovement moveMarcher;
     private Vector2 startMousePos;
     private Vector2 endMousePos;
+    public Camera cam;
     void Start(){
         director = GetComponent<EnsembleDirector2>();
         selectMarcher = GetComponent<SelectedMarchers>();
@@ -119,7 +120,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
         foreach (MarcherPositionsManager marcher in director.marchers)
         {
             // Check if the marcher is within the selection rectangle
-            if (selectionRect.Contains(Camera.main.WorldToScreenPoint(marcher.gameObject.transform.position)))
+            if (selectionRect.Contains(cam.WorldToScreenPoint(marcher.gameObject.transform.position)))
             {
                 // If the marcher is already selected and we're doing additive selection, skip it
                 if (isAdditive && selectMarcher.selectedMarchers.Contains(marcher.gameObject))
@@ -142,7 +143,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
         // If the marcher is within the selection rectangle, deselect it
         foreach (MarcherPositionsManager marcher in director.marchers)
         {
-            Vector3 marcherScreenPos = Camera.main.WorldToScreenPoint(marcher.gameObject.transform.position);
+            Vector3 marcherScreenPos = cam.WorldToScreenPoint(marcher.gameObject.transform.position);
             if (selectionRect.Contains(marcherScreenPos))
             {
                 selectMarcher.DeselectMarcher(marcher.gameObject);
