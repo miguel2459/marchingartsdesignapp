@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Collections;
 
 [ExecuteInEditMode]
 public class EnsembleDirector2 : MonoBehaviour
@@ -8,9 +9,11 @@ public class EnsembleDirector2 : MonoBehaviour
     [Header("Marcher Settings")]
     public int numberOfMarchers;
     public int numberOfSets;
+    public int lastSet;
     public int countsPerSet;
     public float bpm;
     public float interval;
+    public Vector3 fieldCenter;
 
     [Header("Prefabs")]
     public GameObject marcherPrefab;
@@ -31,20 +34,35 @@ public class EnsembleDirector2 : MonoBehaviour
     public ShapeGroup shapeGroup;
     public ShapeUIManager shapeUI;
     public IntervalManager intervalManager;
+    public FieldGridManager fieldManager;
 
     public List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>();
 
     void Start()
     {
+        SnapToGridLines.OnGridReady += OnGridReadyHandler; 
+        if (SessionManager.instance != null) OnSessionReady();
+    }
+
+    void OnSessionReady()
+    {
         InitializeSession();
         InitializeUI();
+        ApplyUpdates();
         setBar.OnTotalSetsChanged(numberOfSets);
         shapeMarchers.InitializeShapeManagers(marcherPrefab, positionSpherePrefab, interval);
+        fieldCenter = fieldManager.GetFieldCenter();
+    }
+
+    void OnGridReadyHandler()
+    {
+        PopulateMarchers();
     }
 
     private void InitializeSession(){
         numberOfMarchers = SessionManager.instance.numberOfMarchers;
         numberOfSets = SessionManager.instance.numberOfSets;
+        lastSet = int.Parse(SessionManager.instance.lastSet);
     }
 
     private void InitializeUI()
@@ -64,25 +82,34 @@ public class EnsembleDirector2 : MonoBehaviour
         bpm = Mathf.Clamp(float.Parse(bpmInputField.text), 20f, 300f);
         interval = Mathf.Clamp(float.Parse(intervalField.text), 1f, 4f);
 
+        SessionManager.instance.numberOfMarchers = numberOfMarchers;
+        SessionManager.instance.numberOfSets = numberOfSets;
+
         setBar.OnTotalSetsChanged(numberOfSets);
-        PopulateMarchers();
         metronome.UpdateBPM(bpm);
 
         Debug.Log($"Updated: Marchers = {numberOfMarchers}, Sets = {numberOfSets}, Counts = {countsPerSet}, BPM = {bpm}");
     }
 
+
     public void PopulateMarchers()
     {
+        SnapToGridLines.OnGridReady -= PopulateMarchers; // Unsubscribe to prevent multiple calls
+        // Retrieve the current list of marchers already present in the scene.
         marchers = new List<MarcherPositionsManager>(GetComponentsInChildren<MarcherPositionsManager>());
         int currentMarcherCount = marchers.Count;
 
+        // Adjust the marcher count to match the user-specified number.
         if (currentMarcherCount < numberOfMarchers)
             AddMarchers(currentMarcherCount);
         else if (currentMarcherCount > numberOfMarchers)
             RemoveExcessMarchers(currentMarcherCount);
 
+        // Ensure each marcher has the correct number of set positions.
         UpdateMarcherSets();
-        UpdateShapeMarchers();
+
+        // Arrange the newly created marchers in a square formation at the center of the field.
+        ArrangeMarchersInSquare();
     }
 
     private void AddMarchers(int currentCount)
@@ -100,7 +127,25 @@ public class EnsembleDirector2 : MonoBehaviour
         }
     }
 
-    private void UpdateShapeMarchers()
+    private void CreateMarcher(int index, Color color, int sets)
+    {
+        //determine position
+        //Vector3 position = fieldCenter + new Vector3(col * spacing, 0, row * spacing);
+        Vector3 position = Vector3.zero;
+
+        GameObject marcherObject = Instantiate(marcherPrefab, position, Quaternion.identity, transform);
+        marcherObject.name = $"Marcher{index + 1}";
+
+        MarcherPositionsManager marcher = marcherObject.GetComponent<MarcherPositionsManager>();
+        MarcherController marcherController = marcherObject.GetComponent<MarcherController>();
+        
+        marcher.InitializeSets(sets, countsPerSet, color, positionSpherePrefab); 
+        marcherController.InitializeMarcher(this);
+        marchers.Add(marcher); 
+    }
+
+
+    private void ArrangeMarchersInSquare()
     {
         if (shapeMarchers == null)
         {
@@ -108,31 +153,25 @@ public class EnsembleDirector2 : MonoBehaviour
             return;
         }
 
-        shapeGroup.marchers = new List<GameObject>(marchers.Count);
+        // Convert the list of marcher components into a list of GameObjects.
+        List<GameObject> marcherObjects = new List<GameObject>();
         foreach (var marcher in marchers)
-            shapeGroup.marchers.Add(marcher.gameObject);
+        {
+            marcherObjects.Add(marcher.gameObject);
+        }
 
+        // Utilize ShapeMarchers to position marchers in a square.
         shapeMarchers.ArrangeFormation(
-            shapeUI.GetCurrentShape(),
-            intervalManager.GetIntervalType(interval),
-            shapeGroup.marchers
+            ShapeMarchers.ShapeType.Box,  // Use a Box formation to create a square shape.
+            intervalManager.GetIntervalType(interval),  // Set spacing based on the interval manager.
+            marcherObjects  // List of all marcher GameObjects.
         );
     }
 
-    private void CreateMarcher(int index, Color color, int sets)
-    {
-        GameObject marcherObject = Instantiate(marcherPrefab, Vector3.zero, Quaternion.identity, transform);
-        marcherObject.name = $"Marcher{index + 1}";
-
-        MarcherPositionsManager marcher = marcherObject.GetComponent<MarcherPositionsManager>();
-        marcher.Initialize(sets, countsPerSet, color, positionSpherePrefab);
-
-        for (int i = 1; i < sets; i++)
-            marcher.PositionSpheres[i].name = $"{marcherObject.name} - Position {i + 1}";
-
-        marchers.Add(marcher);
-    }
-
+    /// <summary>
+    /// Updates each marcher to ensure they have the correct number of sets.
+    /// Adds or removes position spheres as necessary.
+    /// </summary>
     private void UpdateMarcherSets()
     {
         foreach (var marcher in marchers)
@@ -142,24 +181,47 @@ public class EnsembleDirector2 : MonoBehaviour
             Color sphereColor = GetMarcherColor(marcher);
 
             if (difference > 0)
+            {
+                // If more sets are needed, add position spheres.
                 for (int i = currentSets; i < numberOfSets; i++)
+                {
                     marcher.AddPositionSphere(i, positionSpherePrefab, sphereColor);
+                }
+            }
             else if (difference < 0)
+            {
+                // If fewer sets are needed, remove extra position spheres.
                 for (int i = currentSets - 1; i >= numberOfSets; i--)
+                {
                     marcher.RemovePositionSphere(i);
+                }
+            }
         }
     }
 
+    /// <summary>
+    /// Determines the color of the marcher by checking its existing spheres.
+    /// </summary>
+    /// <param name="marcher">The marcher whose color is being determined.</param>
+    /// <returns>The color of the marcher.</returns>
     private Color GetMarcherColor(MarcherPositionsManager marcher)
     {
         foreach (var sphere in marcher.PositionSpheres)
+        {
             if (sphere?.GetComponent<Renderer>() is Renderer renderer)
+            {
                 return renderer.sharedMaterial.color;
+            }
+        }
 
         foreach (var sphere in marcher.setSpheres)
+        {
             if (sphere?.GetComponent<Renderer>() is Renderer renderer)
+            {
                 return renderer.sharedMaterial.color;
+            }
+        }
 
-        return Color.white;
+        return Color.white; // Default to white if no color is found.
     }
 }

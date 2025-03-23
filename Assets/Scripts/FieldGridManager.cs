@@ -8,7 +8,7 @@ public class FieldGridManager : MonoBehaviour
     public enum StepSize { Freeform, SixteenSteps, TwelveSteps, EightSteps, SixSteps, FiveSteps, FourSteps, ThreeAndHalfSteps }
 
     [Header("Field Settings")]
-    public FieldType currentFieldType = FieldType.FootballField;
+    public FieldType currentFieldType;
     public StepSize currentStepSize = StepSize.Freeform;
     public float yardLength = 5f;
     public int footballFieldWidthInYards = 53;
@@ -38,13 +38,17 @@ public class FieldGridManager : MonoBehaviour
 
     private FieldType GetFieldTypeFromSession()
     {
-        return SessionManager.instance.fieldType switch
+        string sessionType = SessionManager.instance.fieldType;
+        Debug.Log($"FieldGridManager: Received field type from session: {sessionType}");
+
+        return sessionType switch
         {
             "Football Field" => FieldType.FootballField,
             "Winter Floor" => FieldType.WinterFloor,
-            _ => FieldType.FootballField
+            _ => throw new System.Exception($"Could not determine field type from session. Received: {sessionType}")
         };
     }
+
 
     public void SetFieldType(FieldType fieldType)
     {
@@ -57,6 +61,25 @@ public class FieldGridManager : MonoBehaviour
         winterGrid.SetActive(!isFootball);
 
         snapToGrid?.SetFieldBoundaries(fieldType);
+    }
+
+    public Vector3 GetFieldCenter()
+    {
+        if (currentFieldType == FieldGridManager.FieldType.FootballField)
+        {
+            // Define the center of the football field
+            return new Vector3(26.25f, 0.8f, 60);
+        }
+        else if (currentFieldType == FieldGridManager.FieldType.WinterFloor)
+        {
+            // Define the center of the winter floor
+            return new Vector3(8, 0.8f, 60); // Adjust based on winter floor dimensions
+        }
+        else
+        {
+            Debug.LogWarning("FieldType is unrecognized. Defaulting to (0,0,0).");
+            return Vector3.zero;
+        }
     }
 
     public void SetStepSize(StepSize stepSize)

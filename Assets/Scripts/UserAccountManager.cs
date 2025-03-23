@@ -32,7 +32,10 @@ public class UserAccountManager : MonoBehaviour
     {
         // 🔹 Ensure UI elements exist before assigning listeners
         if (showSelectionButton != null)
+        {
             showSelectionButton.onClick.AddListener(GoToShowSelection);
+            showSelectionButton.enabled = true;
+        }
 
         if (logoutButton != null)
             logoutButton.onClick.AddListener(LogoutUser);
@@ -42,14 +45,13 @@ public class UserAccountManager : MonoBehaviour
 
         if (userNameText != null)
             userNameText.text = SessionManager.instance.userName;
-        else
-            Debug.LogWarning("⚠ UserName Text UI is not assigned.");
     }
 
     private void GoToShowSelection()
     {
-        SessionManager.instance.ExitShow();
-        SceneController.instance.SwitchScene(3);
+        showSelectionButton.enabled = false;
+        SessionManager.instance.SaveShow();
+        //SceneController.instance.SwitchScene(3);
     }
 
     private void LogoutUser()

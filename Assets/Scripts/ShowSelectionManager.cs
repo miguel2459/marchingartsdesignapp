@@ -63,20 +63,19 @@ public class ShowSelectionManager : MonoBehaviour
 
     private void OnShowSelected(SessionManager.ShowData show)
     {
-        Debug.Log($"Selected Show: {show.showTitle} - Field Type: {SessionManager.instance.fieldType}");
+        Debug.Log($"Selected Show: {show.showTitle}");
         
         // Store selected show data in a static variable or SessionManager
-        SessionManager.instance.selectedShow = show;
-        // Fetch additional show details from API and update SessionManager
-        StartCoroutine(FetchShowDetails(show.showSheetID));
-
-        // Switch to Show Manager Scene
-        SceneController.instance.SwitchScene(4); // Assuming SHOW_MANAGER_SCENE = 4
+        if (!SceneController.instance.IsSceneCurrentlyLoading(4)) // Prevent duplicate loads
+        {
+            SessionManager.instance.selectedShow = show;
+            StartCoroutine(FetchShowDetails(show.showSheetID));
+        }
     }
 
     private IEnumerator FetchShowDetails(string sheetID)
     {
-        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B11?key={SessionManager.instance.apiKey}";
+        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B12?key={SessionManager.instance.apiKey}";
         Debug.Log($"🔗 Fetching show details from: {url}");
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
@@ -97,23 +96,24 @@ public class ShowSelectionManager : MonoBehaviour
                 Debug.Log($"📥 Show Details Fetched: {showDataResponse.ToString()}");
 
                 // Convert JSONNode values to strings before trimming
-                string showID = showDataResponse["values"][0][0].Value.Trim();       // B2
-                string title = showDataResponse["values"][1][0].Value.Trim();        // B3
-                string group = showDataResponse["values"][2][0].Value.Trim();        // B4
-                string fieldType = showDataResponse["values"][4][0].Value.Trim();    // B6
-                string year = showDataResponse["values"][5][0].Value.Trim();         // B7
+                string showID = showDataResponse["values"][0][0].Value.Trim();       // B1
+                string title = showDataResponse["values"][1][0].Value.Trim();        // B2
+                string group = showDataResponse["values"][2][0].Value.Trim();        // B3
+                string fieldType = showDataResponse["values"][4][0].Value.Trim();    // B5
+                string year = showDataResponse["values"][5][0].Value.Trim();         // B6
                 
                 // Safely parse integer values
-                int marchers = TryParseInt(showDataResponse["values"][6][0].Value); // B8
-                int sets = TryParseInt(showDataResponse["values"][7][0].Value);     // B9
-                int props = TryParseInt(showDataResponse["values"][8][0].Value);    // B10
+                int marchers = TryParseInt(showDataResponse["values"][6][0].Value); // B7
+                int sets = TryParseInt(showDataResponse["values"][7][0].Value);     // B8
+                int props = TryParseInt(showDataResponse["values"][8][0].Value);    // B9
                 
-                string modified = showDataResponse["values"][9][0].Value.Trim();         // B11
-                string status = showDataResponse["values"][10][0].Value.Trim();          // B12
+                string modified = showDataResponse["values"][9][0].Value.Trim();         // B10
+                string status = showDataResponse["values"][10][0].Value.Trim();          // B11
+                string setOnExit = showDataResponse ["values"][11][0].Value.Trim();      // B12
 
                 // Save to SessionManager
                 SessionManager.instance.SaveToSessionManager(
-                    showID, title, group, fieldType, year, marchers, sets, props, modified, status
+                    showID, title, group, fieldType, year, marchers, sets, props, modified, status, setOnExit
                 );
 
                 // Switch to Show Manager Scene after data is loaded

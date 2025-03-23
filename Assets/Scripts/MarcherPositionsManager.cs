@@ -7,53 +7,51 @@ public class MarcherPositionsManager : MonoBehaviour
     public GameObject[] PositionSpheres; // Public property to access the position spheres
     public GameObject[] setSpheres;
     public Vector3[] positions; // The positions for each set
-    public bool[] isSet; // Array to track if each position sphere has been set
-    public bool[] responsibilities; // Array to hold the responsibilities for each set (true = travel, false = hold)
 
     public Dictionary<GameObject, Color> sphereOriginalColors = new Dictionary<GameObject, Color>(); // Store original colors of spheres
 
     private int totalSets;
     private int currentSet;
 
-    public void Initialize(int sets, int counts, Color color, GameObject spherePrefab)
+    public void InitializeSets(int sets, int counts, Color color, GameObject spherePrefab)
     {
         totalSets = sets;
         positions = new Vector3[sets];
         PositionSpheres = new GameObject[sets];
-        setSpheres = new GameObject[sets];
-        isSet = new bool[sets]; // Initialize the isSet array
-        responsibilities = new bool[sets]; // Initialize the responsibilities array
+        setSpheres = new GameObject[sets]; // Make sure setSpheres[] is initialized properly
 
-        // Create position spheres and set their color
         for (int i = 0; i < sets; i++)
         {
             AddPositionSphere(i, spherePrefab, color);
-            responsibilities[i] = true; // Default to travel (you can set this based on your needs)
-            isSet[i] = false; // Initially, no sphere is set
         }
 
-        // Set the marcher's position to the first position
-        //transform.position = positions[0];
-        currentSet = 0;
+        // Ensure setSpheres are properly assigned from PositionSpheres
+        for (int i = 0; i < sets; i++)
+        {
+            setSpheres[i] = PositionSpheres[i];
+            if (setSpheres[i] == null)
+            {
+                Debug.LogError($"{gameObject.name}: setSpheres[{i}] is NULL after initialization!");
+            }
+        }
+
+        Debug.Log($"{gameObject.name}: Initialized with {sets} sets.");
     }
+
 
     public void AddPositionSphere(int index, GameObject spherePrefab, Color color)
     {
-        Debug.Log("inside Add PositionShpere_MarcherPositionManager");
+        //Debug.Log("inside Add PositionShpere_MarcherPositionManager");
         // Resize the positions and PositionSpheres arrays to accommodate the new sphere
         Array.Resize(ref positions, positions.Length + 1);
         Array.Resize(ref PositionSpheres, PositionSpheres.Length + 1);
         Array.Resize(ref setSpheres, setSpheres.Length + 1);
-        Array.Resize(ref isSet, isSet.Length + 1);
-        Array.Resize(ref responsibilities, responsibilities.Length + 1);
 
         // Shift the existing elements up in the arrays to make space for the new sphere at the specified index
         for (int i = positions.Length - 1; i > index; i--)
         {
             positions[i] = positions[i - 1];
             PositionSpheres[i] = PositionSpheres[i - 1];
-            isSet[i] = isSet[i - 1]; // Shift isSet values as well
-            responsibilities[i] = responsibilities[i - 1]; // Shift responsibility values as wellif (PositionSpheres[i] != null)
 
             if (PositionSpheres[i] != null)
             {
@@ -76,8 +74,6 @@ public class MarcherPositionsManager : MonoBehaviour
         // Store the new sphere's position and add it to the arrays
         positions[index] = sphere.transform.localPosition;
         PositionSpheres[index] = sphere;
-        isSet[index] = false; // New sphere is not set by default
-        responsibilities[index] = true; // Default to travel for new set (you can change this as needed)// Set the name of the new sphere
 
         // Set the name of the new sphere
         sphere.name = $"{transform.name} - Position {index + 1}";
@@ -99,8 +95,6 @@ public class MarcherPositionsManager : MonoBehaviour
                 positions[i] = positions[i + 1];
                 PositionSpheres[i] = PositionSpheres[i + 1];
                 setSpheres[i] = setSpheres[i + 1];
-                isSet[i] = isSet[i + 1]; // Shift isSet values as well
-                responsibilities[i] = responsibilities[i + 1]; // Shift responsibility values as well// Update the name of the shifted spheres to reflect their new indexif (PositionSpheres[i] != null)
 
                 // Update the name of the shifted spheres to reflect their new index
                 if (PositionSpheres[i] != null)
@@ -113,8 +107,6 @@ public class MarcherPositionsManager : MonoBehaviour
             Array.Resize(ref positions, positions.Length - 1);
             Array.Resize(ref PositionSpheres, PositionSpheres.Length - 1);
             Array.Resize(ref setSpheres, setSpheres.Length - 1);
-            Array.Resize(ref isSet, isSet.Length - 1);
-            Array.Resize(ref responsibilities, responsibilities.Length - 1);
         }
     }
 
@@ -156,9 +148,6 @@ public class MarcherPositionsManager : MonoBehaviour
                     Debug.LogWarning("Set Positions Manager not found in the scene. Creating setPositionsParent as a root object.");
                 }
 
-                // Mark the sphere as set
-                isSet[i] = true;
-
                 // Move the current position sphere to the corresponding index in the setSpheres array
                 setSpheres[i] = PositionSpheres[i];
                 setSpheres[i].gameObject.SetActive(true);
@@ -173,8 +162,6 @@ public class MarcherPositionsManager : MonoBehaviour
 
                 // Clear the current element in the PositionSpheres array and reset associated values
                 PositionSpheres[i] = null;
-                //positions[i] = Vector3.zero;
-                //responsibilities[i] = false;
 
                 Debug.Log($"{gameObject.name}: PositionSphere at index {i} set and moved to setSpheres array.");
                 break;
@@ -236,49 +223,9 @@ public class MarcherPositionsManager : MonoBehaviour
             positions[index] = sphere.transform.localPosition;
             PositionSpheres[index] = sphere;  // Reset position sphere reference
             setSpheres[index] = null;         // Clear the set sphere since it's reset
-            isSet[index] = false;             // Mark as not set
-
             sphere.gameObject.SetActive(false);
 
             Debug.Log($"{marcherTransform.name}: Set sphere {index + 1} reset to its original position and parented back.");
-
-            // Ensure the lowest position sphere is at PositionSpheres[0]
-            //EnsureLowestPositionFirst(position, sphere);
         }
     }
-
-    // Function to ensure the lowest position sphere is always in PositionSpheres[0]
-    private void EnsureLowestPositionFirst(int position, GameObject sphere)
-    {
-        // Loop through the PositionSpheres array to compare positions
-        for (int i = 0; i < PositionSpheres.Length; i++)
-        {
-            if (PositionSpheres[i] != null)
-            {
-                // Extract the position from the sphere's name
-                string sphereName = PositionSpheres[i].name;
-                string[] nameParts = sphereName.Split('-');
-                if (nameParts.Length > 1)
-                {
-                    string positionPart = nameParts[1].Trim(); // e.g., "Position 1"
-                    string[] positionParts = positionPart.Split(' ');
-
-                    if (positionParts.Length > 1 && int.TryParse(positionParts[1], out int currentPos))
-                    {
-                        // If the new position is lower than the current position at PositionSpheres[0], swap them
-                        if (position < currentPos)
-                        {
-                            // Swap the current position sphere with the sphere at index 0
-                            GameObject temp = PositionSpheres[0];
-                            PositionSpheres[0] = PositionSpheres[i];
-                            PositionSpheres[i] = temp;
-
-                            Debug.Log($"Swapped sphere positions: {PositionSpheres[0].name} is now at index 0.");
-                        }
-                    }
-                }
-            }
-        }
-    }
-
 }

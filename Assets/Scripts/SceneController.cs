@@ -5,8 +5,10 @@ using UnityEngine.SceneManagement;
 public class SceneController : MonoBehaviour
 {
     public static SceneController instance;
+    private bool isSessionInitialized = false;
+    private bool isSceneLoading = false; // Prevent duplicate scene loading
 
-    // Scene build indices for clarity
+    // Scene build indices
     private const int MAIN_SCENE = 0;
     private const int STARTUP_SCENE = 1;
     private const int LOGIN_SCENE = 2;
@@ -35,28 +37,51 @@ public class SceneController : MonoBehaviour
     {
         if (PlayerPrefs.GetInt("IsLoggedIn", 0) == 1)
         {
-            SessionManager.instance.AutoLogin();
-
-            Debug.Log($"🔄 Resuming session, loading Show Selection Scene");
-            int sceneToLoad = 3;            
-            SwitchScene(sceneToLoad);
+            StartCoroutine(WaitForSessionInitialization());
         }
         else
         {
-            if (!IsSceneCurrentlyLoaded(STARTUP_SCENE))
+            if (!IsSceneCurrentlyLoaded(STARTUP_SCENE) && !isSceneLoading)
             {
                 LoadSceneAdditive(STARTUP_SCENE);
             }
         }
     }
 
-    public void LoadSceneAdditive(int sceneIndex)
+    private IEnumerator WaitForSessionInitialization()
     {
-        if (!SceneExists(sceneIndex) || IsSceneCurrentlyLoaded(sceneIndex)) return;
-        SceneManager.LoadScene(sceneIndex, LoadSceneMode.Additive);
+        SessionManager.instance.AutoLogin();
+        Debug.Log("⏳ Waiting for SessionManager to initialize...");
+
+        while (!isSessionInitialized)
+        {
+            yield return null;
+        }
+
+        Debug.Log("✅ SessionManager initialized. Loading Show Selection Scene...");
+        SwitchScene(SHOW_SELECTION_SCENE);
     }
 
-    private bool IsSceneCurrentlyLoaded(int sceneIndex)
+    public void OnSessionInitialized()
+    {
+        isSessionInitialized = true;
+    }
+
+    public void LoadSceneAdditive(int sceneIndex)
+    {
+        if (!SceneExists(sceneIndex) || IsSceneCurrentlyLoaded(sceneIndex) || isSceneLoading) return;
+        StartCoroutine(LoadSceneRoutine(sceneIndex));
+    }
+
+    private IEnumerator LoadSceneRoutine(int sceneIndex)
+    {
+        isSceneLoading = true;
+        yield return SceneManager.LoadSceneAsync(sceneIndex, LoadSceneMode.Additive);
+        isSceneLoading = false;
+        Debug.Log($"✅ Scene {sceneIndex} loaded additively.");
+    }
+
+    public bool IsSceneCurrentlyLoaded(int sceneIndex)
     {
         for (int i = 0; i < SceneManager.sceneCount; i++)
         {
@@ -68,42 +93,48 @@ public class SceneController : MonoBehaviour
         return false;
     }
 
-    public void UnloadScene(int sceneIndex)
+    public bool IsSceneCurrentlyLoading(int sceneIndex)
     {
-        if (!SceneExists(sceneIndex) || !IsSceneCurrentlyLoaded(sceneIndex)) return;
-        SceneManager.UnloadSceneAsync(sceneIndex);
+        return isSceneLoading && sceneIndex == SHOW_SELECTION_SCENE; // Ensure only the requested scene is checked
     }
+
 
     public void SwitchScene(int newSceneIndex)
     {
-        if (!SceneExists(newSceneIndex) || IsSceneCurrentlyLoaded(newSceneIndex)) return;
+        if (!SceneExists(newSceneIndex) || IsSceneCurrentlyLoaded(newSceneIndex) || isSceneLoading)
+        {
+            Debug.Log($"⚠ Scene {newSceneIndex} is already loaded or is in the process of loading. Skipping duplicate load.");
+            return;
+        }
+
         StartCoroutine(SwitchSceneRoutine(newSceneIndex));
     }
 
     private IEnumerator SwitchSceneRoutine(int newSceneIndex)
     {
         Debug.Log($"🔄 Switching to Scene: {newSceneIndex}");
+        isSceneLoading = true;
 
-        // Optional: Implement fade-out UI effect here
-        yield return new WaitForSeconds(1f);
+        yield return UnloadAllScenesExceptMain();
 
-        // Unload all scenes except MAIN_SCENE
-        for (int i = 0; i < SceneManager.sceneCount; i++)
+        yield return SceneManager.LoadSceneAsync(newSceneIndex, LoadSceneMode.Additive);
+
+        isSceneLoading = false;
+        Debug.Log($"✅ Successfully switched to Scene: {newSceneIndex}");
+    }
+
+    private IEnumerator UnloadAllScenesExceptMain()
+    {
+        for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
         {
             Scene scene = SceneManager.GetSceneAt(i);
             if (scene.buildIndex != MAIN_SCENE)
             {
-                SceneManager.UnloadSceneAsync(scene.buildIndex);
+                Debug.Log($"🗑 Unloading Scene: {scene.name}");
+                yield return SceneManager.UnloadSceneAsync(scene.buildIndex);
             }
         }
-
-        SceneManager.LoadScene(newSceneIndex, LoadSceneMode.Additive);
-
-        // Save last visited scene for auto-login redirection
-        PlayerPrefs.SetString("LastScene", newSceneIndex.ToString());
-        PlayerPrefs.Save();
-
-        // Optional: Implement fade-in UI effect here
+        yield return null;
     }
 
     private bool SceneExists(int sceneIndex)
