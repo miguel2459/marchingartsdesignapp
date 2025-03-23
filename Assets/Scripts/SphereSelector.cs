@@ -8,19 +8,8 @@ public class SphereSelector : MonoBehaviour
     public LayerMask sphereLayer; // Layer mask for set spheres
     public SelectedMarchers marcherSelector; // Reference to the MarcherSelector script
 
-    private Camera cam;
+    public Camera cam;
     public List<GameObject> selectedSpheres = new List<GameObject>(); // List of selected set spheres
-
-    void Start()
-    {
-        cam = Camera.main;
-
-        // Ensure the MarcherSelector reference is assigned
-        if (marcherSelector == null)
-        {
-            marcherSelector = FindObjectOfType<SelectedMarchers>();
-        }
-    }
 
     void Update()
     {

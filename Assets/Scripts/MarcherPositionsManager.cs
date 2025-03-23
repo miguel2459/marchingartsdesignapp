@@ -25,23 +25,12 @@ public class MarcherPositionsManager : MonoBehaviour
             AddPositionSphere(i, spherePrefab, color);
         }
 
-        // Ensure setSpheres are properly assigned from PositionSpheres
-        for (int i = 0; i < sets; i++)
-        {
-            setSpheres[i] = PositionSpheres[i];
-            if (setSpheres[i] == null)
-            {
-                Debug.LogError($"{gameObject.name}: setSpheres[{i}] is NULL after initialization!");
-            }
-        }
-
         Debug.Log($"{gameObject.name}: Initialized with {sets} sets.");
     }
 
 
     public void AddPositionSphere(int index, GameObject spherePrefab, Color color)
     {
-        //Debug.Log("inside Add PositionShpere_MarcherPositionManager");
         // Resize the positions and PositionSpheres arrays to accommodate the new sphere
         Array.Resize(ref positions, positions.Length + 1);
         Array.Resize(ref PositionSpheres, PositionSpheres.Length + 1);

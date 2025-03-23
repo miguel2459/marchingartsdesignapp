@@ -69715,7 +69715,8 @@ MonoBehaviour:
   sphereLayer:
     serializedVersion: 2
     m_Bits: 512
-  marcherSelector: {fileID: 0}
+  marcherSelector: {fileID: 1219379207}
+  cam: {fileID: 5741240376201056195}
   selectedSpheres: []
 --- !u!114 &1163927912
 MonoBehaviour:
@@ -73272,7 +73273,7 @@ MonoBehaviour:
   bpmInputField: {fileID: 488845533}
   intervalField: {fileID: 653809154}
   metronome: {fileID: 1558474896}
-  snapToGrid: {fileID: 0}
+  snapToGrid: {fileID: 1666209691}
   setBar: {fileID: 1171218384}
   shapeMarchers: {fileID: 583371126}
   shapeGroup:
@@ -73321,6 +73322,7 @@ MonoBehaviour:
   snapToGrid: {fileID: 0}
   transformGizmo: {fileID: 0}
   isMoving: 0
+  cam: {fileID: 5741240376201056195}
   gizmoLayer:
     serializedVersion: 2
     m_Bits: 256
@@ -73380,6 +73382,7 @@ MonoBehaviour:
   director: {fileID: 0}
   selectMarcher: {fileID: 0}
   moveMarcher: {fileID: 0}
+  cam: {fileID: 5741240376201056195}
 --- !u!1 &1219646053
 GameObject:
   m_ObjectHideFlags: 0
@@ -102246,7 +102249,131 @@ MonoBehaviour:
   - 18.75
   - 19.375
   - 20
+  - 20.625
+  - 21.25
+  - 21.875
+  - 22.5
+  - 23.125
+  - 23.75
+  - 24.375
+  - 25
+  - 25.625
+  - 26.25
+  - 26.875
+  - 27.5
+  - 28.125
+  - 28.75
+  - 29.375
+  - 30
+  - 30.625
+  - 31.25
+  - 31.875
+  - 32.5
+  - 33.125
+  - 33.75
+  - 34.375
+  - 35
+  - 35.625
+  - 36.25
+  - 36.875
+  - 37.5
+  - 38.125
+  - 38.75
+  - 39.375
+  - 40
+  - 40.625
+  - 41.25
+  - 41.875
+  - 42.5
+  - 43.125
+  - 43.75
+  - 44.375
+  - 45
+  - 45.625
+  - 46.25
+  - 46.875
+  - 47.5
+  - 48.125
+  - 48.75
+  - 49.375
+  - 50
+  - 50.625
+  - 51.25
+  - 51.875
+  - 52.5
   zPositions8_5:
+  - 0
+  - 0.625
+  - 1.25
+  - 1.875
+  - 2.5
+  - 3.125
+  - 3.75
+  - 4.375
+  - 5
+  - 5.625
+  - 6.25
+  - 6.875
+  - 7.5
+  - 8.125
+  - 8.75
+  - 9.375
+  - 10
+  - 10.625
+  - 11.25
+  - 11.875
+  - 12.5
+  - 13.125
+  - 13.75
+  - 14.375
+  - 15
+  - 15.625
+  - 16.25
+  - 16.875
+  - 17.5
+  - 18.125
+  - 18.75
+  - 19.375
+  - 20
+  - 20.625
+  - 21.25
+  - 21.875
+  - 22.5
+  - 23.125
+  - 23.75
+  - 24.375
+  - 25
+  - 25.625
+  - 26.25
+  - 26.875
+  - 27.5
+  - 28.125
+  - 28.75
+  - 29.375
+  - 30
+  - 30.625
+  - 31.25
+  - 31.875
+  - 32.5
+  - 33.125
+  - 33.75
+  - 34.375
+  - 35
+  - 35.625
+  - 36.25
+  - 36.875
+  - 37.5
+  - 38.125
+  - 38.75
+  - 39.375
+  - 40
+  - 40.625
+  - 41.25
+  - 41.875
+  - 42.5
+  - 43.125
+  - 43.75
+  - 44.375
   - 45
   - 45.625
   - 46.25
@@ -102296,8 +102423,80 @@ MonoBehaviour:
   - 73.75
   - 74.375
   - 75
-  currentFieldMin: {x: 0, y: 45}
-  currentFieldMax: {x: 20, y: 75}
+  - 75.625
+  - 76.25
+  - 76.875
+  - 77.5
+  - 78.125
+  - 78.75
+  - 79.375
+  - 80
+  - 80.625
+  - 81.25
+  - 81.875
+  - 82.5
+  - 83.125
+  - 83.75
+  - 84.375
+  - 85
+  - 85.625
+  - 86.25
+  - 86.875
+  - 87.5
+  - 88.125
+  - 88.75
+  - 89.375
+  - 90
+  - 90.625
+  - 91.25
+  - 91.875
+  - 92.5
+  - 93.125
+  - 93.75
+  - 94.375
+  - 95
+  - 95.625
+  - 96.25
+  - 96.875
+  - 97.5
+  - 98.125
+  - 98.75
+  - 99.375
+  - 100
+  - 100.625
+  - 101.25
+  - 101.875
+  - 102.5
+  - 103.125
+  - 103.75
+  - 104.375
+  - 105
+  - 105.625
+  - 106.25
+  - 106.875
+  - 107.5
+  - 108.125
+  - 108.75
+  - 109.375
+  - 110
+  - 110.625
+  - 111.25
+  - 111.875
+  - 112.5
+  - 113.125
+  - 113.75
+  - 114.375
+  - 115
+  - 115.625
+  - 116.25
+  - 116.875
+  - 117.5
+  - 118.125
+  - 118.75
+  - 119.375
+  - 120
+  currentFieldMin: {x: 0, y: 0}
+  currentFieldMax: {x: 53, y: 120}
 --- !u!114 &1666209692
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -102310,7 +102509,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8e7daf3a90be0d42b821aeddd4ebe7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentFieldType: 1
+  currentFieldType: 0
   currentStepSize: 0
   yardLength: 5
   footballFieldWidthInYards: 53
@@ -135985,7 +136184,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4879677289485067484, guid: c2cfcaf5a5822984c8fa0949abdcc24f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5256765129860333158, guid: c2cfcaf5a5822984c8fa0949abdcc24f, type: 3}
       propertyPath: m_RootOrder
@@ -136113,7 +136312,7 @@ PrefabInstance:
       objectReference: {fileID: 1594737571}
     - target: {fileID: 5726733150789066754, guid: c2cfcaf5a5822984c8fa0949abdcc24f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5726733150789681697, guid: c2cfcaf5a5822984c8fa0949abdcc24f, type: 3}
       propertyPath: m_Materials.Array.data[0]
@@ -137339,7 +137538,7 @@ PrefabInstance:
       objectReference: {fileID: 1313085582}
     - target: {fileID: 622227542, guid: 4c805896c1ed3974d9187a8bd77fb8dd, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 641207493, guid: 4c805896c1ed3974d9187a8bd77fb8dd, type: 3}
       propertyPath: m_Materials.Array.data[0]
