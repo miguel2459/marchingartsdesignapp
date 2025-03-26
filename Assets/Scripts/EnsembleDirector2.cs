@@ -6,6 +6,8 @@ using System.Collections;
 [ExecuteInEditMode]
 public class EnsembleDirector2 : MonoBehaviour
 {
+    SessionManager session = SessionManager.instance;
+
     [Header("Marcher Settings")]
     public int numberOfMarchers;
     public int numberOfSets;
@@ -60,9 +62,9 @@ public class EnsembleDirector2 : MonoBehaviour
     }
 
     private void InitializeSession(){
-        numberOfMarchers = SessionManager.instance.numberOfMarchers;
-        numberOfSets = SessionManager.instance.numberOfSets;
-        lastSet = int.Parse(SessionManager.instance.lastSet);
+        numberOfMarchers = session.SessionState.NumberOfMarchers;
+        numberOfSets = session.SessionState.NumberOfSets;
+        lastSet = int.Parse(session.SessionState.LastSet);
     }
 
     private void InitializeUI()
@@ -82,8 +84,8 @@ public class EnsembleDirector2 : MonoBehaviour
         bpm = Mathf.Clamp(float.Parse(bpmInputField.text), 20f, 300f);
         interval = Mathf.Clamp(float.Parse(intervalField.text), 1f, 4f);
 
-        SessionManager.instance.numberOfMarchers = numberOfMarchers;
-        SessionManager.instance.numberOfSets = numberOfSets;
+        session.SessionState.NumberOfMarchers = numberOfMarchers;
+        session.SessionState.NumberOfSets = numberOfSets;
 
         setBar.OnTotalSetsChanged(numberOfSets);
         metronome.UpdateBPM(bpm);

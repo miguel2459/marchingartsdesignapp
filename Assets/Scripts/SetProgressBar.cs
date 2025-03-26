@@ -79,7 +79,7 @@ public class SetProgressBar : MonoBehaviour
     {
         if (SessionManager.instance != null)
         {
-            lastSet = int.Parse(SessionManager.instance.lastSet);
+            lastSet = int.Parse(SessionManager.instance.SessionState.LastSet);
         }
         else
         {
@@ -103,7 +103,7 @@ public class SetProgressBar : MonoBehaviour
         // Store last selected set in SessionManager
         if (SessionManager.instance != null)
         {
-            SessionManager.instance.lastSet = setNumber.ToString();
+            SessionManager.instance.SessionState.LastSet = setNumber.ToString();
         }
     }
 

@@ -61,7 +61,7 @@ public class ShowSelectionManager : MonoBehaviour
         createNewShowPanel.GetComponent<Button>().onClick.AddListener(() => CreateShowManager.instance.OpenCreateShowPanel());
     }
 
-    private void OnShowSelected(SessionManager.ShowData show)
+    public void OnShowSelected(SessionManager.ShowData show)
     {
         Debug.Log($"Selected Show: {show.showTitle}");
         

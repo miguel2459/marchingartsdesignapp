@@ -74,17 +74,9 @@ public class SignUpManager : MonoBehaviour
             if (response.status == "success")
             {
                 Debug.Log("✅ Account Created! User ID: " + response.userId);
-                PlayerPrefs.SetString("UserID", response.userId);
-                PlayerPrefs.SetString("FolderID", response.folderId);
-                PlayerPrefs.SetString("UserEmail", email);
-                PlayerPrefs.SetString("UserName", name);
-                PlayerPrefs.SetString("AccountSheetID", response.userSheetID);
-                PlayerPrefs.Save();
 
                 // 🔹 Initialize session after account creation
-                SessionManager.instance.InitializeUser(response.userId, email, name, response.userSheetID, response.folderId);
-
-                SceneController.instance.SwitchScene(3);
+                SessionManager.instance.userSession.InitializeUser(response.userId, email, name, response.userSheetID, response.folderId);
             }
             else if (response.status == "email_exists")
             {

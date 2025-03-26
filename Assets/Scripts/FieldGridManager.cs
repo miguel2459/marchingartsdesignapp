@@ -4,6 +4,7 @@ using System.Collections.Generic;
 [ExecuteInEditMode]
 public class FieldGridManager : MonoBehaviour
 {
+    SessionManager session = SessionManager.instance;
     public enum FieldType { FootballField, WinterFloor }
     public enum StepSize { Freeform, SixteenSteps, TwelveSteps, EightSteps, SixSteps, FiveSteps, FourSteps, ThreeAndHalfSteps }
 
@@ -38,7 +39,7 @@ public class FieldGridManager : MonoBehaviour
 
     private FieldType GetFieldTypeFromSession()
     {
-        string sessionType = SessionManager.instance.fieldType;
+        string sessionType = session.SessionState.FieldType;
         Debug.Log($"FieldGridManager: Received field type from session: {sessionType}");
 
         return sessionType switch

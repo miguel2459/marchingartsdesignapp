@@ -154,7 +154,7 @@ MonoBehaviour:
   elapsedTime: 0
   completedRepeats: 0
   stepDuration: 0
-  marcherPositionsManager: {fileID: 0}
+  marcherPositionsManager: {fileID: 942577037629190339}
   director: {fileID: 0}
 --- !u!114 &942577037629190339
 MonoBehaviour:
@@ -171,8 +171,6 @@ MonoBehaviour:
   PositionSpheres: []
   setSpheres: []
   positions: []
-  isSet: 
-  responsibilities: 
 --- !u!114 &2976084566100136744
 MonoBehaviour:
   m_ObjectHideFlags: 0

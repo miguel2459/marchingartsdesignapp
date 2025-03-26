@@ -74,10 +74,8 @@ public class LoginManager : MonoBehaviour
                 PlayerPrefs.Save();
 
                 // 🔹 Initialize session
-                SessionManager.instance.InitializeUser(response.userId, email, response.userName, response.userSheetID, response.folderId);
-
-                // 🔹 Move to Show Selection Scene
-                SceneController.instance.SwitchScene(3);
+                StartCoroutine(SceneController.instance.WaitForSessionInitialization());
+                SessionManager.instance.userSession.InitializeUser(response.userId, email, response.userName, response.userSheetID, response.folderId);
             }
             else
             {
