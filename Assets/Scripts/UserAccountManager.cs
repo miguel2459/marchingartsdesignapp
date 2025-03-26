@@ -44,7 +44,8 @@ public class UserAccountManager : MonoBehaviour
             accountButton.onClick.AddListener(ToggleAccountPanel);
 
         if (userNameText != null)
-            userNameText.text = SessionManager.instance.userName;
+            userNameText.text = SessionManager.instance.SessionState.UserName;
+            Debug.Log("AccountUI Initialized");
     }
 
     private void GoToShowSelection()

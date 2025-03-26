@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 public class SceneController : MonoBehaviour
 {
     public static SceneController instance;
-    private bool isSessionInitialized = false;
+    public bool isSessionInitialized = false;
     private bool isSceneLoading = false; // Prevent duplicate scene loading
 
     // Scene build indices
@@ -37,6 +37,7 @@ public class SceneController : MonoBehaviour
     {
         if (PlayerPrefs.GetInt("IsLoggedIn", 0) == 1)
         {
+            SessionManager.instance.AutoLogin();
             StartCoroutine(WaitForSessionInitialization());
         }
         else
@@ -48,9 +49,8 @@ public class SceneController : MonoBehaviour
         }
     }
 
-    private IEnumerator WaitForSessionInitialization()
+    public IEnumerator WaitForSessionInitialization()
     {
-        SessionManager.instance.AutoLogin();
         Debug.Log("⏳ Waiting for SessionManager to initialize...");
 
         while (!isSessionInitialized)

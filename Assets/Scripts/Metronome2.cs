@@ -25,7 +25,7 @@ public class Metronome2 : MonoBehaviour
     public void UpdateBPM(float bpm)
     {
         beatInterval = 60f / bpm;
-        setText.text = SessionManager.instance.lastSet;
+        setText.text = SessionManager.instance.SessionState.LastSet;
     }
 
     public void StartMetronome()

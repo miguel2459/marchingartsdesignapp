@@ -15,7 +15,6 @@ public class MarcherController : MonoBehaviour
     public float elapsedTime = 0f;
     public int completedRepeats = 0;
     public float stepDuration; // Duration of each step in seconds
-
     public MarcherPositionsManager marcherPositionsManager; // Reference to the MarcherPositionsManager script
     public EnsembleDirector2 director;
 
@@ -23,7 +22,6 @@ public class MarcherController : MonoBehaviour
     public void InitializeMarcher(EnsembleDirector2 directorReference)
     {
         this.director = directorReference;
-        marcherPositionsManager = GetComponent<MarcherPositionsManager>();
         SetStepDuration(director.bpm);
         if (marcherPositionsManager.setSpheres.Length == 0)
         {
@@ -39,7 +37,7 @@ public class MarcherController : MonoBehaviour
         stepDuration = 60f / bpm; // Calculate step duration based on the BPM
         stepsPerLine = director.countsPerSet;
         maxSets = director.numberOfSets;
-        //FillPositionsArrayWithSetSpheres();
+        positions = new Transform[marcherPositionsManager.setSpheres.Length];
     }
 
     void FillPositionsArrayWithSetSpheres()
