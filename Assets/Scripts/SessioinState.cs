@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable] // 👈 Add this so Unity can display it
 public class SessionState
 {
     // User Info

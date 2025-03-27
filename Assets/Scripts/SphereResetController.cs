@@ -11,14 +11,14 @@ public class SphereResetController : MonoBehaviour
     void Start()
     {
         // Add listener to the reset button
-        resetButton.onClick.AddListener(ResetSelectedItems);
+        //resetButton.onClick.AddListener(ResetSelectedItems);
         marcherSelector = FindObjectOfType<SelectedMarchers>();
     }
 
     void Update()
     {
         // Enable the reset button only if a set sphere is selected or if marchers are selected
-        resetButton.interactable = marcherSelector.selectedMarchers.Count > 0 || sphereSelector.selectedSpheres.Count > 0;
+        //resetButton.interactable = marcherSelector.selectedMarchers.Count > 0 || sphereSelector.selectedSpheres.Count > 0;
     }
 
     // Reset function triggered by the button

@@ -1,18 +1,22 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using System;
 
 public class UserAccountManager : MonoBehaviour
 {
     [Header("UI References")]
     public Button showSelectionButton;
     public Button logoutButton;
-    public Text userNameText;
-    public Button accountButton;
-    public GameObject accountPanel;
+    public Button saveShow;
+    public TMP_Text userNameText;
+    public TMP_Text showTitleText;
+    public TMP_Text groupNameText;
+    public TMP_Text lastSaveDate;
+    public TMP_Text lastSaveTime;
 
     private void Start()
     {
-        // Ensure dependencies are assigned
         if (SessionManager.instance == null)
         {
             Debug.LogError("❌ SessionManager instance is missing!");
@@ -30,29 +34,65 @@ public class UserAccountManager : MonoBehaviour
 
     private void InitializeUI()
     {
-        // 🔹 Ensure UI elements exist before assigning listeners
-        if (showSelectionButton != null)
-        {
-            showSelectionButton.onClick.AddListener(GoToShowSelection);
-            showSelectionButton.enabled = true;
-        }
+        showSelectionButton?.onClick.AddListener(GoToShowSelection);
+        saveShow?.onClick.AddListener(OnSaveShowClicked);
+        logoutButton?.onClick.AddListener(LogoutUser);
 
-        if (logoutButton != null)
-            logoutButton.onClick.AddListener(LogoutUser);
-
-        if (accountButton != null)
-            accountButton.onClick.AddListener(ToggleAccountPanel);
-
+        // Populate static UI text
         if (userNameText != null)
             userNameText.text = SessionManager.instance.SessionState.UserName;
-            Debug.Log("AccountUI Initialized");
+
+        if (showTitleText != null)
+            showTitleText.text = SessionManager.instance.SessionState.ShowTitle;
+
+        if (groupNameText != null)
+            groupNameText.text = SessionManager.instance.SessionState.GroupName;
+
+        UpdateLastSaveDisplay();
+
+        Debug.Log("✅ Account UI Initialized");
+    }
+
+    private void OnSaveShowClicked()
+    {
+        SessionManager.instance.SaveShow();
+
+        string date = DateTime.Now.ToString("dd/MM");
+        string time = DateTime.Now.ToString("HH:mm");
+
+        if (lastSaveDate != null) lastSaveDate.text = date;
+        if (lastSaveTime != null) lastSaveTime.text = time;
+
+        SessionManager.instance.SessionState.LastModified = $"{date}, {time}";
+
+        Debug.Log("💾 Save triggered and UI updated.");
+    }
+
+    private void UpdateLastSaveDisplay()
+    {
+        string modified = SessionManager.instance.SessionState.LastModified;
+
+        if (DateTime.TryParse(modified, out DateTime parsedDate))
+        {
+            if (lastSaveDate != null) lastSaveDate.text = parsedDate.ToString("dd/MM");
+            if (lastSaveTime != null) lastSaveTime.text = parsedDate.ToString("HH:mm");
+        }
+        else if (!string.IsNullOrEmpty(modified))
+        {
+            // fallback in case of unparseable value
+            string[] parts = modified.Split(',');
+            if (parts.Length == 2)
+            {
+                if (lastSaveDate != null) lastSaveDate.text = parts[0].Trim();
+                if (lastSaveTime != null) lastSaveTime.text = parts[1].Trim();
+            }
+        }
     }
 
     private void GoToShowSelection()
     {
         showSelectionButton.enabled = false;
-        SessionManager.instance.SaveShow();
-        //SceneController.instance.SwitchScene(3);
+        SessionManager.instance.ExitShow(); // save and switch scene
     }
 
     private void LogoutUser()
@@ -60,27 +100,10 @@ public class UserAccountManager : MonoBehaviour
         SessionManager.instance.Logout();
     }
 
-    private void ToggleAccountPanel()
-    {
-        if (accountPanel == null)
-        {
-            Debug.LogWarning("⚠ Account panel is not assigned.");
-            return;
-        }
-
-        accountPanel.SetActive(!accountPanel.activeSelf);
-    }
-
     private void OnDestroy()
     {
-        // 🔹 Remove listeners to prevent memory leaks
-        if (showSelectionButton != null)
-            showSelectionButton.onClick.RemoveListener(GoToShowSelection);
-
-        if (logoutButton != null)
-            logoutButton.onClick.RemoveListener(LogoutUser);
-
-        if (accountButton != null)
-            accountButton.onClick.RemoveListener(ToggleAccountPanel);
+        showSelectionButton?.onClick.RemoveListener(GoToShowSelection);
+        saveShow?.onClick.RemoveListener(OnSaveShowClicked);
+        logoutButton?.onClick.RemoveListener(LogoutUser);
     }
 }
