@@ -29,9 +29,8 @@ public class ShowDataManager
     private IEnumerator ExitShowCoroutine(Action onComplete)
     {
         yield return SaveShowCoroutine();
-        ClearShowData();
-
         onComplete?.Invoke();
+        ClearShowData();
     }
 
     public void CreateNewShowTemplate(string url, string showID, string title, string group, string email, string field, string year, int marchers, int sets, int props, string modified, string status,
@@ -79,6 +78,12 @@ public class ShowDataManager
 
     private IEnumerator SaveShowCoroutine()
     {
+        if (string.IsNullOrEmpty(sessionState.LastSet) || sessionState.NumberOfMarchers <= 0)
+        {
+            Debug.LogWarning("⚠️ Attempting to save invalid show state. Aborting save.");
+            yield break;
+        }
+
         Debug.Log($"📡 Updating Show Details for {sessionState.ShowTitle} ({sessionState.CurrentShowID})");
 
         WWWForm form = new WWWForm();

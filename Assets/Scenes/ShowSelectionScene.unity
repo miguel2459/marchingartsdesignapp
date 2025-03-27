@@ -1773,7 +1773,6 @@ GameObject:
   - component: {fileID: 420983925}
   - component: {fileID: 420983924}
   - component: {fileID: 420983926}
-  - component: {fileID: 420983927}
   m_Layer: 5
   m_Name: Account Profile
   m_TagString: Untagged
@@ -1883,23 +1882,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &420983927
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 420983922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 364476ab2eaac2a4b859aaeff7347852, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  showSelectionButton: {fileID: 0}
-  logoutButton: {fileID: 1542878829}
-  userNameText: {fileID: 1210105486}
-  accountButton: {fileID: 420983926}
-  accountPanel: {fileID: 81862080}
 --- !u!1 &426500932
 GameObject:
   m_ObjectHideFlags: 0
@@ -5828,6 +5810,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1627297856}
   m_CullTransparentMesh: 1
+--- !u!1 &1655866649
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1655866651}
+  - component: {fileID: 1655866650}
+  m_Layer: 0
+  m_Name: UserAccountManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1655866650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1655866649}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb798e0188082304ab3f092cb5e61769, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  accountPanel: {fileID: 81862080}
+  accountButton: {fileID: 420983926}
+  logoutButton: {fileID: 1542878829}
+  usernameText: {fileID: 1210105486}
+--- !u!4 &1655866651
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1655866649}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1680599534
 GameObject:
   m_ObjectHideFlags: 0

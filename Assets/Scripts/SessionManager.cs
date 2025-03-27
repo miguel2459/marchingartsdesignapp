@@ -9,13 +9,15 @@ using SimpleJSON;
 public class SessionManager : MonoBehaviour
 {
     public UserSessionManager userSession = new UserSessionManager();
-    public SessionState SessionState => userSession.SessionState;
     public ShowDataManager showDataManager;
-
     public GoogleSheetsService sheetsService;
     public string apiKey;
     public static string backendURL;
     public static SessionManager instance;
+
+    [Header("🧪 DEBUG ONLY")]
+    [SerializeField] private SessionState debugSessionState;
+    public SessionState SessionState => userSession.SessionState;
 
     [Header("Session Data")]
     public List<ShowData> savedShows = new List<ShowData>();
@@ -37,6 +39,12 @@ public class SessionManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+    }
+
+    void Update()
+    {
+        // Sync debugSessionState every frame (or do this in a coroutine if you want to reduce overhead)
+        debugSessionState = userSession.SessionState;
     }
 
     // 🔹 Initialize user session when they log in

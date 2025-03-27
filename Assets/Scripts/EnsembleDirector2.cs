@@ -42,8 +42,13 @@ public class EnsembleDirector2 : MonoBehaviour
 
     void Start()
     {
-        SnapToGridLines.OnGridReady += OnGridReadyHandler; 
-        if (SessionManager.instance != null) OnSessionReady();
+        SnapToGridLines.OnGridReady -= OnGridReadyHandler;
+        SnapToGridLines.OnGridReady += OnGridReadyHandler;
+
+        if (SessionManager.instance != null)
+        {
+            OnSessionReady();
+        }
     }
 
     void OnSessionReady()
@@ -58,6 +63,7 @@ public class EnsembleDirector2 : MonoBehaviour
 
     void OnGridReadyHandler()
     {
+        Debug.Log("✅ Grid Ready — Populating Marchers");
         PopulateMarchers();
     }
 
@@ -97,6 +103,8 @@ public class EnsembleDirector2 : MonoBehaviour
     public void PopulateMarchers()
     {
         SnapToGridLines.OnGridReady -= PopulateMarchers; // Unsubscribe to prevent multiple calls
+        marchers.Clear();
+
         // Retrieve the current list of marchers already present in the scene.
         marchers = new List<MarcherPositionsManager>(GetComponentsInChildren<MarcherPositionsManager>());
         int currentMarcherCount = marchers.Count;
@@ -226,4 +234,10 @@ public class EnsembleDirector2 : MonoBehaviour
 
         return Color.white; // Default to white if no color is found.
     }
+
+    void OnDestroy()
+    {
+        SnapToGridLines.OnGridReady -= OnGridReadyHandler;
+    }
+
 }
