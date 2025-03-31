@@ -1,56 +1,67 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
+/// <summary>
+/// Handles user selection of marchers and confirms set positions when spacebar is pressed.
+/// </summary>
 public class SelectedMarchers : MonoBehaviour
 {
+    [Header("Selection Settings")]
     public Color highlightColor = Color.yellow;
     public Color normalColor = Color.white;
-
     public LayerMask marcherLayer;
-    public List<GameObject> selectedMarchers = new List<GameObject>();
-    public CameraControl cameraControl; // Reference to the CameraControl script
+
+    [Header("References")]
+    public CameraControl cameraControl;
     public Camera cam;
-
     public MarcherMovement moveMarcher;
-    public bool selectAllMarchers; // Toggle to select all marchers in the inspector
-    
-    public GameObject firstSelectedMarcher; // To store the first selected marcher
 
-    void Start()
-    {
-       
-    }
+    public List<GameObject> selectedMarchers = new List<GameObject>();
+    public bool selectAllMarchers; // for inspector testing
 
-    void Update()
+    private void Update()
     {
         CheckForSpaceBarSetPosition();
     }
 
+    /// <summary>
+    /// If spacebar is pressed, confirms the transform.position as a SetPosition for each selected marcher.
+    /// </summary>
+    public void CheckForSpaceBarSetPosition()
+    {
+        if (Input.GetKeyDown(KeyCode.Space) && moveMarcher.transformGizmo != null && selectedMarchers.Count > 0)
+        {
+            int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+
+            Debug.Log($"SelectedMarchers: ⏺️ Setting SetPosition for {selectedMarchers.Count} marchers on Set {currentSet}");
+
+            foreach (GameObject marcher in selectedMarchers)
+            {
+                if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
+                {
+                    posManager.SetPosition(currentSet, marcher.transform.position);
+                }
+            }
+        }
+    }
 
     public void SelectMarcher(GameObject marcher)
     {
         if (!selectedMarchers.Contains(marcher))
         {
             selectedMarchers.Add(marcher);
-            marcher.GetComponent<Renderer>().material.color = highlightColor; // Highlight the selected marcher
-            marcher.GetComponent<Unit>().SetSelector(true);
-            if(moveMarcher.transformGizmo != null)
+            marcher.GetComponent<Renderer>().material.color = highlightColor;
+            marcher.GetComponent<Unit>()?.SetSelector(true);
+
+            if (moveMarcher.transformGizmo != null)
             {
                 marcher.transform.SetParent(moveMarcher.transformGizmo.transform);
-
-                // If the gizmo already exists and this is the first marcher selected, center the gizmo on this marcher
-                if (firstSelectedMarcher == null)
-                {
-                    firstSelectedMarcher = marcher.gameObject;
-                    moveMarcher.MoveGizmoToFirstSelectedMarcher(firstSelectedMarcher);
-                }
             }
-            Debug.Log($"MarcherSelector: {marcher.name} selected and highlighted.");
+
+            Debug.Log($"SelectedMarchers: ✅ {marcher.name} selected.");
         }
     }
-
 
     public void DeselectMarcher(GameObject marcher)
     {
@@ -58,75 +69,41 @@ public class SelectedMarchers : MonoBehaviour
         {
             selectedMarchers.Remove(marcher);
             marcher.GetComponent<Renderer>().material.color = normalColor;
-            marcher.GetComponent<Unit>().SetSelector(false);
+            marcher.GetComponent<Unit>()?.SetSelector(false);
+
             if (moveMarcher.transformGizmo != null)
             {
                 marcher.transform.SetParent(transform);
             }
-            Debug.Log($"MarcherSelector: {marcher.name} deselected and color reverted.");
+
+            Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected.");
         }
     }
 
     public void ClearSelection()
     {
-        if (selectedMarchers == null) return;
-
-        foreach (var marcher in selectedMarchers.ToList()) // Create a copy of the list to iterate
+        foreach (GameObject marcher in selectedMarchers.ToList())
         {
             if (marcher != null)
             {
                 var renderer = marcher.GetComponent<Renderer>();
                 var unit = marcher.GetComponent<Unit>();
-                
-                if (renderer != null)
-                {
-                    renderer.material.color = normalColor;
-                }
-                
-                if (unit != null)
-                {
-                    unit.SetSelector(false);
-                }
 
-                if (moveMarcher != null && moveMarcher.transformGizmo != null)
-                {
-                    marcher.transform.SetParent(transform);
-                }
+                if (renderer != null) renderer.material.color = normalColor;
+                if (unit != null) unit.SetSelector(false);
+                if (moveMarcher?.transformGizmo != null) marcher.transform.SetParent(transform);
             }
         }
 
         selectedMarchers.Clear();
-        firstSelectedMarcher = null;
-        
-        if (moveMarcher != null)
-        {
-            moveMarcher.isMoving = false; // Reset isMoving flag
-            moveMarcher.HideTransformGizmo();
-        }
-        
-        Debug.Log("MarcherSelector: All marchers deselected and list cleared.");
-    }
+        moveMarcher?.HideTransformGizmo();
+        moveMarcher.isMoving = false;
 
-    public void CheckForSpaceBarSetPosition()
-    {
-        // Check if space bar is pressed, gizmo is active, and there are selected marchers
-        if (Input.GetKeyDown(KeyCode.Space) && moveMarcher.transformGizmo != null && selectedMarchers.Count > 0)
-        {
-            Debug.Log("MarcherSelector: Space bar pressed - Setting position spheres for selected marchers.");
-
-            // Loop through each selected marcher
-            foreach (var marcher in selectedMarchers)
-            {
-                marcher.gameObject.GetComponent<MarcherPositionsManager>().SetPositionSphere();
-            }
-        }
+        Debug.Log("SelectedMarchers: 🧹 Selection cleared.");
     }
 
     public void UpdateCameraFocus()
     {
-        if (cameraControl != null)
-        {
-            cameraControl.SetSelectedMarchers(selectedMarchers);
-        }
+        cameraControl?.SetSelectedMarchers(selectedMarchers);
     }
 }

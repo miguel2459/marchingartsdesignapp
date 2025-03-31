@@ -1,171 +1,157 @@
-using System;
 using UnityEngine;
-using System.Collections;
 
+/// <summary>
+/// Controls animation/movement of a marcher during performance mode.
+/// Interpolates across confirmed set positions based on BPM and count structure.
+/// </summary>
 public class MarcherController : MonoBehaviour
 {
-    public Transform[] positions; // Array to store the positions
-    public int maxSets; // Public variable to control how many cycles (sets) before stopping
-    public int stepsPerLine; // Public variable to control the number of steps between each set
-    //public Text positionsText; // Reference to the UI Text component to display positions
-
-    public Vector3[] stepPositions; // Array to store the positions for each step
-    public int currentStep = 0;
-    public bool isMarching = false;
-    public float elapsedTime = 0f;
-    public int completedRepeats = 0;
-    public float stepDuration; // Duration of each step in seconds
-    public MarcherPositionsManager marcherPositionsManager; // Reference to the MarcherPositionsManager script
+    public MarcherPositionsManager marcherPositionsManager;
     public EnsembleDirector2 director;
 
-    // Inject director dependency
+    private Vector3[] setPositions;
+    private Vector3[] stepPositions;
+    private float[] stepDurations;
+
+    private int currentStep = 0;
+    private int completedRepeats = 0;
+    private float elapsedTime = 0f;
+
+    private bool isMarching = false;
+
+    /// <summary>
+    /// Inject EnsembleDirector and initialize marcher.
+    /// </summary>
     public void InitializeMarcher(EnsembleDirector2 directorReference)
     {
-        this.director = directorReference;
-        SetStepDuration(director.bpm);
-        if (marcherPositionsManager.setSpheres.Length == 0)
+        director = directorReference;
+
+        // Get all confirmed set positions from marcher
+        setPositions = marcherPositionsManager.GetAllSetPositionsSorted();
+
+        if (setPositions.Length > 0)
         {
-            Debug.LogError($"{gameObject.name}: setSpheres array is empty.");
-            return;
-        }
-
-        //transform.position = marcherPositionsManager.setSpheres[0].transform.position;
-    }
-
-    public void SetStepDuration(float bpm)
-    {
-        stepDuration = 60f / bpm; // Calculate step duration based on the BPM
-        stepsPerLine = director.countsPerSet;
-        maxSets = director.numberOfSets;
-        positions = new Transform[marcherPositionsManager.setSpheres.Length];
-    }
-
-    void FillPositionsArrayWithSetSpheres()
-    {
-        if (marcherPositionsManager != null)
-        {
-            positions = new Transform[marcherPositionsManager.setSpheres.Length];
-
-            for (int i = 0; i < marcherPositionsManager.setSpheres.Length; i++)
-            {
-                if (marcherPositionsManager.setSpheres[i] != null)
-                {
-                    positions[i] = marcherPositionsManager.setSpheres[i].transform;
-                }
-                else
-                {
-                    Debug.LogError($"{gameObject.name}: setSpheres[{i}] is NULL! Cannot set positions.");
-                }
-            }
-
-            // Ensure the marcher is placed at the first valid position
-            if (positions.Length > 0 && positions[0] != null)
-            {
-                transform.position = positions[0].position;
-                Debug.Log($"{gameObject.name} snapped to first position at {transform.position}");
-            }
-            else
-            {
-                Debug.LogError($"{gameObject.name}: No valid set positions available.");
-            }
-
-            // Calculate step positions for movement
-            CalculateStepPositions();
+            transform.position = setPositions[0];
         }
         else
         {
-            Debug.LogError($"{gameObject.name}: MarcherPositionsManager reference is missing.");
+            Debug.LogWarning($"{name} has no setPositions yet.");
         }
     }
 
-    public void CalculateStepPositions()
+    /// <summary>
+    /// Called by Metronome at the beginning of the marching cycle.
+    /// </summary>
+    public void StartMarching(int cycle)
     {
-        int currentSet = completedRepeats;
-        stepPositions = new Vector3[stepsPerLine];
-
-        for (int i = 0; i < stepsPerLine; i++)
+        if (cycle >= 1 && completedRepeats < director.numberOfSets - 1)
         {
-            if (positions.Length > currentSet + 1 && positions[currentSet] != null && positions[currentSet + 1] != null)
+            if (SessionManager.instance.SessionState.SetTimingMap.TryGetValue(cycle, out var timing))
             {
-                // Calculate positions based on grid-structured positions between sets          
-                stepPositions[i] = Vector3.Lerp(
-                    positions[currentSet].position, 
-                    positions[currentSet + 1].position, 
-                    (float)(i + 1) / stepsPerLine
-                );
-                ///Debug.Log($"{gameObject.name} - Set {currentSet + 1}, Step {i + 1} Position: {stepPositions[i]}");
+                isMarching = true;
+                PrepareNextStepPositions(timing);
             }
             else
             {
-                Debug.LogWarning($"{gameObject.name}: Insufficient set positions available for step calculation.");
+                Debug.LogWarning($"{name} ❌ No SetTimingData for Set {cycle}");
+                isMarching = false;
             }
         }
     }
 
-
-    public void StartMarching(int cycle)
-    {
-        //Debug.Log("is cycle:" + cycle + " > 1? && is completedRepeats:" + completedRepeats + " < maxSets:" + maxSets);
-        if (cycle >= 1 && completedRepeats < maxSets) // Start moving on the first count of the second cycle
-        {
-            isMarching = true;
-            Debug.Log("isMarching set to true");
-            if (cycle == 1)
-            {
-                CalculateStepPositions(); // Ensure step positions are calculated for the first cycle
-            }
-        }
-    }
-
+    /// <summary>
+    /// Resets marcher state to beginning.
+    /// </summary>
     public void ResetMarcher()
     {
         isMarching = false;
         completedRepeats = 0;
-        currentStep = 0; // Start from the first step
+        currentStep = 0;
+        elapsedTime = 0f;
+
+        if (setPositions != null && setPositions.Length > 0)
+        {
+            transform.position = setPositions[0];
+        }
+    }
+
+    /// <summary>
+    /// Prepare interpolated step positions between two set positions.
+    /// </summary>
+    private void PrepareNextStepPositions(SessionState.SetTimingData timing)
+    {
+        int from = completedRepeats;
+        int to = completedRepeats + 1;
+
+        if (setPositions == null || from >= setPositions.Length - 1)
+        {
+            Debug.LogWarning($"{name}: Not enough set positions for marching from Set {from}.");
+            isMarching = false;
+            return;
+        }
+
+        int steps = timing.count;
+        stepPositions = new Vector3[steps];
+        stepDurations = new float[steps];
+
+        for (int i = 0; i < steps; i++)
+        {
+            float t = (steps > 1) ? (float)i / (steps - 1) : 0f;
+            float bpm = Mathf.Lerp(timing.startBPM, timing.endBPM, t);
+            float duration = 60f / bpm;
+
+            stepPositions[i] = Vector3.Lerp(setPositions[from], setPositions[to], (float)(i + 1) / steps);
+            stepDurations[i] = duration;
+        }
+
+        currentStep = 0;
         elapsedTime = 0f;
     }
 
-    public void ResetMarcherPosition()
+    public bool HasSetPositions()
     {
-        transform.position = positions[0].transform.position;
+        return marcherPositionsManager.GetAllSetPositionsSorted().Length > 0;
     }
 
-    void Update()
+    private void Update()
     {
-        if (isMarching && currentStep < stepsPerLine)
+        if (!isMarching || stepPositions == null || currentStep >= stepPositions.Length) return;
+
+        elapsedTime += Time.deltaTime;
+        float t = elapsedTime / stepDurations[currentStep];
+
+        Vector3 start = currentStep == 0 ? setPositions[completedRepeats] : stepPositions[currentStep - 1];
+        Vector3 end = stepPositions[currentStep];
+
+        transform.position = Vector3.Lerp(start, end, t);
+
+        if (t >= 1f)
         {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / stepDuration;
+            currentStep++;
+            elapsedTime = 0f;
 
-            // Lerp to the current target step position
-            transform.position = Vector3.Lerp(
-                currentStep == 0 ? positions[completedRepeats].position : stepPositions[currentStep - 1],
-                stepPositions[currentStep],
-                t
-            );
-
-            if (t >= 1f)
+            if (currentStep >= stepPositions.Length)
             {
-                // Move to the next step
-                currentStep++;
-                elapsedTime = 0f;
+                completedRepeats++;
 
-                if (currentStep >= stepsPerLine)
+                if (completedRepeats >= setPositions.Length - 1)
                 {
-                    isMarching = false; // Stop marching after completing all steps
-                    completedRepeats++; // Increment the repeat counter after a full cycle is completed
-                    Debug.Log($"Marcher has completed set {completedRepeats}");
-
-                    if (completedRepeats + 1 >= maxSets)
+                    isMarching = false;
+                    FindObjectOfType<Metronome2>()?.StopMetronome();
+                }
+                else
+                {
+                    // 🧠 Get next set timing again for next transition
+                    int nextSet = completedRepeats + 1;
+                    if (SessionManager.instance.SessionState.SetTimingMap.TryGetValue(nextSet, out var timing))
                     {
-                        // Notify the Metronome to stop counting
-                        FindObjectOfType<Metronome2>().StopMetronome();
+                        PrepareNextStepPositions(timing);
+                        isMarching = true;
                     }
                     else
                     {
-                        currentStep = 0; // Reset step counter for the next set
-                        CalculateStepPositions(); // Recalculate step positions for the next set
-                        isMarching = true; // Continue marching to the next set
+                        Debug.LogWarning($"{name} ❌ No SetTimingData for Set {nextSet}");
+                        isMarching = false;
                     }
                 }
             }

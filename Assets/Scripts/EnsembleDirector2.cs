@@ -1,7 +1,9 @@
 using UnityEngine;
-using UnityEngine.UI;
+using System.IO;
 using System.Collections.Generic;
 using System.Collections;
+using UnityEngine.Networking;
+using SimpleJSON;
 
 [ExecuteInEditMode]
 public class EnsembleDirector2 : MonoBehaviour
@@ -21,13 +23,6 @@ public class EnsembleDirector2 : MonoBehaviour
     public GameObject marcherPrefab;
     public GameObject positionSpherePrefab;
 
-    [Header("UI References")]
-    public InputField numberOfMarchersInputField;
-    public InputField numberOfSetsInputField;
-    public InputField countsPerSetInputField;
-    public InputField bpmInputField;
-    public InputField intervalField;
-
     [Header("Managers & Components")]
     public Metronome2 metronome;
     public SnapToGridLines snapToGrid;
@@ -37,89 +32,95 @@ public class EnsembleDirector2 : MonoBehaviour
     public ShapeUIManager shapeUI;
     public IntervalManager intervalManager;
     public FieldGridManager fieldManager;
+    public EnsembleUIController UIController;
 
     public List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>();
+    private Dictionary<string, Dictionary<int, Vector3>> parsedSetPositions = new Dictionary<string, Dictionary<int, Vector3>>();
+    private Dictionary<string, Dictionary<int, Vector3>> parsedStandbyPositions = new Dictionary<string, Dictionary<int, Vector3>>();
 
-    void Start()
+
+    private IEnumerator Start()
     {
         SnapToGridLines.OnGridReady -= OnGridReadyHandler;
         SnapToGridLines.OnGridReady += OnGridReadyHandler;
+        
+        yield return new WaitUntil(() => !string.IsNullOrEmpty(SessionState.marcherJsonText) && !string.IsNullOrEmpty(SessionState.timingJsonText));
+        LoadMarcherStateFromJSON(SessionState.marcherJsonText);
+        LoadSetTimingMapFromJSON(SessionState.timingJsonText);
 
-        if (SessionManager.instance != null)
-        {
-            OnSessionReady();
-        }
+        OnSessionReady();
     }
-
-    void OnSessionReady()
+    public void OnSessionReady()
     {
         InitializeSession();
-        InitializeUI();
-        ApplyUpdates();
         setBar.OnTotalSetsChanged(numberOfSets);
-        shapeMarchers.InitializeShapeManagers(marcherPrefab, positionSpherePrefab, interval);
+        shapeMarchers.InitializeShapeManagers(marcherPrefab, interval);
         fieldCenter = fieldManager.GetFieldCenter();
-    }
 
+        PopulateMarchers();
+    }
     void OnGridReadyHandler()
     {
         Debug.Log("✅ Grid Ready — Populating Marchers");
-        PopulateMarchers();
+        //PopulateMarchers();
     }
-
     private void InitializeSession(){
         numberOfMarchers = session.SessionState.NumberOfMarchers;
         numberOfSets = session.SessionState.NumberOfSets;
         lastSet = int.Parse(session.SessionState.LastSet);
+        UIController.InitializeUI();
     }
-
-    private void InitializeUI()
-    {
-        numberOfMarchersInputField.text = numberOfMarchers.ToString();
-        numberOfSetsInputField.text = numberOfSets.ToString();
-        countsPerSetInputField.text = countsPerSet.ToString();
-        bpmInputField.text = bpm.ToString();
-        intervalField.text = interval.ToString();
-    }
-
-    public void ApplyUpdates()
-    {
-        numberOfMarchers = Mathf.Max(1, int.Parse(numberOfMarchersInputField.text));
-        numberOfSets = Mathf.Max(1, int.Parse(numberOfSetsInputField.text));
-        countsPerSet = Mathf.Max(1, int.Parse(countsPerSetInputField.text));
-        bpm = Mathf.Clamp(float.Parse(bpmInputField.text), 20f, 300f);
-        interval = Mathf.Clamp(float.Parse(intervalField.text), 1f, 4f);
-
-        session.SessionState.NumberOfMarchers = numberOfMarchers;
-        session.SessionState.NumberOfSets = numberOfSets;
-
-        setBar.OnTotalSetsChanged(numberOfSets);
-        metronome.UpdateBPM(bpm);
-
-        Debug.Log($"Updated: Marchers = {numberOfMarchers}, Sets = {numberOfSets}, Counts = {countsPerSet}, BPM = {bpm}");
-    }
-
 
     public void PopulateMarchers()
     {
-        SnapToGridLines.OnGridReady -= PopulateMarchers; // Unsubscribe to prevent multiple calls
+        SnapToGridLines.OnGridReady -= PopulateMarchers;
         marchers.Clear();
 
-        // Retrieve the current list of marchers already present in the scene.
         marchers = new List<MarcherPositionsManager>(GetComponentsInChildren<MarcherPositionsManager>());
         int currentMarcherCount = marchers.Count;
 
-        // Adjust the marcher count to match the user-specified number.
         if (currentMarcherCount < numberOfMarchers)
-            AddMarchers(currentMarcherCount);
+            AddMarchers(currentCount: currentMarcherCount);
         else if (currentMarcherCount > numberOfMarchers)
-            RemoveExcessMarchers(currentMarcherCount);
+            RemoveExcessMarchers(currentCount: currentMarcherCount);
 
-        // Ensure each marcher has the correct number of set positions.
-        UpdateMarcherSets();
+        bool usedSavedPositions = false;
+        int lastSetNum = int.Parse(session.SessionState.LastSet);
 
-        // Arrange the newly created marchers in a square formation at the center of the field.
-        ArrangeMarchersInSquare();
+        foreach (var marcher in marchers)
+        {
+            marcher.InitializeSetCount(numberOfSets);
+
+            // Inject saved positions into the marcher manager
+            if (parsedSetPositions.ContainsKey(marcher.name))
+            {
+                foreach (var kvp in parsedSetPositions[marcher.name])
+                    marcher.setPositions[kvp.Key] = kvp.Value;
+            }
+
+            if (parsedStandbyPositions.ContainsKey(marcher.name))
+            {
+                foreach (var kvp in parsedStandbyPositions[marcher.name])
+                    marcher.standbyPositions[kvp.Key] = kvp.Value;
+            }
+
+            // Set transform position based on best available data
+            if (marcher.setPositions.ContainsKey(lastSetNum))
+            {
+                marcher.transform.position = marcher.setPositions[lastSetNum];
+                usedSavedPositions = true;
+            }
+            else if (marcher.standbyPositions.ContainsKey(lastSetNum))
+            {
+                marcher.transform.position = marcher.standbyPositions[lastSetNum];
+                usedSavedPositions = true;
+            }
+        }
+
+        if (!usedSavedPositions)
+        {
+            ArrangeMarchersInSquare();
+        }
     }
 
     private void AddMarchers(int currentCount)
@@ -139,8 +140,6 @@ public class EnsembleDirector2 : MonoBehaviour
 
     private void CreateMarcher(int index, Color color, int sets)
     {
-        //determine position
-        //Vector3 position = fieldCenter + new Vector3(col * spacing, 0, row * spacing);
         Vector3 position = Vector3.zero;
 
         GameObject marcherObject = Instantiate(marcherPrefab, position, Quaternion.identity, transform);
@@ -148,12 +147,12 @@ public class EnsembleDirector2 : MonoBehaviour
 
         MarcherPositionsManager marcher = marcherObject.GetComponent<MarcherPositionsManager>();
         MarcherController marcherController = marcherObject.GetComponent<MarcherController>();
-        
-        marcher.InitializeSets(sets, countsPerSet, color, positionSpherePrefab); 
-        marcherController.InitializeMarcher(this);
-        marchers.Add(marcher); 
-    }
 
+        marcher.InitializeSetCount(sets); // ✅ REPLACED: no need for InitializeSets
+        marcherController.InitializeMarcher(this);
+
+        marchers.Add(marcher);
+    }
 
     private void ArrangeMarchersInSquare()
     {
@@ -178,66 +177,201 @@ public class EnsembleDirector2 : MonoBehaviour
         );
     }
 
-    /// <summary>
-    /// Updates each marcher to ensure they have the correct number of sets.
-    /// Adds or removes position spheres as necessary.
-    /// </summary>
-    private void UpdateMarcherSets()
+    public string GenerateMarcherStateJSON()
+    {
+        var root = new JSONObject();
+        root["version"] = "1.0.0";
+        root["timestamp"] = System.DateTime.UtcNow.ToString("o");
+
+        var marcherArray = new JSONArray();
+
+        foreach (var marcher in marchers)
+        {
+            var marcherNode = new JSONObject();
+            marcherNode["id"] = marcher.name;
+
+            var setPosNode = new JSONObject();
+            foreach (var kvp in marcher.setPositions)
+            {
+                var setArray = new JSONArray();
+                setArray.Add(kvp.Value.x);
+                setArray.Add(kvp.Value.y);
+                setArray.Add(kvp.Value.z);
+                setPosNode[kvp.Key.ToString()] = setArray;
+
+            }
+
+            var standbyPosNode = new JSONObject();
+            foreach (var kvp in marcher.standbyPositions)
+            {
+                var standbyArray = new JSONArray();
+                standbyArray.Add(kvp.Value.x);
+                standbyArray.Add(kvp.Value.y);
+                standbyArray.Add(kvp.Value.z);
+                standbyPosNode[kvp.Key.ToString()] = standbyArray;
+            }
+
+            marcherNode["setPositions"] = setPosNode;
+            marcherNode["standbyPositions"] = standbyPosNode;
+
+            marcherArray.Add(marcherNode);
+        }
+
+        root["marchers"] = marcherArray;
+
+        return root.ToString(2); // Pretty print with indent
+    }
+
+    public string SaveMarcherStateToFile()
+    {
+        string json = GenerateMarcherStateJSON();
+        string showTitle = SessionManager.instance.SessionState.ShowTitle;
+        string sanitizedTitle = string.Join("_", showTitle.Split(Path.GetInvalidFileNameChars()));
+        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        string filename = $"{sanitizedTitle}_{timestamp}_marcher_positions.json";
+
+        string directory = Path.Combine(Application.dataPath, "SavedJSON");
+        if (!Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        string path = Path.Combine(directory, filename);
+        File.WriteAllText(path, json);
+        Debug.Log("✅ Marcher state JSON saved to: " + path);
+
+    #if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh();
+    #endif
+
+        return path; // 🔥 Return full path so ShowDataManager can upload it
+    }
+
+    public void LoadMarcherStateFromJSON(string jsonText)
+    {
+        Debug.Log("Attempting to Load JSON position values to marchers");
+
+        parsedSetPositions.Clear();
+        parsedStandbyPositions.Clear();
+
+        var root = JSON.Parse(jsonText);
+        var marcherArray = root["marchers"].AsArray;
+
+        for (int i = 0; i < marcherArray.Count; i++)
+        {
+            var marcherData = marcherArray[i];
+            string id = marcherData["id"];
+
+            var setPositions = marcherData["setPositions"].AsObject;
+            var standbyPositions = marcherData["standbyPositions"].AsObject;
+
+            Dictionary<int, Vector3> setsDict = new Dictionary<int, Vector3>();
+            Dictionary<int, Vector3> standbyDict = new Dictionary<int, Vector3>();
+
+            foreach (KeyValuePair<string, JSONNode> kvp in setPositions)
+            {
+                int set = int.Parse(kvp.Key);
+                var vec = kvp.Value.AsArray;
+                setsDict[set] = new Vector3(vec[0].AsFloat, vec[1].AsFloat, vec[2].AsFloat);
+            }
+
+            foreach (KeyValuePair<string, JSONNode> kvp in standbyPositions)
+            {
+                int set = int.Parse(kvp.Key);
+                var vec = kvp.Value.AsArray;
+                standbyDict[set] = new Vector3(vec[0].AsFloat, vec[1].AsFloat, vec[2].AsFloat);
+            }
+
+            parsedSetPositions[id] = setsDict;
+            parsedStandbyPositions[id] = standbyDict;
+
+            Debug.Log($"🔁 Cached all positions for {id}");
+        }
+    }
+
+    public void RepositionMarchersToSet(int setIndex)
     {
         foreach (var marcher in marchers)
         {
-            int currentSets = marcher.PositionSpheres.Length;
-            int difference = numberOfSets - currentSets;
-            Color sphereColor = GetMarcherColor(marcher);
+            Vector3 newPosition;
 
-            if (difference > 0)
+            if (marcher.setPositions.TryGetValue(setIndex, out newPosition))
             {
-                // If more sets are needed, add position spheres.
-                for (int i = currentSets; i < numberOfSets; i++)
-                {
-                    marcher.AddPositionSphere(i, positionSpherePrefab, sphereColor);
-                }
+                marcher.transform.position = newPosition;
+                Debug.Log($"{marcher.name} repositioned to SetPosition for set {setIndex}");
             }
-            else if (difference < 0)
+            else if (marcher.standbyPositions.TryGetValue(setIndex, out newPosition))
             {
-                // If fewer sets are needed, remove extra position spheres.
-                for (int i = currentSets - 1; i >= numberOfSets; i--)
-                {
-                    marcher.RemovePositionSphere(i);
-                }
+                marcher.transform.position = newPosition;
+                Debug.Log($"{marcher.name} repositioned to StandbyPosition for set {setIndex}");
+            }
+            else
+            {
+                Debug.Log($"{marcher.name} has no saved position for set {setIndex}");
             }
         }
     }
 
-    /// <summary>
-    /// Determines the color of the marcher by checking its existing spheres.
-    /// </summary>
-    /// <param name="marcher">The marcher whose color is being determined.</param>
-    /// <returns>The color of the marcher.</returns>
-    private Color GetMarcherColor(MarcherPositionsManager marcher)
+    public string SaveSetTimingMapToFile()
     {
-        foreach (var sphere in marcher.PositionSpheres)
+        var root = new JSONObject();
+
+        foreach (var entry in SessionManager.instance.SessionState.SetTimingMap)
         {
-            if (sphere?.GetComponent<Renderer>() is Renderer renderer)
-            {
-                return renderer.sharedMaterial.color;
-            }
+            var setIndex = entry.Key;
+            var data = entry.Value;
+
+            JSONObject setNode = new JSONObject();
+            setNode["count"] = data.count;
+            setNode["startBPM"] = data.startBPM;
+            setNode["endBPM"] = data.endBPM;
+
+            root[setIndex.ToString()] = setNode;
         }
 
-        foreach (var sphere in marcher.setSpheres)
+        string json = root.ToString(2); // Pretty print
+        string showTitle = SessionManager.instance.SessionState.ShowTitle;
+        string sanitizedTitle = string.Join("_", showTitle.Split(Path.GetInvalidFileNameChars()));
+        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        string filename = $"{sanitizedTitle}_{timestamp}_set_timing.json";
+
+        string directory = Path.Combine(Application.dataPath, "SavedJSON");
+        if (!Directory.Exists(directory))
         {
-            if (sphere?.GetComponent<Renderer>() is Renderer renderer)
-            {
-                return renderer.sharedMaterial.color;
-            }
+            Directory.CreateDirectory(directory);
         }
 
-        return Color.white; // Default to white if no color is found.
+        string path = Path.Combine(directory, filename);
+        File.WriteAllText(path, json);
+
+        Debug.Log("✅ SetTiming JSON saved to: " + path);
+    #if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh();
+    #endif
+        return path;
+    }
+
+    public void LoadSetTimingMapFromJSON(string jsonText)
+    {
+        var json = JSON.Parse(jsonText);
+        var map = SessionManager.instance.SessionState.SetTimingMap;
+        map.Clear();
+
+        foreach (KeyValuePair<string, JSONNode> kvp in json.AsObject)
+        {
+            int setIndex = int.Parse(kvp.Key);
+            int count = kvp.Value["count"];
+            float startBPM = kvp.Value["startBPM"];
+            float endBPM = kvp.Value["endBPM"];
+
+            map[setIndex] = new SessionState.SetTimingData(setIndex, count, startBPM, endBPM);
+        }
+
+        Debug.Log($"✅ Loaded {map.Count} SetTiming entries into SessionState.");
     }
 
     void OnDestroy()
     {
         SnapToGridLines.OnGridReady -= OnGridReadyHandler;
     }
-
 }

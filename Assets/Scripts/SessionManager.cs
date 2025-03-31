@@ -161,7 +161,7 @@ public class SessionManager : MonoBehaviour
 
 
     // 🔹 Save selected show details into session
-    public void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status, string setOnExit)
+    public void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status, string setOnExit, string JSONMarching, string JSONTiming)
     {
         SessionState.CurrentShowID = id;
         SessionState.ShowTitle = title;
@@ -174,6 +174,8 @@ public class SessionManager : MonoBehaviour
         SessionState.LastModified = modified;
         SessionState.ShowStatus = status;
         SessionState.LastSet = setOnExit;
+        SessionState.JSONMarchersPositions = JSONMarching;
+        SessionState.JSONSetTiming = JSONTiming;
     }
 
     public void AddNewShow(string showTitle)
@@ -240,6 +242,7 @@ public class SessionManager : MonoBehaviour
 
     public void SaveShow()
     {
+        //ensembleDirector.SaveMarcherStateToFile();
         showDataManager.SaveShow();
     }
 
@@ -252,11 +255,17 @@ public class SessionManager : MonoBehaviour
         }
     }
 
+    public void StartLogout()
+    {
+        showDataManager.LogOut();
+    }
+
     public void Logout()
     {
         Debug.Log("🔒 Logging out...");
         userSession.Logout();
         savedShows.Clear();
+        selectedShow = null;
         SceneController.instance.SwitchScene(1);
     }
 

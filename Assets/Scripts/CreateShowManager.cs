@@ -77,11 +77,13 @@ public class CreateShowManager : MonoBehaviour
             int numSets = int.Parse(inputNumSets.text);
             int numProps = int.Parse(inputNumProps.text);
             string setOnExit = "1";
+            string JSONMarching = null;
+            string JSONTiming = null;
             
             Debug.Log("Attempting to create new show " + showTitle);
 
             // Save Show Data Locally in SessionManager
-            SessionManager.instance.SaveToSessionManager(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus, setOnExit);
+            SessionManager.instance.SaveToSessionManager(showID, showTitle, groupName, fieldType, productionYear, numMarchers, numSets, numProps, lastModified, showStatus, setOnExit, JSONMarching, JSONTiming);
 
             // Copy the Marching Show Template Google Sheet
             session.showDataManager.CreateNewShowTemplate(

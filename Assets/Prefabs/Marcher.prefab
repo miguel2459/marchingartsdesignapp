@@ -107,6 +107,7 @@ GameObject:
   - component: {fileID: 5783072409151532744}
   - component: {fileID: 1380147373992394969}
   - component: {fileID: 942577037629190339}
+  - component: {fileID: 3832302089163184675}
   - component: {fileID: 2976084566100136744}
   - component: {fileID: 5783072409151532747}
   - component: {fileID: 5783072409151532746}
@@ -171,6 +172,21 @@ MonoBehaviour:
   PositionSpheres: []
   setSpheres: []
   positions: []
+  visualizer: {fileID: 0}
+--- !u!114 &3832302089163184675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5783072409151532751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4a811d49b4831243a3578073d9c0da9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dotMarkerPrefab: {fileID: 3639481111079413093, guid: 5b7fe71959540f144bb764790adc3523, type: 3}
+  yOffset: 0
 --- !u!114 &2976084566100136744
 MonoBehaviour:
   m_ObjectHideFlags: 0
