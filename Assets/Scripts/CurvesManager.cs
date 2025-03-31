@@ -10,12 +10,8 @@ public class CurvesManager : MonoBehaviour
     private float marcherSpacing;
 
     // Initialize method to set up necessary references
-    public void Initialize(GameObject marcherPrefab, GameObject positionSpherePrefab, float marcherSpacing)
+    public void Initialize()
     {
-        this.marcherPrefab = marcherPrefab;
-        this.positionSpherePrefab = positionSpherePrefab;
-        this.marcherSpacing = marcherSpacing;
-
         // Get necessary components in the scene if not assigned
         snapToGrid = FindObjectOfType<SnapToGridLines>();
         intervalManager = FindObjectOfType<IntervalManager>();

@@ -4,15 +4,17 @@ using System.Collections;
 
 public class Metronome2 : MonoBehaviour
 {
-    public AudioClip metronomeClip; // The audio clip for the metronome
-    public Text setText; // UI Text component for displaying the current set
-    public Text counterText; // UI Text component for displaying the current count
+    public AudioClip metronomeClip;
+    public Text setText;
+    public Text counterText;
+    public CountsProgressBar countsProgressBar; // ✅ Injected reference
 
     [SerializeField]
     private float beatInterval;
     private AudioSource audioSource;
     private int cycleCount = 0;
-    private bool isRunning = false; // Set initial state to false
+    private bool isRunning = false;
+
     public EnsembleDirector2 director;
 
     void Start()
@@ -21,20 +23,12 @@ public class Metronome2 : MonoBehaviour
         audioSource.clip = metronomeClip;
     }
 
-    // This function updates BPM and recalculates beat interval
-    public void UpdateBPM(float bpm)
-    {
-        beatInterval = 60f / bpm;
-        setText.text = SessionManager.instance.SessionState.LastSet;
-    }
-
     public void StartMetronome()
     {
         if (!isRunning)
         {
             isRunning = true;
-            cycleCount = 0; // Reset cycle count at start
-            director.ApplyUpdates();
+            cycleCount = 1;
             StartCoroutine(MetronomeRoutine());
         }
     }
@@ -42,48 +36,70 @@ public class Metronome2 : MonoBehaviour
     IEnumerator MetronomeRoutine()
     {
         int count = 1;
-        MarcherController[] marcherControllers = FindObjectsOfType<MarcherController>();
+
+        // Reset all marcher controllers
         foreach (var marcher in director.marchers)
         {
-            marcher.GetComponent<MarcherController>().ResetMarcherPosition();
+            marcher.GetComponent<MarcherController>().ResetMarcher();
         }
-        Debug.Log("Metronome started");
 
         while (isRunning)
         {
-            if (count <= director.countsPerSet)
+            // 🔁 Get current set and timing data
+            if (!SessionManager.instance.SessionState.SetTimingMap.TryGetValue(cycleCount, out var timing))
             {
-                counterText.text = count.ToString(); // Update counter text with the current count
-                audioSource.Play(); // Play the metronome sound
-                setText.text = $"{cycleCount}"; // Update set text with the current set
-                Debug.Log("count: " + count + " cycle: " + cycleCount);
+                Debug.LogWarning($"❌ No timing data for Set {cycleCount}");
+                StopMetronome();
+                yield break;
+            }
 
-                if (count == 1 && cycleCount == 1)
-                {
-                    //Debug.Log("Triggering StartMarching for all marcherControllers " + marcherControllers.Length);
-                    // Start marching for all marcherControllers
-                    foreach (var marcherController in marcherControllers)
-                    {
-                        marcherController.StartMarching(cycleCount);
-                    }
-                }
+            int totalCounts = timing.count;
+            float startBPM = timing.startBPM;
+            float endBPM = timing.endBPM;
+
+            // Compute current interpolated BPM (for acceleration/deceleration)
+            float lerpT = (totalCounts > 1) ? (count - 1f) / (totalCounts - 1f) : 0f;
+            float interpolatedBPM = Mathf.Lerp(startBPM, endBPM, lerpT);
+            beatInterval = 60f / interpolatedBPM;
+
+            // 🔊 Update UI and audio
+            counterText.text = count.ToString();
+            setText.text = $"{cycleCount}";
+            audioSource.Play();
+
+            // 🎯 Highlight the count in the UI
+            countsProgressBar?.HighlightCount(count - 1);
+
+            // 🥁 Start marching on first count of first playable set
+            if (count == 1 && cycleCount == 1)
+            {
+                foreach (var mc in FindObjectsOfType<MarcherController>())
+                    mc.StartMarching(cycleCount);
             }
 
             yield return new WaitForSeconds(beatInterval);
+
             count++;
 
-            // Reset the count after reaching the set number of steps for each marcherController
-            if (count > director.countsPerSet)
+            if (count > totalCounts)
             {
                 count = 1;
                 cycleCount++;
+
+                // Reset count bar highlight
+                countsProgressBar?.ResetHighlight();
+
+                // Render next set's count bar if exists
+                if (SessionManager.instance.SessionState.SetTimingMap.TryGetValue(cycleCount, out var nextSet))
+                {
+                    countsProgressBar?.RenderCounts(cycleCount, nextSet.count);
+                }
             }
 
-            // Stop the metronome if maxSets is reached for any marcherController
             if (cycleCount > director.numberOfSets)
             {
-                StopMetronome(); // Stop and reset metronome if the cycle count exceeds maxSets
-                break; // Exit the loop when the max number of repeats is reached
+                StopMetronome();
+                yield break;
             }
         }
     }
@@ -91,24 +107,20 @@ public class Metronome2 : MonoBehaviour
     public void StopMetronome()
     {
         audioSource.Play();
-        isRunning = false; // Stop the metronome
-
-        // Reset the counter and set text when the metronome stops
-        counterText.text = "Complete";
-        setText.text = "" + cycleCount.ToString();
-
+        isRunning = false;
         cycleCount = 0;
 
-        // Reset all marcher controllers to their starting positions
-        MarcherController[] marcherControllers = FindObjectsOfType<MarcherController>();
-        foreach (var marcherController in marcherControllers)
+        counterText.text = "Complete";
+        setText.text = "";
+
+        countsProgressBar?.ResetHighlight();
+
+        foreach (var mc in FindObjectsOfType<MarcherController>())
         {
-            if (marcherController.positions.Length > 0)
-            {
-                marcherController.ResetMarcher(); // Assuming you have a reset function for marchers
-            }
+            if (mc.HasSetPositions())
+                mc.ResetMarcher();
         }
 
-        Debug.Log("Metronome stopped and reset.");
+        Debug.Log("🛑 Metronome stopped.");
     }
 }

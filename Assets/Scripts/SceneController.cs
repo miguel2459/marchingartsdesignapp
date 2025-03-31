@@ -110,18 +110,44 @@ public class SceneController : MonoBehaviour
         StartCoroutine(SwitchSceneRoutine(newSceneIndex));
     }
 
-    private IEnumerator SwitchSceneRoutine(int newSceneIndex)
+
+    public IEnumerator SwitchSceneRoutine(int newSceneIndex)
     {
+        if (!SceneExists(newSceneIndex))
+        {
+            Debug.LogError($"❌ Scene {newSceneIndex} does not exist in Build Settings.");
+            yield break;
+        }
+
+        if (IsSceneCurrentlyLoaded(newSceneIndex))
+        {
+            Debug.Log($"⚠ Scene {newSceneIndex} is already loaded.");
+            yield break;
+        }
+
+        if (isSceneLoading)
+        {
+            Debug.Log($"⏳ Another scene is currently loading. Waiting...");
+            yield break;
+        }
+
         Debug.Log($"🔄 Switching to Scene: {newSceneIndex}");
         isSceneLoading = true;
 
         yield return UnloadAllScenesExceptMain();
 
-        yield return SceneManager.LoadSceneAsync(newSceneIndex, LoadSceneMode.Additive);
+        Debug.Log("📥 Adding ShowManagerScene...");
+        AsyncOperation loadOp = SceneManager.LoadSceneAsync(newSceneIndex, LoadSceneMode.Additive);
+        yield return loadOp;
 
         isSceneLoading = false;
-        Debug.Log($"✅ Successfully switched to Scene: {newSceneIndex}");
+
+        if (loadOp.isDone)
+            Debug.Log($"✅ Successfully switched to Scene: {newSceneIndex}");
+        else
+            Debug.LogError($"❌ Scene {newSceneIndex} failed to load.");
     }
+
 
     private IEnumerator UnloadAllScenesExceptMain()
     {

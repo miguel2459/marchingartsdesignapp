@@ -20,11 +20,6 @@ public class MarcherMovement : MonoBehaviour
     public LayerMask gizmoLayer; // Layer for the gizmo
     public LayerMask marcherLayer; // Layer for the marchers
 
-    void Start()
-    {
-        marcherSelector = GetComponent<SelectedMarchers>();
-        snapToGrid = FindObjectOfType<SnapToGridLines>(); // Assuming SnapToGridWithLines is on the same GameObject
-    }
 
     void Update()
     {
@@ -112,6 +107,19 @@ public class MarcherMovement : MonoBehaviour
 
             // Snap to grid when releasing the mouse button
             transformGizmo.transform.position = snapToGrid.GetSnappedGizmoPosition(transformGizmo.transform.position);
+
+            // 💾 Save standby positions for each selected marcher
+            int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+
+            foreach (var marcher in marcherSelector.selectedMarchers)
+            {
+                if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
+                {
+                    
+                    Vector3 pos = marcher.transform.position;
+                    posManager.SaveStandbyPosition(currentSet, pos);
+                }
+            }
         }
     }
 
@@ -123,7 +131,7 @@ public class MarcherMovement : MonoBehaviour
             {
                 marcherPositionsManager = marcher.GetComponent<MarcherPositionsManager>();
 
-                if (marcherPositionsManager != null && AreAllSetSpheresFilled(marcherPositionsManager))
+                if (marcherPositionsManager != null && AreAllSetPositionsConfirmed(marcherPositionsManager))
                 {
                     Debug.Log($"{marcher.name}: All setSpheres are filled. Cannot move marcher.");
                     return;
@@ -184,17 +192,12 @@ public class MarcherMovement : MonoBehaviour
     }
 
 
-    bool AreAllSetSpheresFilled(MarcherPositionsManager marcherPositionsManager)
+    bool AreAllSetPositionsConfirmed(MarcherPositionsManager marcherPositionsManager)
     {
-        foreach (var sphere in marcherPositionsManager.setSpheres)
-        {
-            if (sphere == null)
-            {
-                return false;
-            }
-        }
-        return true;
+        int totalSetCount = SessionManager.instance.SessionState.NumberOfSets;
+        return marcherPositionsManager.setPositions.Count >= totalSetCount;
     }
+
 
     void AdjustGizmoRotation()
     {
@@ -224,7 +227,7 @@ public class MarcherMovement : MonoBehaviour
         {
             marcherPositionsManager = marcher.GetComponent<MarcherPositionsManager>();
 
-            if (marcherPositionsManager != null && AreAllSetSpheresFilled(marcherPositionsManager))
+            if (marcherPositionsManager != null && AreAllSetPositionsConfirmed(marcherPositionsManager))
             {
                 Debug.Log($"{marcher.name}: All setSpheres are filled. Cannot move marcher.");
                 return;

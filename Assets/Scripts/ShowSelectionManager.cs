@@ -75,7 +75,7 @@ public class ShowSelectionManager : MonoBehaviour
 
     private IEnumerator FetchShowDetails(string sheetID)
     {
-        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B12?key={SessionManager.instance.apiKey}";
+        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B14?key={SessionManager.instance.apiKey}";
         Debug.Log($"🔗 Fetching show details from: {url}");
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
@@ -110,14 +110,15 @@ public class ShowSelectionManager : MonoBehaviour
                 string modified = showDataResponse["values"][9][0].Value.Trim();         // B10
                 string status = showDataResponse["values"][10][0].Value.Trim();          // B11
                 string setOnExit = showDataResponse ["values"][11][0].Value.Trim();      // B12
+                string JSONMarching = showDataResponse ["values"][12][0];                // B13
+                string JSONTiming = showDataResponse ["values"][13][0];                  // B14
 
                 // Save to SessionManager
                 SessionManager.instance.SaveToSessionManager(
-                    showID, title, group, fieldType, year, marchers, sets, props, modified, status, setOnExit
+                    showID, title, group, fieldType, year, marchers, sets, props, modified, status, setOnExit, JSONMarching, JSONTiming
                 );
 
-                // Switch to Show Manager Scene after data is loaded
-                SceneController.instance.SwitchScene(4);
+                StartCoroutine(LoadShowJSONThenPopulate());
             }
             else
             {
@@ -125,7 +126,40 @@ public class ShowSelectionManager : MonoBehaviour
             }
         }
     }
+    private IEnumerator LoadShowJSONThenPopulate()
+    {
+        // Load Marcher JSON
+        string marcherUrl = SessionManager.instance.SessionState.JSONMarchersPositions;
+        UnityWebRequest marcherRequest = UnityWebRequest.Get(marcherUrl);
+        yield return marcherRequest.SendWebRequest();
 
+        if (marcherRequest.result == UnityWebRequest.Result.Success)
+        {
+            SessionState.marcherJsonText = marcherRequest.downloadHandler.text;
+            Debug.Log("📥 Marcher JSON stored.");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Failed to load Marcher JSON.");
+        }
+
+        // Load Timing JSON
+        string timingUrl = SessionManager.instance.SessionState.JSONSetTiming;
+        UnityWebRequest timingRequest = UnityWebRequest.Get(timingUrl);
+        yield return timingRequest.SendWebRequest();
+
+        if (timingRequest.result == UnityWebRequest.Result.Success)
+        {
+            SessionState.timingJsonText = timingRequest.downloadHandler.text;
+            Debug.Log("📥 Timing JSON stored.");
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Failed to load Timing JSON.");
+        }
+
+        SceneController.instance.SwitchScene(4);
+    }
 
     private int TryParseInt(string value)
     {

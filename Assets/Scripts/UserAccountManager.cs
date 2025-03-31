@@ -55,8 +55,6 @@ public class UserAccountManager : MonoBehaviour
 
     private void OnSaveShowClicked()
     {
-        SessionManager.instance.SaveShow();
-
         string date = DateTime.Now.ToString("dd/MM");
         string time = DateTime.Now.ToString("HH:mm");
 
@@ -64,6 +62,7 @@ public class UserAccountManager : MonoBehaviour
         if (lastSaveTime != null) lastSaveTime.text = time;
 
         SessionManager.instance.SessionState.LastModified = $"{date}, {time}";
+        SessionManager.instance.SaveShow();
 
         Debug.Log("💾 Save triggered and UI updated.");
     }
@@ -97,7 +96,7 @@ public class UserAccountManager : MonoBehaviour
 
     private void LogoutUser()
     {
-        SessionManager.instance.Logout();
+        SessionManager.instance.StartLogout();
     }
 
     private void OnDestroy()

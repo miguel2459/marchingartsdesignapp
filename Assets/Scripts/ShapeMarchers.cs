@@ -21,17 +21,17 @@ public class ShapeMarchers : MonoBehaviour
         if (!intervalManager) intervalManager = GetComponent<IntervalManager>();
     }
 
-    public void InitializeShapeManagers(GameObject marcherPrefab, GameObject positionSpherePrefab, float marcherSpacing)
+    public void InitializeShapeManagers(GameObject marcherPrefab, float marcherSpacing)
     {
         // Initialize shape managers before they are used
         if (boxManager != null) 
-            boxManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+            boxManager.Initialize();
         if (linesManager != null) 
-            linesManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+            linesManager.Initialize();
         if (curvesManager != null) 
-            curvesManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+            curvesManager.Initialize();
         if (circleManager != null) 
-            circleManager.Initialize(marcherPrefab, positionSpherePrefab, marcherSpacing);
+            circleManager.Initialize();
     }
 
 

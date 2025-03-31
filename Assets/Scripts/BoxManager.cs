@@ -8,7 +8,7 @@ public class BoxManager : MonoBehaviour
     public IntervalManager intervalManager;
 
     // Initialize method to set up necessary references
-    public void Initialize(GameObject marcherPrefab, GameObject positionSpherePrefab, float marcherSpacing)
+    public void Initialize()
     {
         if (snapToGrid == null)
         {
@@ -26,25 +26,15 @@ public class BoxManager : MonoBehaviour
     public void CreateBoxFormation(List<GameObject> marchers, IntervalManager.IntervalType interval, bool isFilled)
     {
         Vector3 center = fieldManager.GetFieldCenter();
-        float count = marchers.Count;
+        int count = marchers.Count;
         float spacing = intervalManager.GetIntervalSpacing(interval);
 
-        Debug.Log($"Marcher Count: {count}, interval size: {spacing}");
+        // New logic: round up cols and rows to ensure all marchers fit
+        int numCols = Mathf.CeilToInt(Mathf.Sqrt(count));
+        int numRows = Mathf.CeilToInt((float)count / numCols);
 
-        // Step 1: Calculate the approximate size of the box
-        int gridSize = Mathf.FloorToInt(Mathf.Sqrt(count));  // 4x4 for 16 marchers
+        Debug.Log($"✅ Rectangular Grid Calculated - Total: {count} | Rows: {numRows}, Columns: {numCols}, Spacing: {spacing}");
 
-        // Step 2: Calculate the box width and height based on interval spacing
-        int numRows = gridSize;
-        int numCols = gridSize;
-
-        // If the number of marchers isn't a perfect square, fill any remaining marchers
-        if (numRows * numCols < count)
-        {
-            numRows += 1;  // Add one more column if there are remaining marchers
-        }
-
-        Debug.Log($"Creating Box Formation - Rows: {numRows}, Columns: {numCols}, Spacing: {spacing}, IsFilled: {isFilled}");
 
         if (isFilled)
         {
