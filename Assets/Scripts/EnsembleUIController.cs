@@ -13,6 +13,12 @@ public class EnsembleUIController : MonoBehaviour
     [Header("Target Reference")]
     public EnsembleDirector2 director;
     public SetProgressBar setsBar;
+    public CountsProgressBar countsBar;
+
+    public Button buttonPlaySet01;
+    public Button buttonPlayChunk;
+    public Button buttonPlayCurrentSet;
+    
 
     private void Start()
     {
@@ -31,8 +37,9 @@ public class EnsembleUIController : MonoBehaviour
         countsPerSetInputField.text = director.countsPerSet.ToString();
         bpmInputField.text = director.bpm.ToString();
         intervalField.text = director.interval.ToString();
-
+        
         setsBar.InitializeSetsBar();
+        countsBar.EnsureSetTimingDefaults(director.numberOfSets);
     }
 
     private void AttachInputListeners()
@@ -50,7 +57,31 @@ public class EnsembleUIController : MonoBehaviour
             else
                 RevertToPreviousValue(numberOfSetsInputField, director.numberOfSets);
         });
+
+         buttonPlaySet01.onClick.AddListener(() =>
+        {
+            director.metronome.StartMetronome(1);
+        });
+
+        // buttonPlayChunk.onClick.AddListener(() =>
+        // {
+        //     int chunkStart = GetChunkStartSet(); // You define this logic
+        //     director.metronome.StartMetronome(chunkStart);
+        // });
+
+        buttonPlayCurrentSet.onClick.AddListener(() =>
+        {
+            int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+            director.metronome.StartMetronome(currentSet);
+        });
     }
+
+    private int GetChunkStartSet()
+{
+    // You can return a value based on dropdown, toggle, or internal logic
+    return 3; // Example: chunk starts at set 3
+}
+
 
     private void RevertToPreviousValue(InputField field, int previousValue)
     {

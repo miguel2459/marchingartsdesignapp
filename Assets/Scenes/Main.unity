@@ -167,11 +167,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   apiKey: 
-  userId: 
-  userFolderId: 
-  userEmail: 
-  userName: 
-  accountSheetID: 
+  debugSessionState:
+    UserId: 
+    UserEmail: 
+    UserName: 
+    AccountSheetID: 
+    UserFolderId: 
+    CurrentShowID: 
+    ShowTitle: 
+    GroupName: 
+    CreatedBy: 
+    FieldType: 
+    ProductionYear: 
+    NumberOfMarchers: 0
+    NumberOfSets: 0
+    NumberOfProps: 0
+    LastModified: 
+    ShowStatus: 
+    LastSet: 
+    JSONMarchersPositions: 
+    JSONSetTiming: 
+    SetsData: []
+    MarchersData: []
   savedShows: []
   selectedShow:
     showID: 
@@ -179,20 +196,6 @@ MonoBehaviour:
     showSheetID: 
     lastModified: 
     group: 
-  currentShowID: 
-  showTitle: 
-  groupName: 
-  createdBy: 
-  fieldType: 
-  productionYear: 
-  numberOfMarchers: 0
-  numberOfSets: 0
-  numberOfProps: 0
-  lastModified: 
-  showStatus: 
-  lastSet: 
-  setsData: []
-  marchersData: []
 --- !u!1 &431454371
 GameObject:
   m_ObjectHideFlags: 0
@@ -337,7 +340,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 909435455}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 878.6936, y: 563.54834, z: 25.251953}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -500,7 +503,7 @@ GameObject:
   - component: {fileID: 1385377768}
   - component: {fileID: 1385377769}
   m_Layer: 0
-  m_Name: SceneManager
+  m_Name: SceneController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -514,7 +517,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1385377767}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 878.6936, y: 563.54834, z: 25.251953}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -532,6 +535,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01256612f91c33440931ad73f3fea581, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isSessionInitialized: 0
 --- !u!1 &1590571787
 GameObject:
   m_ObjectHideFlags: 0

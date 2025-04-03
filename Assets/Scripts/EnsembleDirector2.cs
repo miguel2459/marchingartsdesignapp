@@ -50,6 +50,14 @@ public class EnsembleDirector2 : MonoBehaviour
 
         OnSessionReady();
     }
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Delete))
+        {
+            DeleteCurrentSetPositions();
+        }
+    }
+
     public void OnSessionReady()
     {
         InitializeSession();
@@ -104,6 +112,9 @@ public class EnsembleDirector2 : MonoBehaviour
                     marcher.standbyPositions[kvp.Key] = kvp.Value;
             }
 
+            // ✅ Safe to do after all marcher logic is done
+            setBar.OnSetButtonClick(lastSet);
+
             // Set transform position based on best available data
             if (marcher.setPositions.ContainsKey(lastSetNum))
             {
@@ -128,6 +139,51 @@ public class EnsembleDirector2 : MonoBehaviour
         for (int i = currentCount; i < numberOfMarchers; i++)
             CreateMarcher(i, new Color(Random.value, Random.value, Random.value), numberOfSets);
     }
+
+    public void PreviewCountPosition(int setNumber, int clickedCount)
+    {
+        var timingMap = SessionManager.instance.SessionState.SetTimingMap;
+
+        if (!timingMap.TryGetValue(setNumber, out var timing))
+        {
+            Debug.LogWarning($"❌ No timing data found for Set {setNumber}");
+            return;
+        }
+
+        if (!timingMap.ContainsKey(setNumber + 1))
+        {
+            Debug.LogWarning($"❌ Cannot preview count: Set {setNumber + 1} does not exist.");
+            return;
+        }
+
+        int totalCounts = Mathf.Max(1, timing.count);
+        float t = Mathf.Clamp01(clickedCount / (float)totalCounts);
+
+        Debug.Log($"🧠 Previewing Count {clickedCount} of {totalCounts} in Set {setNumber}");
+        Debug.Log($"➡ Interpolation factor t = {t:F3}");
+
+        foreach (var marcher in marchers)
+        {
+            if (marcher.setPositions.TryGetValue(setNumber, out var startPos) &&
+                marcher.setPositions.TryGetValue(setNumber + 1, out var endPos))
+            {
+                Vector3 interpolatedPos = Vector3.Lerp(startPos, endPos, t);
+
+                Debug.Log($"🔄 {marcher.name}:");
+                Debug.Log($"   StartPos (Set {setNumber})    = {startPos}");
+                Debug.Log($"   EndPos   (Set {setNumber + 1}) = {endPos}");
+                Debug.Log($"   Result   (Interpolated)       = {interpolatedPos}");
+
+                marcher.transform.position = interpolatedPos;
+            }
+            else
+            {
+                Debug.LogWarning($"⚠️ {marcher.name} is missing setPosition data for Set {setNumber} or Set {setNumber + 1}");
+            }
+        }
+    }
+
+
 
     private void RemoveExcessMarchers(int currentCount)
     {
@@ -369,6 +425,38 @@ public class EnsembleDirector2 : MonoBehaviour
 
         Debug.Log($"✅ Loaded {map.Count} SetTiming entries into SessionState.");
     }
+
+    public void DeleteCurrentSetPositions()
+    {
+        int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+        int previousSet = Mathf.Max(1, currentSet - 1);
+
+        Debug.Log($"🗑 Deleting Set {currentSet} positions and reverting to Set {previousSet}.");
+
+        foreach (var marcher in marchers)
+        {
+            // Remove the current set's data
+            marcher.setPositions.Remove(currentSet);
+            marcher.standbyPositions.Remove(currentSet);
+            marcher.SyncInspectorLists();
+
+            // Snap marcher to last known position
+            Vector3 newPosition;
+            if (marcher.setPositions.TryGetValue(previousSet, out newPosition) ||
+                marcher.standbyPositions.TryGetValue(previousSet, out newPosition))
+            {
+                marcher.transform.position = newPosition;
+                Debug.Log($"{marcher.name} ⬅️ Reverted to Set {previousSet} position: {newPosition}");
+            }
+            else
+            {
+                Debug.LogWarning($"{marcher.name} ⚠️ No fallback position for Set {previousSet}.");
+            }
+        }
+
+        Debug.Log("✅ All marcher positions updated.");
+    }
+
 
     void OnDestroy()
     {

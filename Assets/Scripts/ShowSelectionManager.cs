@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Networking;
 using SimpleJSON;
+using System.IO;
+
 
 public class ShowSelectionManager : MonoBehaviour
 {
@@ -28,7 +30,30 @@ public class ShowSelectionManager : MonoBehaviour
 
         Debug.Log("✅ User session detected, populating show selection.");
         PopulateShowSelection();
+        StartCoroutine(PreFetchAndCacheAllJSONs());
+
     }
+
+    private IEnumerator PreFetchAndCacheAllJSONs()
+    {
+        var shows = SessionManager.instance.savedShows;
+        string localDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
+        Directory.CreateDirectory(localDir);
+
+        foreach (var show in shows)
+        {
+            string marcherPath = Path.Combine(localDir, $"{show.showID}_marchers.json");
+            string timingPath = Path.Combine(localDir, $"{show.showID}_timing.json");
+
+            if (!File.Exists(marcherPath))
+                yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONMarchersPositions, marcherPath, isMarcher: true);
+            if (!File.Exists(timingPath))
+                yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONSetTiming, timingPath, isMarcher: false);
+        }
+
+        Debug.Log("✅ Cached all JSONs locally for available shows.");
+    }
+
 
     private void PopulateShowSelection()
     {
@@ -129,37 +154,89 @@ public class ShowSelectionManager : MonoBehaviour
     private IEnumerator LoadShowJSONThenPopulate()
     {
         // Load Marcher JSON
-        string marcherUrl = SessionManager.instance.SessionState.JSONMarchersPositions;
-        UnityWebRequest marcherRequest = UnityWebRequest.Get(marcherUrl);
-        yield return marcherRequest.SendWebRequest();
+        string localDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
+        string localMarcherPath = Path.Combine(localDir, $"{SessionManager.instance.SessionState.CurrentShowID}_marchers.json");
 
-        if (marcherRequest.result == UnityWebRequest.Result.Success)
+        bool needDownloadMarcher = false;
+
+        if (File.Exists(localMarcherPath))
         {
-            SessionState.marcherJsonText = marcherRequest.downloadHandler.text;
-            Debug.Log("📥 Marcher JSON stored.");
+            try
+            {
+                SessionState.marcherJsonText = File.ReadAllText(localMarcherPath);
+                Debug.Log("📥 Loaded marcher JSON from local.");
+            }
+            catch
+            {
+                Debug.LogWarning("⚠️ Failed to read local marcher JSON. Will re-download.");
+                needDownloadMarcher = true;
+            }
         }
         else
         {
-            Debug.LogWarning("⚠️ Failed to load Marcher JSON.");
+            Debug.Log("📥 Marcher JSON not found locally. Downloading...");
+            needDownloadMarcher = true;
         }
+
+        if (needDownloadMarcher)
+            yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONMarchersPositions, localMarcherPath, isMarcher: true);
+
+
 
         // Load Timing JSON
-        string timingUrl = SessionManager.instance.SessionState.JSONSetTiming;
-        UnityWebRequest timingRequest = UnityWebRequest.Get(timingUrl);
-        yield return timingRequest.SendWebRequest();
+        string localTimingPath = Path.Combine(localDir, $"{SessionManager.instance.SessionState.CurrentShowID}_timing.json");
+        
+        bool needDownloadTiming = false;
 
-        if (timingRequest.result == UnityWebRequest.Result.Success)
+        if (File.Exists(localTimingPath))
         {
-            SessionState.timingJsonText = timingRequest.downloadHandler.text;
-            Debug.Log("📥 Timing JSON stored.");
+            try
+            {
+                SessionState.timingJsonText = File.ReadAllText(localTimingPath);
+                Debug.Log("📥 Loaded timing JSON from local.");
+            }
+            catch
+            {
+                Debug.LogWarning("⚠️ Failed to read local timing JSON. Will re-download.");
+                needDownloadTiming = true;
+            }
         }
         else
         {
-            Debug.LogWarning("⚠️ Failed to load Timing JSON.");
+            Debug.Log("📥 Timing JSON not found locally. Downloading...");
+            needDownloadTiming = true;
         }
+
+        if (needDownloadTiming)
+            yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONSetTiming, localTimingPath, isMarcher: false);
+
 
         SceneController.instance.SwitchScene(4);
     }
+
+    private IEnumerator DownloadAndSaveJSON(string url, string localPath, bool isMarcher)
+    {
+        UnityWebRequest request = UnityWebRequest.Get(url);
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(localPath));
+            File.WriteAllText(localPath, request.downloadHandler.text);
+
+            if (isMarcher)
+                SessionState.marcherJsonText = request.downloadHandler.text;
+            else
+                SessionState.timingJsonText = request.downloadHandler.text;
+
+            Debug.Log($"📦 Saved JSON locally: {localPath}");
+        }
+        else
+        {
+            Debug.LogWarning($"⚠️ Failed to download JSON: {url} — {request.error}");
+        }
+    }
+
 
     private int TryParseInt(string value)
     {
