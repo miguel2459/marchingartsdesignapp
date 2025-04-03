@@ -18,6 +18,7 @@ public class MarcherController : MonoBehaviour
     private float elapsedTime = 0f;
 
     private bool isMarching = false;
+    private int lastCompletedStepIndex = 0;
 
     /// <summary>
     /// Inject EnsembleDirector and initialize marcher.
@@ -28,15 +29,6 @@ public class MarcherController : MonoBehaviour
 
         // Get all confirmed set positions from marcher
         setPositions = marcherPositionsManager.GetAllSetPositionsSorted();
-
-        if (setPositions.Length > 0)
-        {
-            transform.position = setPositions[0];
-        }
-        else
-        {
-            Debug.LogWarning($"{name} has no setPositions yet.");
-        }
     }
 
     /// <summary>
@@ -62,18 +54,20 @@ public class MarcherController : MonoBehaviour
     /// <summary>
     /// Resets marcher state to beginning.
     /// </summary>
-    public void ResetMarcher()
+    public void ResetMarcher(int startSetIndex = 1)
     {
         isMarching = false;
-        completedRepeats = 0;
+        completedRepeats = startSetIndex - 1;
         currentStep = 0;
         elapsedTime = 0f;
 
-        if (setPositions != null && setPositions.Length > 0)
+        var allSets = marcherPositionsManager.GetAllSetPositionsSorted();
+        if (allSets != null && allSets.Length >= startSetIndex)
         {
-            transform.position = setPositions[0];
+            transform.position = allSets[startSetIndex - 1];
         }
     }
+
 
     /// <summary>
     /// Prepare interpolated step positions between two set positions.
@@ -113,6 +107,14 @@ public class MarcherController : MonoBehaviour
         return marcherPositionsManager.GetAllSetPositionsSorted().Length > 0;
     }
 
+    
+
+    public void StopMarching()
+    {
+        isMarching = false;
+    }
+
+
     private void Update()
     {
         if (!isMarching || stepPositions == null || currentStep >= stepPositions.Length) return;
@@ -127,6 +129,7 @@ public class MarcherController : MonoBehaviour
 
         if (t >= 1f)
         {
+            //lastCompletedStepIndex = currentStep;
             currentStep++;
             elapsedTime = 0f;
 
@@ -137,7 +140,7 @@ public class MarcherController : MonoBehaviour
                 if (completedRepeats >= setPositions.Length - 1)
                 {
                     isMarching = false;
-                    FindObjectOfType<Metronome2>()?.StopMetronome();
+                    //FindObjectOfType<Metronome2>()?.StopMetronome();
                 }
                 else
                 {

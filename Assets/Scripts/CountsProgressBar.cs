@@ -12,6 +12,7 @@ public class CountsProgressBar : MonoBehaviour
 
     private List<GameObject> countButtons = new List<GameObject>();
     private int activeCountIndex = -1;
+    public EnsembleDirector2 director; // Or set a reference
 
     /// <summary>
     /// Renders the given number of counts as buttons.
@@ -19,6 +20,30 @@ public class CountsProgressBar : MonoBehaviour
     public void RenderCounts(int setNumber, int countTotal)
     {
         ClearCounts();
+
+        float spacing = 10f;
+        float viewportWidth = contentArea.parent.GetComponent<RectTransform>().rect.width;
+        float availableWidth = viewportWidth - ((countTotal - 1) * spacing);
+
+        int visibleCountLimit = 8;
+        float buttonWidth;
+
+        if (countTotal <= visibleCountLimit)
+        {
+            buttonWidth = availableWidth / countTotal;
+        }
+        else
+        {
+            float maxVisibleWidth = viewportWidth - ((visibleCountLimit - 1) * spacing);
+            buttonWidth = maxVisibleWidth / visibleCountLimit;
+        }
+
+        // Update layout spacing to match
+        HorizontalLayoutGroup layout = contentArea.GetComponent<HorizontalLayoutGroup>();
+        if (layout != null)
+        {
+            layout.spacing = spacing;
+        }
 
         for (int i = 0; i < countTotal; i++)
         {
@@ -30,19 +55,41 @@ public class CountsProgressBar : MonoBehaviour
                 label.text = (i + 1).ToString();
             }
 
+            RectTransform rt = buttonObj.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.sizeDelta = new Vector2(buttonWidth, rt.sizeDelta.y); // Respect current height
+            }
+
             Image bg = buttonObj.GetComponent<Image>();
             if (bg != null)
             {
                 bg.color = defaultColor;
             }
 
+            
+             int countIndex = i; // ✅ Local copy for closure
+
+            buttonObj.GetComponent<Button>().onClick.AddListener(() =>
+            {
+                OnCountButtonClicked(setNumber, countIndex + 1); // 1-based display
+            });
+
+
             countButtons.Add(buttonObj);
         }
 
-        // Optionally adjust container size based on number of buttons
-        float buttonWidth = countButtonPrefab.GetComponent<RectTransform>().sizeDelta.x;
-        contentArea.sizeDelta = new Vector2(countTotal * (buttonWidth + 10), contentArea.sizeDelta.y);
+        // Let layout group + content size fitter handle resizing — no need to modify contentArea.sizeDelta manually
     }
+
+    public void OnCountButtonClicked(int setNumber, int clickedCount)
+    {
+        if (director != null)
+        {
+            director.PreviewCountPosition(setNumber, clickedCount);
+        }
+    }
+
 
     /// <summary>
     /// Clears all count buttons.
@@ -80,6 +127,46 @@ public class CountsProgressBar : MonoBehaviour
 
         activeCountIndex = countIndex;
     }
+
+    public void EnsureSetTimingDefaults(int totalSets)
+    {
+        var map = SessionManager.instance.SessionState.SetTimingMap;
+
+        // Ensure default timing for all sets up to totalSets
+        for (int i = 1; i <= totalSets; i++)
+        {
+            if (!map.ContainsKey(i))
+            {
+                map[i] = new SessionState.SetTimingData(i, 8, 140f, 140f);
+                Debug.Log($"🆕 Default timing added for Set {i}: 8 counts @ 140 BPM");
+            }
+        }
+
+        // Get the current set number from SessionState
+        if (int.TryParse(SessionManager.instance.SessionState.LastSet, out int currentSet))
+        {
+            if (map.TryGetValue(currentSet, out var timing))
+            {
+                RenderCounts(currentSet, timing.count); // ✅ Initialize the visual
+            }
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Could not parse current set from SessionState.LastSet.");
+        }
+    }
+
+    public void ForceUnhighlight()
+    {
+        if (activeCountIndex >= 0 && activeCountIndex < countButtons.Count)
+        {
+            var img = countButtons[activeCountIndex].GetComponent<Image>();
+            if (img != null) img.color = defaultColor;
+        }
+
+        activeCountIndex = -1;
+    }
+
 
     /// <summary>
     /// Optional reset for when the metronome ends.
