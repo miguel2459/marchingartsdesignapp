@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 663d07e11cf94dc4d8e4c88934e40779, type: 3}
+  m_Name: ShowStateSO
+  m_EditorClassIdentifier: 
+  CurrentShowID: SH1743754439982
+  ShowTitle: Versace Union
+  GroupName: Bene Gesserit Corps
+  CreatedBy: 
+  FieldType: Football Field
+  ProductionYear: 2025
+  NumberOfMarchers: 56
+  NumberOfSets: 67
+  NumberOfProps: 8
+  LastModified: 4/4/2025, 1:18:36 AM
+  ShowStatus: Active
+  LastSet: 1
+  JSONMarchersURL: 
+  JSONSetTimingURL: 

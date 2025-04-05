@@ -5,6 +5,7 @@ using TMPro;
 
 public class CountsProgressBar : MonoBehaviour
 {
+    SessionManager session = SessionManager.instance;
     public GameObject countButtonPrefab; // Prefab for a single count button
     public RectTransform contentArea; // The container for all buttons
     public Color defaultColor = Color.white;
@@ -130,20 +131,20 @@ public class CountsProgressBar : MonoBehaviour
 
     public void EnsureSetTimingDefaults(int totalSets)
     {
-        var map = SessionManager.instance.SessionState.SetTimingMap;
+        var map = session.runtimeCacheSO.SetTimingMap;
 
         // Ensure default timing for all sets up to totalSets
         for (int i = 1; i <= totalSets; i++)
         {
             if (!map.ContainsKey(i))
             {
-                map[i] = new SessionState.SetTimingData(i, 8, 140f, 140f);
+                map[i] = new RuntimeCacheSO.SetTimingData(i, 8, 140f, 140f);
                 Debug.Log($"🆕 Default timing added for Set {i}: 8 counts @ 140 BPM");
             }
         }
 
         // Get the current set number from SessionState
-        if (int.TryParse(SessionManager.instance.SessionState.LastSet, out int currentSet))
+        if (int.TryParse(session.showStateSO.LastSet, out int currentSet))
         {
             if (map.TryGetValue(currentSet, out var timing))
             {

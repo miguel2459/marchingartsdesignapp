@@ -5,6 +5,8 @@ using System;
 
 public class UserAccountManager : MonoBehaviour
 {
+    SessionManager session = SessionManager.instance;
+    
     [Header("UI References")]
     public Button showSelectionButton;
     public Button logoutButton;
@@ -40,13 +42,13 @@ public class UserAccountManager : MonoBehaviour
 
         // Populate static UI text
         if (userNameText != null)
-            userNameText.text = SessionManager.instance.SessionState.UserName;
+            userNameText.text = session.userStateSO.UserName;
 
         if (showTitleText != null)
-            showTitleText.text = SessionManager.instance.SessionState.ShowTitle;
+            showTitleText.text = session.showStateSO.ShowTitle;
 
         if (groupNameText != null)
-            groupNameText.text = SessionManager.instance.SessionState.GroupName;
+            groupNameText.text = session.showStateSO.GroupName;
 
         UpdateLastSaveDisplay();
 
@@ -61,15 +63,15 @@ public class UserAccountManager : MonoBehaviour
         if (lastSaveDate != null) lastSaveDate.text = date;
         if (lastSaveTime != null) lastSaveTime.text = time;
 
-        SessionManager.instance.SessionState.LastModified = $"{date}, {time}";
-        SessionManager.instance.SaveShow();
+        session.showStateSO.LastModified = $"{date}, {time}";
+        session.SaveShow();
 
         Debug.Log("💾 Save triggered and UI updated.");
     }
 
     private void UpdateLastSaveDisplay()
     {
-        string modified = SessionManager.instance.SessionState.LastModified;
+        string modified = session.showStateSO.LastModified;
 
         if (DateTime.TryParse(modified, out DateTime parsedDate))
         {

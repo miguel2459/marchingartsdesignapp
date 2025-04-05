@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 public class SceneController : MonoBehaviour
 {
     public static SceneController instance;
-    public bool isSessionInitialized = false;
+    public bool isSessionInitialized;
     private bool isSceneLoading = false; // Prevent duplicate scene loading
 
     // Scene build indices
@@ -20,6 +20,7 @@ public class SceneController : MonoBehaviour
         if (instance == null)
         {
             instance = this;
+            isSessionInitialized = false;
             DontDestroyOnLoad(gameObject);
         }
         else

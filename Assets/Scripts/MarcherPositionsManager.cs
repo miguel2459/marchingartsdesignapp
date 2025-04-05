@@ -110,7 +110,7 @@ public class MarcherPositionsManager : MonoBehaviour
     public Vector3[] GetAllSetPositionsSorted()
     {
         List<Vector3> sortedPositions = new List<Vector3>();
-        for (int i = 0; i < SessionManager.instance.SessionState.NumberOfSets; i++)
+        for (int i = 0; i < SessionManager.instance.showStateSO.NumberOfSets; i++)
         {
             if (setPositions.TryGetValue(i + 1, out Vector3 pos)) // 1-based set index
             {

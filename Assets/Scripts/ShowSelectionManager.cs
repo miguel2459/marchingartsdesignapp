@@ -9,6 +9,8 @@ using System.IO;
 
 public class ShowSelectionManager : MonoBehaviour
 {
+    SessionManager session = SessionManager.instance;
+    
     [Header("UI References")]
     public Transform scrollContent; // Parent container for show panels
     public GameObject panelCreateNewShowPrefab; // Prefab for creating a new show
@@ -36,22 +38,41 @@ public class ShowSelectionManager : MonoBehaviour
 
     private IEnumerator PreFetchAndCacheAllJSONs()
     {
-        var shows = SessionManager.instance.savedShows;
+        var shows = new List<SessionManager.ShowData>(session.savedShows);
         string localDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
         Directory.CreateDirectory(localDir);
 
+        Debug.Log($"🧠 Starting prefetch of {shows.Count} shows into: {localDir}");
+
         foreach (var show in shows)
         {
-            string marcherPath = Path.Combine(localDir, $"{show.showID}_marchers.json");
-            string timingPath = Path.Combine(localDir, $"{show.showID}_timing.json");
+            string marcherPath = Path.Combine(localDir, $"{show.showID}_marcher_positions.json");
+            string timingPath = Path.Combine(localDir, $"{show.showID}_set_timing.json");
+
+            Debug.Log($"📁 Checking cache for show: {show.showTitle} (ID: {show.showID})");
 
             if (!File.Exists(marcherPath))
-                yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONMarchersPositions, marcherPath, isMarcher: true);
+            {
+                Debug.Log($"📥 Marcher JSON not found locally — downloading from URL:\n{show.marcherJSONLink}");
+                yield return DownloadAndSaveJSON(show.marcherJSONLink, marcherPath, isMarcher: true);
+            }
+            else
+            {
+                Debug.Log($"✅ Marcher JSON already cached: {marcherPath}");
+            }
+
             if (!File.Exists(timingPath))
-                yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONSetTiming, timingPath, isMarcher: false);
+            {
+                Debug.Log($"📥 Timing JSON not found locally — downloading from URL:\n{show.timingJSONLink}");
+                yield return DownloadAndSaveJSON(show.timingJSONLink, timingPath, isMarcher: false);
+            }
+            else
+            {
+                Debug.Log($"✅ Timing JSON already cached: {timingPath}");
+            }
         }
 
-        Debug.Log("✅ Cached all JSONs locally for available shows.");
+        Debug.Log("🎉 Finished prefetching and caching JSONs for all available shows.");
     }
 
 
@@ -63,7 +84,7 @@ public class ShowSelectionManager : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        List<SessionManager.ShowData> savedShows = SessionManager.instance.savedShows;
+        List<SessionManager.ShowData> savedShows = session.savedShows;
 
         if (savedShows.Count > 0)
         {
@@ -93,14 +114,14 @@ public class ShowSelectionManager : MonoBehaviour
         // Store selected show data in a static variable or SessionManager
         if (!SceneController.instance.IsSceneCurrentlyLoading(4)) // Prevent duplicate loads
         {
-            SessionManager.instance.selectedShow = show;
+            session.selectedShow = show;
             StartCoroutine(FetchShowDetails(show.showSheetID));
         }
     }
 
     private IEnumerator FetchShowDetails(string sheetID)
     {
-        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B14?key={SessionManager.instance.apiKey}";
+        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B12?key={session.apiKey}";
         Debug.Log($"🔗 Fetching show details from: {url}");
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
@@ -135,11 +156,11 @@ public class ShowSelectionManager : MonoBehaviour
                 string modified = showDataResponse["values"][9][0].Value.Trim();         // B10
                 string status = showDataResponse["values"][10][0].Value.Trim();          // B11
                 string setOnExit = showDataResponse ["values"][11][0].Value.Trim();      // B12
-                string JSONMarching = showDataResponse ["values"][12][0];                // B13
-                string JSONTiming = showDataResponse ["values"][13][0];                  // B14
+                string JSONMarching = session.selectedShow.marcherJSONLink;            
+                string JSONTiming = session.selectedShow.timingJSONLink;                 
 
                 // Save to SessionManager
-                SessionManager.instance.SaveToSessionManager(
+                session.SaveToSessionManager(
                     showID, title, group, fieldType, year, marchers, sets, props, modified, status, setOnExit, JSONMarching, JSONTiming
                 );
 
@@ -155,7 +176,7 @@ public class ShowSelectionManager : MonoBehaviour
     {
         // Load Marcher JSON
         string localDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
-        string localMarcherPath = Path.Combine(localDir, $"{SessionManager.instance.SessionState.CurrentShowID}_marchers.json");
+        string localMarcherPath = Path.Combine(localDir, $"{session.showStateSO.CurrentShowID}_marcher_positions.json");
 
         bool needDownloadMarcher = false;
 
@@ -163,7 +184,7 @@ public class ShowSelectionManager : MonoBehaviour
         {
             try
             {
-                SessionState.marcherJsonText = File.ReadAllText(localMarcherPath);
+                session.runtimeCacheSO.CachedMarcherJSON = File.ReadAllText(localMarcherPath);
                 Debug.Log("📥 Loaded marcher JSON from local.");
             }
             catch
@@ -179,12 +200,12 @@ public class ShowSelectionManager : MonoBehaviour
         }
 
         if (needDownloadMarcher)
-            yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONMarchersPositions, localMarcherPath, isMarcher: true);
+            yield return DownloadAndSaveJSON(session.showStateSO.JSONMarchersURL, localMarcherPath, isMarcher: true);
 
 
 
         // Load Timing JSON
-        string localTimingPath = Path.Combine(localDir, $"{SessionManager.instance.SessionState.CurrentShowID}_timing.json");
+        string localTimingPath = Path.Combine(localDir, $"{session.showStateSO.CurrentShowID}_set_timing.json");
         
         bool needDownloadTiming = false;
 
@@ -192,7 +213,7 @@ public class ShowSelectionManager : MonoBehaviour
         {
             try
             {
-                SessionState.timingJsonText = File.ReadAllText(localTimingPath);
+                session.runtimeCacheSO.CachedTimingJSON = File.ReadAllText(localTimingPath);
                 Debug.Log("📥 Loaded timing JSON from local.");
             }
             catch
@@ -208,7 +229,7 @@ public class ShowSelectionManager : MonoBehaviour
         }
 
         if (needDownloadTiming)
-            yield return DownloadAndSaveJSON(SessionManager.instance.SessionState.JSONSetTiming, localTimingPath, isMarcher: false);
+            yield return DownloadAndSaveJSON(session.showStateSO.JSONSetTimingURL, localTimingPath, isMarcher: false);
 
 
         SceneController.instance.SwitchScene(4);
@@ -225,9 +246,9 @@ public class ShowSelectionManager : MonoBehaviour
             File.WriteAllText(localPath, request.downloadHandler.text);
 
             if (isMarcher)
-                SessionState.marcherJsonText = request.downloadHandler.text;
+                session.runtimeCacheSO.CachedMarcherJSON = request.downloadHandler.text;
             else
-                SessionState.timingJsonText = request.downloadHandler.text;
+                session.runtimeCacheSO.CachedTimingJSON = request.downloadHandler.text;
 
             Debug.Log($"📦 Saved JSON locally: {localPath}");
         }

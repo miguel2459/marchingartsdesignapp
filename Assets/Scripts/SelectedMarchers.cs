@@ -32,7 +32,7 @@ public class SelectedMarchers : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space) && moveMarcher.transformGizmo != null && selectedMarchers.Count > 0)
         {
-            int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+            int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
 
             Debug.Log($"SelectedMarchers: ⏺️ Setting SetPosition for {selectedMarchers.Count} marchers on Set {currentSet}");
 

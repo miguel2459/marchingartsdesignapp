@@ -6,6 +6,7 @@ using UnityEngine;
 /// </summary>
 public class MarcherController : MonoBehaviour
 {
+    public RuntimeCacheSO runtimeCacheSO;
     public MarcherPositionsManager marcherPositionsManager;
     public EnsembleDirector2 director;
 
@@ -23,9 +24,10 @@ public class MarcherController : MonoBehaviour
     /// <summary>
     /// Inject EnsembleDirector and initialize marcher.
     /// </summary>
-    public void InitializeMarcher(EnsembleDirector2 directorReference)
+    public void InitializeMarcher(EnsembleDirector2 directorReference, RuntimeCacheSO cacheSO)
     {
         director = directorReference;
+        runtimeCacheSO = cacheSO;
 
         // Get all confirmed set positions from marcher
         setPositions = marcherPositionsManager.GetAllSetPositionsSorted();
@@ -38,7 +40,7 @@ public class MarcherController : MonoBehaviour
     {
         if (cycle >= 1 && completedRepeats < director.numberOfSets - 1)
         {
-            if (SessionManager.instance.SessionState.SetTimingMap.TryGetValue(cycle, out var timing))
+            if (runtimeCacheSO.SetTimingMap.TryGetValue(cycle, out var timing))
             {
                 isMarching = true;
                 PrepareNextStepPositions(timing);
@@ -72,7 +74,7 @@ public class MarcherController : MonoBehaviour
     /// <summary>
     /// Prepare interpolated step positions between two set positions.
     /// </summary>
-    private void PrepareNextStepPositions(SessionState.SetTimingData timing)
+    private void PrepareNextStepPositions(RuntimeCacheSO.SetTimingData timing)
     {
         int from = completedRepeats;
         int to = completedRepeats + 1;
@@ -146,7 +148,7 @@ public class MarcherController : MonoBehaviour
                 {
                     // 🧠 Get next set timing again for next transition
                     int nextSet = completedRepeats + 1;
-                    if (SessionManager.instance.SessionState.SetTimingMap.TryGetValue(nextSet, out var timing))
+                    if (runtimeCacheSO.SetTimingMap.TryGetValue(nextSet, out var timing))
                     {
                         PrepareNextStepPositions(timing);
                         isMarching = true;

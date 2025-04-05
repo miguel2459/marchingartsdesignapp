@@ -24,7 +24,7 @@ public class UserAccountShowSelection : MonoBehaviour
         // Populate username
         if (usernameText != null && SessionManager.instance != null)
         {
-            usernameText.text = SessionManager.instance.SessionState.UserName;
+            usernameText.text = SessionManager.instance.userStateSO.UserName;
         }
     }
 

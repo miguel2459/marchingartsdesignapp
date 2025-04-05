@@ -5,6 +5,7 @@ using TMPro;
 
 public class SetProgressBar : MonoBehaviour
 {
+    SessionManager session = SessionManager.instance;
     public GameObject sectionPrefab;
     public EnsembleDirector2 director;
     public ScrollRect scrollRect;
@@ -95,7 +96,7 @@ public class SetProgressBar : MonoBehaviour
     {
         if (SessionManager.instance != null)
         {
-            lastSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+            lastSet = int.Parse(session.showStateSO.LastSet);
             currentSetText.text = lastSet.ToString();
         }
         else
@@ -107,12 +108,12 @@ public class SetProgressBar : MonoBehaviour
     public void OnSetButtonClick(int setNumber)
     {
         currentSetIndex = setNumber;
-        SessionManager.instance.SessionState.LastSet = setNumber.ToString();
+        session.showStateSO.LastSet = setNumber.ToString();
         currentSetText.text = setNumber.ToString();
         director.RepositionMarchersToSet(setNumber);
         HighlightSet(setNumber);
 
-        var map = SessionManager.instance.SessionState.SetTimingMap;
+        var map = session.runtimeCacheSO.SetTimingMap;
         if (map.TryGetValue(setNumber, out var timing))
         {
             cachedCount = timing.count;
@@ -142,7 +143,7 @@ public class SetProgressBar : MonoBehaviour
             if (int.TryParse(value, out int parsedCount))
             {
                 parsedCount = Mathf.Max(1, parsedCount);
-                SessionManager.instance.SessionState.SetTimingMap[currentSetIndex].count = parsedCount;
+                session.runtimeCacheSO.SetTimingMap[currentSetIndex].count = parsedCount;
                 cachedCount = parsedCount;
                 countsProgressBar.RenderCounts(currentSetIndex, parsedCount);
             }
@@ -163,7 +164,7 @@ public class SetProgressBar : MonoBehaviour
         {
             if (float.TryParse(value, out float parsedStartBPM))
             {
-                SessionManager.instance.SessionState.SetTimingMap[currentSetIndex].startBPM = parsedStartBPM;
+                session.runtimeCacheSO.SetTimingMap[currentSetIndex].startBPM = parsedStartBPM;
                 cachedStartBPM = parsedStartBPM;
             }
             else
@@ -183,7 +184,7 @@ public class SetProgressBar : MonoBehaviour
         {
             if (float.TryParse(value, out float parsedEndBPM))
             {
-                SessionManager.instance.SessionState.SetTimingMap[currentSetIndex].endBPM = parsedEndBPM;
+                session.runtimeCacheSO.SetTimingMap[currentSetIndex].endBPM = parsedEndBPM;
                 cachedEndBPM = parsedEndBPM;
             }
             else
@@ -199,7 +200,7 @@ public class SetProgressBar : MonoBehaviour
 
     public void UpdateTimingInputsForSet(int setIndex)
     {
-        if (SessionManager.instance.SessionState.SetTimingMap.TryGetValue(setIndex, out var timing))
+        if (session.runtimeCacheSO.SetTimingMap.TryGetValue(setIndex, out var timing))
         {
             setCountsInput.text = timing.count.ToString();
             startBPMInput.text = timing.startBPM.ToString();
@@ -216,7 +217,7 @@ public class SetProgressBar : MonoBehaviour
     {
         currentSetIndex = setNumber;
         currentSetText.text = setNumber.ToString();
-        SessionManager.instance.SessionState.LastSet = setNumber.ToString();
+        session.showStateSO.LastSet = setNumber.ToString();
 
         for (int i = 0; i < setButtons.Count; i++)
         {

@@ -1,23 +1,26 @@
 using System.IO;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.Networking;
 using SimpleJSON;
 
 public class SessionManager : MonoBehaviour
 {
+    public static SessionManager instance;
+
+    [Header("Injected References")]
+    public UserStateSO userStateSO;
+    public ShowStateSO showStateSO;
+    public RuntimeCacheSO runtimeCacheSO;
+
+    [Header("Managers")]
     public UserSessionManager userSession = new UserSessionManager();
     public ShowDataManager showDataManager;
     public GoogleSheetsService sheetsService;
+
+    [Header("Configuration")]
     public string apiKey;
     public static string backendURL;
-    public static SessionManager instance;
-
-    [Header("🧪 DEBUG ONLY")]
-    [SerializeField] private SessionState debugSessionState;
-    public SessionState SessionState => userSession.SessionState;
 
     [Header("Session Data")]
     public List<ShowData> savedShows = new List<ShowData>();
@@ -29,11 +32,17 @@ public class SessionManager : MonoBehaviour
         {
             instance = this;
             DontDestroyOnLoad(gameObject);
-            savedShows.Clear();
 
-            LoadApiKey(); // Load API key from config.json
+            savedShows.Clear();
+            userStateSO.Clear();
+            showStateSO.Clear();
+            runtimeCacheSO.Clear();
+            LoadApiKey();
+
+            // Inject ScriptableObject session into managers
             sheetsService = new GoogleSheetsService(apiKey, this);
-            showDataManager = new ShowDataManager(this, SessionState, backendURL);
+            showDataManager = new ShowDataManager(this, userStateSO, showStateSO, backendURL);
+            userSession.InjectUserState(userStateSO); // Update this in a moment
         }
         else
         {
@@ -41,14 +50,8 @@ public class SessionManager : MonoBehaviour
         }
     }
 
-    void Update()
-    {
-        // Sync debugSessionState every frame (or do this in a coroutine if you want to reduce overhead)
-        debugSessionState = userSession.SessionState;
-    }
-
     // 🔹 Initialize user session when they log in
-    public void InitializeUser()
+    public void InitializeUserShows()
     {    
         StartCoroutine(FetchUserShows());
     }
@@ -59,7 +62,7 @@ public class SessionManager : MonoBehaviour
     {
         Debug.Log("📡 Fetching user data from Google Sheets...");
 
-        string sheetId = SessionState.AccountSheetID;
+        string sheetId = userStateSO.AccountSheetID;
 
         bool isDone = false;
         string error = null;
@@ -94,7 +97,7 @@ public class SessionManager : MonoBehaviour
         string creatorName = mainSheetResponse["values"][1][0];
         int numberOfShows = int.Parse(mainSheetResponse["values"][8][0]);
 
-        Debug.Log($"👤 Account Name: {creatorName}");
+        Debug.Log($"👤 Pulling Shows from Account: {creatorName}");
         Debug.Log($"📜 Number of Shows: {numberOfShows}");
 
         if (numberOfShows > 0)
@@ -106,7 +109,7 @@ public class SessionManager : MonoBehaviour
         {
             Debug.Log("ℹ️ No shows found for this user.");
             SceneController.instance.OnSessionInitialized();
-            SceneController.instance.SwitchScene(3);
+            //SceneController.instance.SwitchScene(3);
         }
     }
 
@@ -117,7 +120,7 @@ public class SessionManager : MonoBehaviour
         JSONNode result = null;
         string error = null;
 
-        sheetsService.FetchShowList(SessionState.AccountSheetID,
+        sheetsService.FetchShowList(userStateSO.AccountSheetID,
             success => {
                 result = success;
                 isDone = true;
@@ -149,6 +152,8 @@ public class SessionManager : MonoBehaviour
                         group = row[2],
                         showSheetID = row[3],
                         lastModified = row[4],
+                        marcherJSONLink = row[5],
+                        timingJSONLink = row[6]
                     };
                     savedShows.Add(show);
                     Debug.Log($"✅ Added show: {show.showTitle} | ID: {show.showID}");
@@ -163,19 +168,19 @@ public class SessionManager : MonoBehaviour
     // 🔹 Save selected show details into session
     public void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status, string setOnExit, string JSONMarching, string JSONTiming)
     {
-        SessionState.CurrentShowID = id;
-        SessionState.ShowTitle = title;
-        SessionState.GroupName = group;
-        SessionState.FieldType = field;
-        SessionState.ProductionYear = year;
-        SessionState.NumberOfMarchers = marchers;
-        SessionState.NumberOfSets = sets;
-        SessionState.NumberOfProps = props;
-        SessionState.LastModified = modified;
-        SessionState.ShowStatus = status;
-        SessionState.LastSet = setOnExit;
-        SessionState.JSONMarchersPositions = JSONMarching;
-        SessionState.JSONSetTiming = JSONTiming;
+        showStateSO.CurrentShowID = id;
+        showStateSO.ShowTitle = title;
+        showStateSO.GroupName = group;
+        showStateSO.FieldType = field;
+        showStateSO.ProductionYear = year;
+        showStateSO.NumberOfMarchers = marchers;
+        showStateSO.NumberOfSets = sets;
+        showStateSO.NumberOfProps = props;
+        showStateSO.LastModified = modified;
+        showStateSO.ShowStatus = status;
+        showStateSO.LastSet = setOnExit;
+        showStateSO.JSONMarchersURL = JSONMarching;
+        showStateSO.JSONSetTimingURL = JSONTiming;
     }
 
     public void AddNewShow(string showTitle)
@@ -187,7 +192,7 @@ public class SessionManager : MonoBehaviour
 
     private IEnumerator ReinitializeAndSelectNewShow(string showTitle)
     {
-        // Step 1: Refresh the user's shows
+        // StesessionStateSOp 1: Refresh the user's shows
         yield return StartCoroutine(FetchUserShows());
 
         // Step 2: Try to find the newly created show
@@ -250,8 +255,8 @@ public class SessionManager : MonoBehaviour
     {
         if (userSession.TryAutoLogin())
         {
-            Debug.Log($"🔄 Auto-Login: {SessionState.UserName} ({SessionState.UserEmail})");
-            StartCoroutine(FetchUserShows());
+            Debug.Log($"🔄 Initializing User's Shows: {userStateSO.UserName} ({userStateSO.UserEmail})");
+            InitializeUserShows();
         }
     }
 
@@ -265,6 +270,8 @@ public class SessionManager : MonoBehaviour
         Debug.Log("🔒 Logging out...");
         userSession.Logout();
         savedShows.Clear();
+        showStateSO.Clear();
+        runtimeCacheSO.Clear();
         selectedShow = null;
         SceneController.instance.SwitchScene(1);
     }
@@ -277,5 +284,7 @@ public class SessionManager : MonoBehaviour
         public string showSheetID;
         public string lastModified;
         public string group;
+        public string marcherJSONLink;
+        public string timingJSONLink;
     }
 }

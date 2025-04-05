@@ -109,7 +109,7 @@ public class MarcherMovement : MonoBehaviour
             transformGizmo.transform.position = snapToGrid.GetSnappedGizmoPosition(transformGizmo.transform.position);
 
             // 💾 Save standby positions for each selected marcher
-            int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+            int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
 
             foreach (var marcher in marcherSelector.selectedMarchers)
             {
@@ -194,7 +194,7 @@ public class MarcherMovement : MonoBehaviour
 
     bool AreAllSetPositionsConfirmed(MarcherPositionsManager marcherPositionsManager)
     {
-        int totalSetCount = SessionManager.instance.SessionState.NumberOfSets;
+        int totalSetCount = SessionManager.instance.showStateSO.NumberOfSets;
         return marcherPositionsManager.setPositions.Count >= totalSetCount;
     }
 
