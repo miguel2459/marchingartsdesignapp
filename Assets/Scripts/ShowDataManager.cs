@@ -8,13 +8,15 @@ using SimpleJSON;
 public class ShowDataManager
 {
     private readonly MonoBehaviour coroutineHost;
-    private readonly SessionState sessionState;
+    private readonly UserStateSO userStateSO;
+    private readonly ShowStateSO showStateSO;
     private readonly string backendURL;
 
-    public ShowDataManager(MonoBehaviour coroutineHost, SessionState sessionState, string backendURL)
+    public ShowDataManager(MonoBehaviour coroutineHost, UserStateSO userStateSO, ShowStateSO showStateSO, string backendURL)
     {
         this.coroutineHost = coroutineHost;
-        this.sessionState = sessionState;
+        this.userStateSO = userStateSO;
+        this.showStateSO = showStateSO;
         this.backendURL = backendURL;
     }
 
@@ -90,13 +92,13 @@ public class ShowDataManager
 
     private IEnumerator SaveShowCoroutine()
     {
-        if (string.IsNullOrEmpty(sessionState.LastSet) || sessionState.NumberOfMarchers <= 0)
+        if (string.IsNullOrEmpty(showStateSO.LastSet) || showStateSO.NumberOfMarchers <= 0)
         {
             Debug.LogWarning("⚠️ Attempting to save invalid show state. Aborting save.");
             yield break;
         }
 
-        Debug.Log($"📡 Updating Show Details for {sessionState.ShowTitle} ({sessionState.CurrentShowID})");
+        Debug.Log($"📡 Updating Show Details for {showStateSO.ShowTitle} ({showStateSO.CurrentShowID})");
 
         // 🔥 Save JSON and get the actual path
         EnsembleDirector2 director = GameObject.FindObjectOfType<EnsembleDirector2>();
@@ -106,12 +108,16 @@ public class ShowDataManager
             string savedJsonPath = director.SaveMarcherStateToFile();
             if (!string.IsNullOrEmpty(savedJsonPath))
             {
+                // 🆕 Save to persistent local cache too
+                //CopyFileToLocalCache(savedJsonPath, showStateSO.CurrentShowID + "_marchers.json");
                 coroutineHost.StartCoroutine(UploadMarcherJSON(savedJsonPath));
             }
 
             string timingJsonPath = director.SaveSetTimingMapToFile();
             if (!string.IsNullOrEmpty(timingJsonPath))
             {
+                // 🆕 Save to persistent local cache too
+                //CopyFileToLocalCache(timingJsonPath, showStateSO.CurrentShowID + "_timing.json");
                 coroutineHost.StartCoroutine(UploadSetTimingJSON(timingJsonPath));
             }
 
@@ -120,11 +126,11 @@ public class ShowDataManager
         // 🔁 Save core show details to Google Sheets
         WWWForm form = new WWWForm();
         form.AddField("action", "UpdateShowDetails");
-        form.AddField("numberOfMarchers", sessionState.NumberOfMarchers);
-        form.AddField("numberOfSets", sessionState.NumberOfSets);
-        form.AddField("numberOfProps", sessionState.NumberOfProps);
+        form.AddField("numberOfMarchers", showStateSO.NumberOfMarchers);
+        form.AddField("numberOfSets", showStateSO.NumberOfSets);
+        form.AddField("numberOfProps", showStateSO.NumberOfProps);
         form.AddField("lastModified", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
-        form.AddField("lastSet", sessionState.LastSet);
+        form.AddField("lastSet", showStateSO.LastSet);
         form.AddField("showSheetId", SessionManager.instance.selectedShow?.showSheetID);
 
         using (UnityWebRequest www = UnityWebRequest.Post(backendURL, form))
@@ -133,11 +139,11 @@ public class ShowDataManager
 
             if (www.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log($"✅ Show Details updated successfully for {sessionState.ShowTitle}.");
+                Debug.Log($"✅ Show Details updated successfully to GDrive for {showStateSO.ShowTitle}.");
             }
             else
             {
-                Debug.LogError($"❌ Error updating Show Details: {www.error}");
+                Debug.LogError($"❌ Error updating Show Details to GDrive: {www.error}");
             }
         }
     }
@@ -152,9 +158,9 @@ public class ShowDataManager
 
         JSONObject wrappedPayload = new JSONObject();
         wrappedPayload["action"] = "UpdateMarcherJSON";
-        wrappedPayload["userFolderId"] = SessionManager.instance.SessionState.UserFolderId;
-        wrappedPayload["showID"] = SessionManager.instance.SessionState.CurrentShowID;
-        wrappedPayload["showSheetId"] = SessionManager.instance.selectedShow.showSheetID;
+        wrappedPayload["userFolderId"] = userStateSO.UserFolderId;
+        wrappedPayload["showID"] = showStateSO.CurrentShowID;
+        wrappedPayload["accountSheetId"] = userStateSO.AccountSheetID;
         wrappedPayload["marcherData"] = jsonData;
 
         string payloadStr = wrappedPayload.ToString();
@@ -172,9 +178,9 @@ public class ShowDataManager
 
         if (www.result == UnityWebRequest.Result.Success)
         {
-            Debug.Log("✅ Marcher JSON uploaded successfully");
+            Debug.Log("✅ Marcher JSON uploaded successfully to GDrive");
             string response = www.downloadHandler.text;
-            Debug.Log($"📥 Server response: {response}");
+            Debug.Log($"📥 Marcher JSON Server response: {response}");
         }
         else
         {
@@ -196,9 +202,9 @@ public class ShowDataManager
 
         JSONObject payload = new JSONObject();
         payload["action"] = "UpdateSetTimingJSON";
-        payload["userFolderId"] = SessionManager.instance.SessionState.UserFolderId;
-        payload["showID"] = SessionManager.instance.SessionState.CurrentShowID;
-        payload["showSheetId"] = SessionManager.instance.selectedShow.showSheetID;
+        payload["userFolderId"] = userStateSO.UserFolderId;
+        payload["showID"] = showStateSO.CurrentShowID;
+        payload["accountSheetId"] = userStateSO.AccountSheetID;
         payload["setTimingData"] = jsonData;
 
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(payload.ToString());
@@ -211,7 +217,9 @@ public class ShowDataManager
 
         if (www.result == UnityWebRequest.Result.Success)
         {
-            Debug.Log("✅ SetTiming JSON uploaded successfully");
+            Debug.Log("✅ SetTiming JSON uploaded successfully to GDrive");
+            string response = www.downloadHandler.text;
+            Debug.Log($"📥 Set Timing Server response: {response}");
         }
         else
         {
@@ -219,26 +227,34 @@ public class ShowDataManager
         }
     }
 
+    private void CopyFileToLocalCache(string sourcePath, string fileName)
+    {
+        string localDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
+        Directory.CreateDirectory(localDir);
+        string destPath = Path.Combine(localDir, fileName);
+
+        File.Copy(sourcePath, destPath, overwrite: true);
+        Debug.Log($"📁 Local cache updated: {destPath}");
+    }
+
+
 
     private void ClearShowData()
     {
         Debug.Log("🧹 Clearing Show Data...");
 
         SessionManager.instance.selectedShow = null;
-        sessionState.CurrentShowID = string.Empty;
-        sessionState.ShowTitle = string.Empty;
-        sessionState.GroupName = string.Empty;
-        sessionState.CreatedBy = string.Empty;
-        sessionState.FieldType = string.Empty;
-        sessionState.ProductionYear = string.Empty;
-        sessionState.NumberOfMarchers = 0;
-        sessionState.NumberOfSets = 0;
-        sessionState.NumberOfProps = 0;
-        sessionState.LastModified = string.Empty;
-        sessionState.ShowStatus = string.Empty;
-        sessionState.LastSet = string.Empty;
-        sessionState.SetsData.Clear();
-        sessionState.MarchersData.Clear();
-        sessionState.MarchersCoordinates.Clear();
+        showStateSO.CurrentShowID = string.Empty;
+        showStateSO.ShowTitle = string.Empty;
+        showStateSO.GroupName = string.Empty;
+        showStateSO.CreatedBy = string.Empty;
+        showStateSO.FieldType = string.Empty;
+        showStateSO.ProductionYear = string.Empty;
+        showStateSO.NumberOfMarchers = 0;
+        showStateSO.NumberOfSets = 0;
+        showStateSO.NumberOfProps = 0;
+        showStateSO.LastModified = string.Empty;
+        showStateSO.ShowStatus = string.Empty;
+        showStateSO.LastSet = string.Empty;
     }
 }

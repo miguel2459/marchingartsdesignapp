@@ -23,7 +23,7 @@ public class GoogleSheetsService
 
     public void FetchShowList(string sheetId, System.Action<JSONNode> onSuccess, System.Action<string> onError)
     {
-        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetId}/values/Shows!A2:E?key={apiKey}";
+        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetId}/values/Shows!A2:G?key={apiKey}";
         coroutineHost.StartCoroutine(GetJSONRequest(url, onSuccess, onError));
     }
 

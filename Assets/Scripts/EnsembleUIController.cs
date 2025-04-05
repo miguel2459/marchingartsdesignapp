@@ -3,6 +3,8 @@ using UnityEngine.UI;
 
 public class EnsembleUIController : MonoBehaviour
 {
+    SessionManager session = SessionManager.instance;
+
     [Header("Input Fields")]
     public InputField numberOfMarchersInputField;
     public InputField numberOfSetsInputField;
@@ -71,7 +73,7 @@ public class EnsembleUIController : MonoBehaviour
 
         buttonPlayCurrentSet.onClick.AddListener(() =>
         {
-            int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+            int currentSet = int.Parse(session.showStateSO.LastSet);
             director.metronome.StartMetronome(currentSet);
         });
     }
@@ -93,7 +95,7 @@ public class EnsembleUIController : MonoBehaviour
         if (int.TryParse(value, out int parsedValue))
         {
             director.numberOfMarchers = Mathf.Max(1, parsedValue);
-            SessionManager.instance.SessionState.NumberOfMarchers = director.numberOfMarchers;
+            session.showStateSO.NumberOfMarchers = director.numberOfMarchers;
             director.PopulateMarchers();
         }
         else
@@ -107,7 +109,7 @@ public class EnsembleUIController : MonoBehaviour
         if (int.TryParse(value, out int parsedValue))
         {
             director.numberOfSets = Mathf.Max(1, parsedValue);
-            SessionManager.instance.SessionState.NumberOfSets = director.numberOfSets;
+            session.showStateSO.NumberOfSets = director.numberOfSets;
             director.setBar.OnTotalSetsChanged(director.numberOfSets); // Update SetProgressBar
             director.PopulateMarchers(); // Adjust marcher spheres
         }

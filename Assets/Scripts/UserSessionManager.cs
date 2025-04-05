@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.IO;
 
 /// <summary>
 /// Handles user authentication, auto-login, and logout.
@@ -6,8 +7,14 @@ using UnityEngine;
 /// </summary>
 public class UserSessionManager
 {
-    public SessionState SessionState { get; private set; } = new SessionState();
+    // 🔒 Private field to hold the reference to the injected ScriptableObject session data.
+    // This allows the class to store the runtime session state internally.
+    private UserStateSO userState;
 
+    // 🔓 Public read-only property to expose the session state externally.
+    // Other classes can read from this, but only this class can modify the reference.
+    // This follows the principle of encapsulation and protects against unintended changes.
+    public UserStateSO UserState => userState;
     private const string KeyIsLoggedIn = "IsLoggedIn";
     private const string KeyUserId = "UserID";
     private const string KeyEmail = "UserEmail";
@@ -15,13 +22,18 @@ public class UserSessionManager
     private const string KeySheetId = "AccountSheetID";
     private const string KeyFolderId = "FolderID";
 
+    public void InjectUserState(UserStateSO so)
+    {
+        userState = so;
+    }
+    
     public void InitializeUser(string id, string email, string name, string sheetID, string folderId)
     {
-        SessionState.UserId = id;
-        SessionState.UserEmail = email;
-        SessionState.UserName = name;
-        SessionState.AccountSheetID = sheetID;
-        SessionState.UserFolderId = folderId;
+        UserState.UserId = id;
+        UserState.UserEmail = email;
+        UserState.UserName = name;
+        UserState.AccountSheetID = sheetID;
+        UserState.UserFolderId = folderId;
 
         PlayerPrefs.SetInt(KeyIsLoggedIn, 1);
         PlayerPrefs.SetString(KeyUserId, id);
@@ -31,9 +43,9 @@ public class UserSessionManager
         PlayerPrefs.SetString(KeyFolderId, folderId);
         PlayerPrefs.Save();
 
-        SessionManager.instance.InitializeUser();
+        Debug.Log($"✅ UserSessionManager: User Initialized, Logged in as {name} ({email})");
 
-        Debug.Log($"✅ UserSessionManager: Logged in as {name} ({email})");
+        SessionManager.instance.InitializeUserShows();
     }
 
     public bool TryAutoLogin()
@@ -48,13 +60,13 @@ public class UserSessionManager
 
             if (!string.IsNullOrEmpty(id))
             {
+                Debug.Log("🔄 UserSessionManager: TryAutoLogin: Persistent Login Found!");
                 InitializeUser(id, email, name, sheetID, folderId);
-                Debug.Log("🔄 UserSessionManager: Auto-login successful.");
                 return true;
             }
         }
 
-        Debug.Log("⚠️ UserSessionManager: No valid session for auto-login.");
+        Debug.Log("⚠️ UserSessionManager: TryAutoLogin: No valid session for auto-login.");
         return false;
     }
 
@@ -70,8 +82,33 @@ public class UserSessionManager
         PlayerPrefs.DeleteKey(KeyFolderId);
         PlayerPrefs.Save();
 
-        SessionState = new SessionState(); // Wipe the current session
+        // Wipe the current session by clearing all fields in the SO
+        UserState.Clear();
+
+        // 🧹 Delete local JSON cache
+        string jsonCacheDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
+
+        if (Directory.Exists(jsonCacheDir))
+        {
+            Debug.Log($"🧹 Deleting cached JSON files in: {jsonCacheDir}");
+            string[] jsonFiles = Directory.GetFiles(jsonCacheDir, "*_*.json");
+
+            foreach (string file in jsonFiles)
+            {
+                try
+                {
+                    File.Delete(file);
+                    Debug.Log($"🗑️ Deleted cached JSON: {file}");
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"⚠️ Failed to delete cached file {file}: {ex.Message}");
+                }
+            }
+        }
+
         SceneController.instance.isSessionInitialized = false;
         Debug.Log("✅ UserSessionManager: Logout complete.");
     }
+
 }

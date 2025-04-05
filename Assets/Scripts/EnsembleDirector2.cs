@@ -9,6 +9,7 @@ using SimpleJSON;
 public class EnsembleDirector2 : MonoBehaviour
 {
     SessionManager session = SessionManager.instance;
+    RuntimeCacheData runtimeCache;
 
     [Header("Marcher Settings")]
     public int numberOfMarchers;
@@ -44,9 +45,9 @@ public class EnsembleDirector2 : MonoBehaviour
         SnapToGridLines.OnGridReady -= OnGridReadyHandler;
         SnapToGridLines.OnGridReady += OnGridReadyHandler;
         
-        yield return new WaitUntil(() => !string.IsNullOrEmpty(SessionState.marcherJsonText) && !string.IsNullOrEmpty(SessionState.timingJsonText));
-        LoadMarcherStateFromJSON(SessionState.marcherJsonText);
-        LoadSetTimingMapFromJSON(SessionState.timingJsonText);
+        yield return new WaitUntil(() => !string.IsNullOrEmpty(session.runtimeCacheSO.CachedMarcherJSON) && !string.IsNullOrEmpty(session.runtimeCacheSO.CachedTimingJSON));
+        LoadMarcherStateFromJSON(session.runtimeCacheSO.CachedMarcherJSON);
+        LoadSetTimingMapFromJSON(session.runtimeCacheSO.CachedTimingJSON);
 
         OnSessionReady();
     }
@@ -73,9 +74,9 @@ public class EnsembleDirector2 : MonoBehaviour
         //PopulateMarchers();
     }
     private void InitializeSession(){
-        numberOfMarchers = session.SessionState.NumberOfMarchers;
-        numberOfSets = session.SessionState.NumberOfSets;
-        lastSet = int.Parse(session.SessionState.LastSet);
+        numberOfMarchers = session.showStateSO.NumberOfMarchers;
+        numberOfSets = session.showStateSO.NumberOfSets;
+        lastSet = int.Parse(session.showStateSO.LastSet);
         UIController.InitializeUI();
     }
 
@@ -93,7 +94,7 @@ public class EnsembleDirector2 : MonoBehaviour
             RemoveExcessMarchers(currentCount: currentMarcherCount);
 
         bool usedSavedPositions = false;
-        int lastSetNum = int.Parse(session.SessionState.LastSet);
+        int lastSetNum = int.Parse(session.showStateSO.LastSet);
 
         foreach (var marcher in marchers)
         {
@@ -112,9 +113,6 @@ public class EnsembleDirector2 : MonoBehaviour
                     marcher.standbyPositions[kvp.Key] = kvp.Value;
             }
 
-            // ✅ Safe to do after all marcher logic is done
-            setBar.OnSetButtonClick(lastSet);
-
             // Set transform position based on best available data
             if (marcher.setPositions.ContainsKey(lastSetNum))
             {
@@ -127,6 +125,9 @@ public class EnsembleDirector2 : MonoBehaviour
                 usedSavedPositions = true;
             }
         }
+
+        // ✅ Safe to do after all marcher logic is done
+        setBar.OnSetButtonClick(lastSet);
 
         if (!usedSavedPositions)
         {
@@ -142,7 +143,7 @@ public class EnsembleDirector2 : MonoBehaviour
 
     public void PreviewCountPosition(int setNumber, int clickedCount)
     {
-        var timingMap = SessionManager.instance.SessionState.SetTimingMap;
+        var timingMap = session.runtimeCacheSO.SetTimingMap;
 
         if (!timingMap.TryGetValue(setNumber, out var timing))
         {
@@ -205,7 +206,7 @@ public class EnsembleDirector2 : MonoBehaviour
         MarcherController marcherController = marcherObject.GetComponent<MarcherController>();
 
         marcher.InitializeSetCount(sets); // ✅ REPLACED: no need for InitializeSets
-        marcherController.InitializeMarcher(this);
+        marcherController.InitializeMarcher(this, session.runtimeCacheSO);
 
         marchers.Add(marcher);
     }
@@ -281,16 +282,10 @@ public class EnsembleDirector2 : MonoBehaviour
     public string SaveMarcherStateToFile()
     {
         string json = GenerateMarcherStateJSON();
-        string showTitle = SessionManager.instance.SessionState.ShowTitle;
-        string sanitizedTitle = string.Join("_", showTitle.Split(Path.GetInvalidFileNameChars()));
-        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        string filename = $"{sanitizedTitle}_{timestamp}_marcher_positions.json";
+        string showID = session.showStateSO.CurrentShowID;
+        string filename = $"{showID}_marcher_positions.json";
 
-        string directory = Path.Combine(Application.dataPath, "SavedJSON");
-        if (!Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        string directory = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
 
         string path = Path.Combine(directory, filename);
         File.WriteAllText(path, json);
@@ -372,7 +367,7 @@ public class EnsembleDirector2 : MonoBehaviour
     {
         var root = new JSONObject();
 
-        foreach (var entry in SessionManager.instance.SessionState.SetTimingMap)
+        foreach (var entry in session.runtimeCacheSO.SetTimingMap)
         {
             var setIndex = entry.Key;
             var data = entry.Value;
@@ -386,16 +381,10 @@ public class EnsembleDirector2 : MonoBehaviour
         }
 
         string json = root.ToString(2); // Pretty print
-        string showTitle = SessionManager.instance.SessionState.ShowTitle;
-        string sanitizedTitle = string.Join("_", showTitle.Split(Path.GetInvalidFileNameChars()));
-        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        string filename = $"{sanitizedTitle}_{timestamp}_set_timing.json";
+        string showID = session.showStateSO.CurrentShowID;
+        string filename = $"{showID}_set_timing.json";
 
-        string directory = Path.Combine(Application.dataPath, "SavedJSON");
-        if (!Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        string directory = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
 
         string path = Path.Combine(directory, filename);
         File.WriteAllText(path, json);
@@ -410,7 +399,7 @@ public class EnsembleDirector2 : MonoBehaviour
     public void LoadSetTimingMapFromJSON(string jsonText)
     {
         var json = JSON.Parse(jsonText);
-        var map = SessionManager.instance.SessionState.SetTimingMap;
+        var map = session.runtimeCacheSO.SetTimingMap;
         map.Clear();
 
         foreach (KeyValuePair<string, JSONNode> kvp in json.AsObject)
@@ -420,7 +409,7 @@ public class EnsembleDirector2 : MonoBehaviour
             float startBPM = kvp.Value["startBPM"];
             float endBPM = kvp.Value["endBPM"];
 
-            map[setIndex] = new SessionState.SetTimingData(setIndex, count, startBPM, endBPM);
+            map[setIndex] = new RuntimeCacheSO.SetTimingData(setIndex, count, startBPM, endBPM);
         }
 
         Debug.Log($"✅ Loaded {map.Count} SetTiming entries into SessionState.");
@@ -428,7 +417,7 @@ public class EnsembleDirector2 : MonoBehaviour
 
     public void DeleteCurrentSetPositions()
     {
-        int currentSet = int.Parse(SessionManager.instance.SessionState.LastSet);
+        int currentSet = int.Parse(session.showStateSO.LastSet);
         int previousSet = Mathf.Max(1, currentSet - 1);
 
         Debug.Log($"🗑 Deleting Set {currentSet} positions and reverting to Set {previousSet}.");

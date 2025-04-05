@@ -39,7 +39,7 @@ public class FieldGridManager : MonoBehaviour
 
     private FieldType GetFieldTypeFromSession()
     {
-        string sessionType = session.SessionState.FieldType;
+        string sessionType = session.showStateSO.FieldType;
         Debug.Log($"FieldGridManager: Received field type from session: {sessionType}");
 
         return sessionType switch

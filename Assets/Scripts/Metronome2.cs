@@ -29,7 +29,7 @@ public class Metronome2 : MonoBehaviour
         foreach (var marcher in director.marchers)
         {
             var controller = marcher.GetComponent<MarcherController>();
-            controller.InitializeMarcher(director); // 🟢 Refresh setPositions
+            controller.InitializeMarcher(director, SessionManager.instance.runtimeCacheSO); // 🟢 Refresh setPositions
             controller.ResetMarcher(startSet);
         }
 
@@ -48,7 +48,7 @@ public class Metronome2 : MonoBehaviour
         while (isRunning)
         {
             // 🔁 Get current set and timing data
-            if (!SessionManager.instance.SessionState.SetTimingMap.TryGetValue(cycleCount, out var timing))
+            if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(cycleCount, out var timing))
             {
                 Debug.LogWarning($"❌ No timing data for Set {cycleCount}");
                 StopMetronome();
@@ -96,7 +96,7 @@ public class Metronome2 : MonoBehaviour
                 countsProgressBar?.ResetHighlight();
 
                 // Render next set's count bar if exists
-                if (SessionManager.instance.SessionState.SetTimingMap.TryGetValue(cycleCount, out var nextSet))
+                if (SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(cycleCount, out var nextSet))
                 {
                     countsProgressBar?.RenderCounts(cycleCount, nextSet.count);
                 }

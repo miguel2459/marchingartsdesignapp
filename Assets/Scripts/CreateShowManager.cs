@@ -91,7 +91,7 @@ public class CreateShowManager : MonoBehaviour
             showID,
             showTitle,
             groupName,
-            session.SessionState.UserEmail,
+            session.userStateSO.UserEmail,
             fieldType,
             productionYear,
             numMarchers,
@@ -99,8 +99,8 @@ public class CreateShowManager : MonoBehaviour
             numProps,
             lastModified,
             showStatus,
-            session.SessionState.UserFolderId,
-            session.SessionState.AccountSheetID,
+            session.userStateSO.UserFolderId,
+            session.userStateSO.AccountSheetID,
             setOnExit,
             onSuccess: () =>
             {
