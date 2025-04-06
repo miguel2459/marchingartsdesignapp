@@ -8,6 +8,8 @@ TagManager:
   - Marcher
   - SetSphere
   - FlyingCamera
+  - Flying Camera
+  - RotationGizmo
   layers:
   - Default
   - TransparentFX

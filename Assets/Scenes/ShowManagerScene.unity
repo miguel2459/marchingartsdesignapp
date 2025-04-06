@@ -9894,9 +9894,9 @@ GameObject:
   - component: {fileID: 1219379204}
   - component: {fileID: 1219379203}
   - component: {fileID: 1219379207}
-  - component: {fileID: 1219379205}
   - component: {fileID: 1219379206}
   - component: {fileID: 1219379208}
+  - component: {fileID: 1219379209}
   m_Layer: 0
   m_Name: EnsembleDirector
   m_TagString: Untagged
@@ -10000,34 +10000,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1219379205
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1219379202}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 27c88e3d45e940f4a972ecb7b3a1cf63, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  marcherSelector: {fileID: 1219379207}
-  transformGizmoPrefab: {fileID: 5896091529052167557, guid: c017bcde408e7634e9e534a055000ee0, type: 3}
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 128
-  marcherPositionsManager: {fileID: 0}
-  snapToGrid: {fileID: 1666209691}
-  transformGizmo: {fileID: 0}
-  isMoving: 0
-  cam: {fileID: 5741240376201056195}
-  gizmoLayer:
-    serializedVersion: 2
-    m_Bits: 256
-  marcherLayer:
-    serializedVersion: 2
-    m_Bits: 64
 --- !u!114 &1219379206
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10040,8 +10012,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d54e2ac8aed717b44878eda0980908e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selectedMarchers: {fileID: 0}
-  moveMarchers: {fileID: 0}
+  selectedMarchers: {fileID: 1219379207}
+  transformGizmoManager: {fileID: 1219379209}
 --- !u!114 &1219379207
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10061,7 +10033,7 @@ MonoBehaviour:
     m_Bits: 64
   cameraControl: {fileID: 5741240376201056196}
   cam: {fileID: 5741240376201056195}
-  moveMarcher: {fileID: 1219379205}
+  transformGizmoManager: {fileID: 1219379209}
   selectedMarchers: []
   selectAllMarchers: 0
 --- !u!114 &1219379208
@@ -10077,10 +10049,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   selectionImage: {fileID: 1430122582}
-  director: {fileID: 0}
-  selectMarcher: {fileID: 0}
-  moveMarcher: {fileID: 0}
+  director: {fileID: 1219379203}
+  selectMarcher: {fileID: 1219379207}
+  transformGizmoManager: {fileID: 1219379209}
   cam: {fileID: 5741240376201056195}
+--- !u!114 &1219379209
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1219379202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8aad572563eaa5143870651bba8f1b1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unifiedGizmoPrefab: {fileID: 5896091529052167557, guid: c017bcde408e7634e9e534a055000ee0, type: 3}
+  cam: {fileID: 5741240376201056195}
+  selectedMarchers: {fileID: 1219379207}
+  snapToGrid: {fileID: 1666209691}
+  gizmoLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  marcherLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  isMoving: 0
 --- !u!21 &1233719761
 Material:
   serializedVersion: 6

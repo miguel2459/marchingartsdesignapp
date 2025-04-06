@@ -6,12 +6,9 @@ public class ClickMarcherSelector : MonoBehaviour
     
     private Vector3 mousePos;
     public SelectedMarchers selectedMarchers;
-    public MarcherMovement moveMarchers;
+    public TransformGizmoManager transformGizmoManager;
 
-    void Start(){
-        selectedMarchers = GetComponent<SelectedMarchers>();
-        moveMarchers = GetComponent<MarcherMovement>();
-    }
+
     void Update()
     {
         HandleMouseInput();
@@ -22,7 +19,7 @@ public class ClickMarcherSelector : MonoBehaviour
         mousePos = Input.mousePosition;
 
         // Handle Ctrl+Click deselection
-        if (Input.GetMouseButtonUp(0) && Input.GetKey(KeyCode.LeftControl) && !moveMarchers.transformGizmo)
+        if (Input.GetMouseButtonUp(0) && Input.GetKey(KeyCode.LeftControl) && !transformGizmoManager.HasActiveGizmo)
         {
             Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
             RaycastHit hit;
@@ -38,7 +35,22 @@ public class ClickMarcherSelector : MonoBehaviour
             }
         }
 
-        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && moveMarchers.transformGizmo)
+        // 🛠️ Handle click-away to hide gizmo even when gizmo is active
+        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && transformGizmoManager.HasActiveGizmo)
+        {
+            Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
+            RaycastHit hit;
+
+            if (!Physics.Raycast(ray, out hit, Mathf.Infinity, selectedMarchers.marcherLayer | transformGizmoManager.gizmoLayer))
+            {
+                Debug.Log("MarcherSelector: Clicked away from both marcher and gizmo — hiding gizmo.");
+                transformGizmoManager.HideTransformGizmo();
+                return;
+            }
+        }
+
+
+        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && transformGizmoManager.HasActiveGizmo)
         {
             Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
             RaycastHit hit;
@@ -56,7 +68,7 @@ public class ClickMarcherSelector : MonoBehaviour
         }
 
         // Handle normal click selection (only if not dragging)
-        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && !moveMarchers.transformGizmo)
+        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && !transformGizmoManager.HasActiveGizmo)
         {
             Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
             RaycastHit hit;

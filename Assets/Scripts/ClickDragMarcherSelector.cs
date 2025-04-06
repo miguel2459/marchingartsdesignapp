@@ -8,14 +8,12 @@ public class ClickDragMarcherSelector : MonoBehaviour
     Rect selectionRect;
     public EnsembleDirector2 director;
     public SelectedMarchers selectMarcher;
-    public MarcherMovement moveMarcher;
+    public TransformGizmoManager transformGizmoManager;
+
     private Vector2 startMousePos;
     private Vector2 endMousePos;
     public Camera cam;
     void Start(){
-        director = GetComponent<EnsembleDirector2>();
-        selectMarcher = GetComponent<SelectedMarchers>();
-        moveMarcher = GetComponent<MarcherMovement>();
         UpdateSelectionBox();
     }
     void Update(){
@@ -24,7 +22,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
     void HandleMouseInput()
     {
         // Early exit if components aren't initialized
-        if (selectMarcher == null || moveMarcher == null) return;
+        if (selectMarcher == null || transformGizmoManager == null) return;
 
         // Start drag
         if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))
@@ -45,7 +43,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
             }
 
             // Only clear if not Shift/Ctrl AND we didn't click a selected marcher
-            if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl) && !moveMarcher.transformGizmo && !clickedSelectedMarcher)
+            if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl) && !transformGizmoManager.HasActiveGizmo && !clickedSelectedMarcher)
             {
                 selectMarcher.ClearSelection();
             }
@@ -58,7 +56,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
         }
 
         // Update drag
-        if (Input.GetMouseButton(0) && !Input.GetKey(KeyCode.LeftAlt) && !moveMarcher.transformGizmo)
+        if (Input.GetMouseButton(0) && !Input.GetKey(KeyCode.LeftAlt) && !transformGizmoManager.HasActiveGizmo)
         {
             endMousePos = Input.mousePosition;
             
@@ -88,7 +86,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
         }
 
         // End drag
-        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && !moveMarcher.transformGizmo)
+        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && !transformGizmoManager.HasActiveGizmo)
         {
             // Only process selection if we have a valid drag area
             if (startMousePos != Vector2.zero && endMousePos != Vector2.zero)
