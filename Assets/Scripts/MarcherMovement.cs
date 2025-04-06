@@ -24,6 +24,11 @@ public class MarcherMovement : MonoBehaviour
 
     void Update()
     {
+        //
+        //
+        //
+        //
+        //
         if (Input.GetKeyDown(KeyCode.W) && marcherSelector.selectedMarchers.Count > 0)
         {
             if (transformGizmo == null)
@@ -42,21 +47,30 @@ public class MarcherMovement : MonoBehaviour
             }
         }
 
+        //
+        //
+        //
+        //
+        //
         if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt) && marcherSelector.selectedMarchers.Count > 0)
         {
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
+            //
+            //
             // Check for gizmo interaction first
             if (transformGizmo != null && Physics.Raycast(ray, out hit, RaycastDistance, gizmoLayer))
             {
                 Debug.Log($"Raycast hit gizmo: {hit.collider.gameObject.name}");
                 float distance = 0f;
 
-                // 🟨 SHIFT + CLICK on gizmo body (not axis) → Freeform move mode
+                //
+                //
+                // 🟨 SHIFT + CLICK on gizmo body (not axis) → Freeform reanchor move mode
                 if (Input.GetKey(KeyCode.LeftShift))
                 {
-                    Debug.Log("MarcherMovement: Shift+Clicked gizmo - initiating freeform gizmo drag.");
+                    Debug.Log("MarcherMovement: Shift+Clicked gizmo - initiating freeform reanchor gizmo drag.");
 
                     isFreeDraggingGizmo = true;
                     isMoving = true;
@@ -76,7 +90,9 @@ public class MarcherMovement : MonoBehaviour
 
                     return;
                 }
-
+            
+                //
+                //
                 // 🎯 X/Z Axis Handle Drag Logic
                 Plane movementPlane = new Plane(Vector3.up, hit.point);
          
@@ -117,6 +133,9 @@ public class MarcherMovement : MonoBehaviour
                 }
             }
 
+            //
+            //
+            //
             else if (!Input.GetKey(KeyCode.LeftAlt) && transformGizmo != null)
             {
                 // Only clear if not clicking a selected marcher
@@ -143,6 +162,11 @@ public class MarcherMovement : MonoBehaviour
             }
         }
 
+        //
+        //
+        //
+        //
+        //
         if (isMoving && transformGizmo != null && marcherSelector.selectedMarchers.Count > 0)
         {
             Debug.Log("MarcherMovement: Moving marcher(s) with gizmo.");
@@ -154,6 +178,11 @@ public class MarcherMovement : MonoBehaviour
             isMoving = false;
         }
 
+        //
+        //
+        //
+        //
+        //
         if (Input.GetMouseButtonUp(0) && isMoving)
         {
             Debug.Log("MarcherMovement: Stopping movement.");
@@ -276,14 +305,6 @@ public class MarcherMovement : MonoBehaviour
         return false;
     }
 
-
-    bool AreAllSetPositionsConfirmed(MarcherPositionsManager marcherPositionsManager)
-    {
-        int totalSetCount = SessionManager.instance.showStateSO.NumberOfSets;
-        return marcherPositionsManager.setPositions.Count >= totalSetCount;
-    }
-
-
     void AdjustGizmoRotation()
     {
         float cameraZPosition = cam.transform.position.z;
@@ -345,32 +366,6 @@ public class MarcherMovement : MonoBehaviour
             transformGizmo.transform.position = finalPosition;
             Debug.Log($"MarcherMovement: Gizmo moved to {finalPosition} {(Input.GetKey(KeyCode.Q) ? "[SNAPPED]" : "[FREEFORM]")}");
             }
-    }
-
-    public void MoveGizmoToSelectedMarchers()
-    {
-        Vector3 centerPoint = Vector3.zero;
-        foreach (var marcher in marcherSelector.selectedMarchers)
-        {
-            centerPoint += marcher.transform.position;
-        }
-        centerPoint /= marcherSelector.selectedMarchers.Count;
-
-        // Snap gizmo to the nearest grid point at the center point
-        transformGizmo.transform.position = snapToGrid.GetSnappedGizmoPosition(centerPoint);
-        marcherPositionsManager.transform.localPosition = Vector3.zero;
-        Debug.Log("MarcherMovement: Gizmo moved to the new center point of selected marchers.");
-    }
-
-    public void MoveGizmoToFirstSelectedMarcher(GameObject firstSelectedMarcher)
-    {
-        if (firstSelectedMarcher != null)
-        {
-            // Snap gizmo to the nearest grid point at the first selected marcher's position
-            transformGizmo.transform.position = snapToGrid.GetSnappedGizmoPosition(firstSelectedMarcher.transform.position);
-            firstSelectedMarcher.transform.localPosition = Vector3.zero;
-            Debug.Log($"MarcherMovement: Gizmo moved to the position of the first selected marcher: {firstSelectedMarcher.name}.");
-        }
     }
 
     public void HideTransformGizmo()

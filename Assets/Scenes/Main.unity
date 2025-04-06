@@ -177,6 +177,8 @@ MonoBehaviour:
     showSheetID: 
     lastModified: 
     group: 
+    marcherJSONLink: 
+    timingJSONLink: 
 --- !u!1 &431454371
 GameObject:
   m_ObjectHideFlags: 0

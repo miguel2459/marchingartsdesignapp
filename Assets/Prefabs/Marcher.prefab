@@ -146,15 +146,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e84e301e11e89594a8c99416bc9bf5e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  positions: []
-  maxSets: 0
-  stepsPerLine: 8
-  stepPositions: []
-  currentStep: 0
-  isMarching: 0
-  elapsedTime: 0
-  completedRepeats: 0
-  stepDuration: 0
+  runtimeCacheSO: {fileID: 0}
   marcherPositionsManager: {fileID: 942577037629190339}
   director: {fileID: 0}
 --- !u!114 &942577037629190339
@@ -169,10 +161,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 927bf2d012317564ca9cb2f23f95b5d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  PositionSpheres: []
-  setSpheres: []
-  positions: []
-  visualizer: {fileID: 0}
+  inspectorSetPositions: []
+  inspectorStandbyPositions: []
 --- !u!114 &3832302089163184675
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -15,7 +15,7 @@ public class SelectedMarchers : MonoBehaviour
     [Header("References")]
     public CameraControl cameraControl;
     public Camera cam;
-    public MarcherMovement moveMarcher;
+    public TransformGizmoManager transformGizmoManager;
 
     public List<GameObject> selectedMarchers = new List<GameObject>();
     public bool selectAllMarchers; // for inspector testing
@@ -30,7 +30,7 @@ public class SelectedMarchers : MonoBehaviour
     /// </summary>
     public void CheckForSpaceBarSetPosition()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && moveMarcher.transformGizmo != null && selectedMarchers.Count > 0)
+        if (Input.GetKeyDown(KeyCode.Space) && transformGizmoManager.HasActiveGizmo && selectedMarchers.Count > 0)
         {
             int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
 
@@ -54,9 +54,9 @@ public class SelectedMarchers : MonoBehaviour
             marcher.GetComponent<Renderer>().material.color = highlightColor;
             marcher.GetComponent<Unit>()?.SetSelector(true);
 
-            if (moveMarcher.transformGizmo != null)
+            if (transformGizmoManager.HasActiveGizmo)
             {
-                marcher.transform.SetParent(moveMarcher.transformGizmo.transform);
+                marcher.transform.SetParent(transformGizmoManager.transformGizmo.transform);
             }
 
             Debug.Log($"SelectedMarchers: ✅ {marcher.name} selected.");
@@ -71,9 +71,9 @@ public class SelectedMarchers : MonoBehaviour
             marcher.GetComponent<Renderer>().material.color = normalColor;
             marcher.GetComponent<Unit>()?.SetSelector(false);
 
-            if (moveMarcher.transformGizmo != null)
+            if (transformGizmoManager.HasActiveGizmo)
             {
-                marcher.transform.SetParent(transform);
+                marcher.transform.SetParent(null);
             }
 
             Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected.");
@@ -82,12 +82,11 @@ public class SelectedMarchers : MonoBehaviour
 
     public void ReanchorToExisting(GameObject marcher)
     {
-        if (moveMarcher != null)
+        if (transformGizmoManager != null)
         {
-            moveMarcher.ReanchorGizmoToMarcher(marcher);
+            transformGizmoManager.ReanchorGizmoToMarcher(marcher);
         }
     }
-
 
     public void ClearSelection()
     {
@@ -100,13 +99,17 @@ public class SelectedMarchers : MonoBehaviour
 
                 if (renderer != null) renderer.material.color = normalColor;
                 if (unit != null) unit.SetSelector(false);
-                if (moveMarcher?.transformGizmo != null) marcher.transform.SetParent(transform);
+
+                if (transformGizmoManager != null && transformGizmoManager.HasActiveGizmo)
+                {
+                    marcher.transform.SetParent(null);
+                }
             }
         }
 
         selectedMarchers.Clear();
-        moveMarcher?.HideTransformGizmo();
-        moveMarcher.isMoving = false;
+        transformGizmoManager?.HideTransformGizmo();
+        transformGizmoManager.isMoving = false;
 
         Debug.Log("SelectedMarchers: 🧹 Selection cleared.");
     }
