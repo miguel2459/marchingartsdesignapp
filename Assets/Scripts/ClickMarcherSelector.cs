@@ -38,6 +38,23 @@ public class ClickMarcherSelector : MonoBehaviour
             }
         }
 
+        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && moveMarchers.transformGizmo)
+        {
+            Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, selectedMarchers.marcherLayer))
+            {
+                GameObject clicked = hit.collider.gameObject;
+
+                if (Input.GetKey(KeyCode.LeftShift) && selectedMarchers.selectedMarchers.Contains(clicked))
+                {
+                    Debug.Log("MarcherSelector: Reanchoring gizmo to selected marcher.");
+                    selectedMarchers.ReanchorToExisting(clicked);
+                }
+            }
+        }
+
         // Handle normal click selection (only if not dragging)
         if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && !moveMarchers.transformGizmo)
         {
@@ -77,9 +94,14 @@ public class ClickMarcherSelector : MonoBehaviour
                 // Handle only Shift selection on mouse down
                 if (Input.GetKey(KeyCode.LeftShift))
                 {
-                    Debug.Log($"MarcherSelector: Shift key pressed - Adding marcher {hit.collider.gameObject.name} to selection.");
-                    selectedMarchers.SelectMarcher(hit.collider.gameObject);
+                    GameObject clicked = hit.collider.gameObject;
+
+                    if (!selectedMarchers.selectedMarchers.Contains(clicked))
+                    {
+                        selectedMarchers.SelectMarcher(clicked);
+                    }
                 }
+
                 else if (!Input.GetKey(KeyCode.LeftControl)) // Only select if Ctrl is not pressed
                 {
                     Debug.Log($"MarcherSelector: Selecting marcher {hit.collider.gameObject.name}.");
