@@ -80,6 +80,15 @@ public class SelectedMarchers : MonoBehaviour
         }
     }
 
+    public void ReanchorToExisting(GameObject marcher)
+    {
+        if (moveMarcher != null)
+        {
+            moveMarcher.ReanchorGizmoToMarcher(marcher);
+        }
+    }
+
+
     public void ClearSelection()
     {
         foreach (GameObject marcher in selectedMarchers.ToList())

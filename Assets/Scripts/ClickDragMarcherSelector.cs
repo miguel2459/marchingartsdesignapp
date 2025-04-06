@@ -32,8 +32,20 @@ public class ClickDragMarcherSelector : MonoBehaviour
             startMousePos = Input.mousePosition;
             selectionRect = new Rect();
             
-            // Only clear selection if not holding shift or control
-            if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl) && !moveMarcher.transformGizmo)
+            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            bool clickedSelectedMarcher = false;
+
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, selectMarcher.marcherLayer))
+            {
+                if (selectMarcher.selectedMarchers.Contains(hit.collider.gameObject))
+                {
+                    clickedSelectedMarcher = true;
+                }
+            }
+
+            // Only clear if not Shift/Ctrl AND we didn't click a selected marcher
+            if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl) && !moveMarcher.transformGizmo && !clickedSelectedMarcher)
             {
                 selectMarcher.ClearSelection();
             }
