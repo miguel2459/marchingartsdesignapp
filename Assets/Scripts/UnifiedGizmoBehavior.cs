@@ -14,6 +14,10 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     private Vector3 offset;
     private bool isDragging = false;
     public TransformGizmoManager gizmoManager;
+    public bool IsDragging()
+    {
+        return isDragging;
+    }
 
 
     void Update()

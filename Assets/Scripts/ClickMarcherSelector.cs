@@ -41,14 +41,21 @@ public class ClickMarcherSelector : MonoBehaviour
             Ray ray = selectedMarchers.cam.ScreenPointToRay(mousePos);
             RaycastHit hit;
 
+            // 🧠 Prevent hiding the gizmo if user was just manipulating it
+            var gizmo = transformGizmoManager.transformGizmo;
+            var behavior = gizmo ? gizmo.GetComponent<UnifiedGizmoBehavior>() : null;
+            bool wasDraggingGizmo = behavior && behavior.IsDragging();
+
             if (!Physics.Raycast(ray, out hit, Mathf.Infinity, selectedMarchers.marcherLayer | transformGizmoManager.gizmoLayer))
             {
-                Debug.Log("MarcherSelector: Clicked away from both marcher and gizmo — hiding gizmo.");
-                transformGizmoManager.HideTransformGizmo();
-                return;
+                if (!wasDraggingGizmo)
+                {
+                    Debug.Log("MarcherSelector: Clicked away from both marcher and gizmo — hiding gizmo.");
+                    transformGizmoManager.HideTransformGizmo();
+                    return;
+                }
             }
         }
-
 
         if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && transformGizmoManager.HasActiveGizmo)
         {
