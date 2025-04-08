@@ -30,6 +30,24 @@ public class SetProgressBar : MonoBehaviour
     private int totalSets = 1;
     private int lastSet = 1;
 
+    private void Awake()
+    {
+        setButtons.Clear();
+
+        foreach (Transform child in scrollRect.content)
+        {
+            GameObject buttonObj = child.gameObject;
+
+            if (buttonObj.TryGetComponent(out Button btn))
+            {
+                setButtons.Add(btn);
+                Debug.Log($"🔍 Found existing set button: {buttonObj.name}");
+            }
+        }
+
+        Debug.Log($"✅ Awake initialized {setButtons.Count} pre-existing set buttons.");
+    }
+
     private void Start()
     {
         AttachListeners();
@@ -107,10 +125,15 @@ public class SetProgressBar : MonoBehaviour
 
     public void OnSetButtonClick(int setNumber)
     {
+        Debug.Log($"🟦 OnSetButtonClick called for Set {setNumber}");
+
         currentSetIndex = setNumber;
         session.showStateSO.LastSet = setNumber.ToString();
         currentSetText.text = setNumber.ToString();
+
+        Debug.Log($"🔁 Repositioning marchers to Set {setNumber}");
         director.RepositionMarchersToSet(setNumber);
+
         HighlightSet(setNumber);
 
         var map = session.runtimeCacheSO.SetTimingMap;
@@ -124,6 +147,7 @@ public class SetProgressBar : MonoBehaviour
             startBPMInput.text = cachedStartBPM.ToString();
             endBPMInput.text = cachedEndBPM.ToString();
 
+            Debug.Log($"✅ Timing Data for Set {setNumber}: Counts = {cachedCount}, Start BPM = {cachedStartBPM}, End BPM = {cachedEndBPM}");
             countsProgressBar?.RenderCounts(setNumber, cachedCount);
         }
         else
@@ -135,6 +159,7 @@ public class SetProgressBar : MonoBehaviour
             countsProgressBar?.ClearCounts();
         }
     }
+
 
     private void HandleCountEdit(string value)
     {

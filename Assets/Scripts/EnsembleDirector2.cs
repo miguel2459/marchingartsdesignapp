@@ -349,12 +349,12 @@ public class EnsembleDirector2 : MonoBehaviour
             if (marcher.setPositions.TryGetValue(setIndex, out newPosition))
             {
                 marcher.transform.position = newPosition;
-                Debug.Log($"{marcher.name} repositioned to SetPosition for set {setIndex}");
+                //Debug.Log($"{marcher.name} repositioned to SetPosition for set {setIndex}");
             }
             else if (marcher.standbyPositions.TryGetValue(setIndex, out newPosition))
             {
                 marcher.transform.position = newPosition;
-                Debug.Log($"{marcher.name} repositioned to StandbyPosition for set {setIndex}");
+                //Debug.Log($"{marcher.name} repositioned to StandbyPosition for set {setIndex}");
             }
             else
             {

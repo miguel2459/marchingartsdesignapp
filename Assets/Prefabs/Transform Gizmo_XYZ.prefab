@@ -189,7 +189,7 @@ GameObject:
   - component: {fileID: 6330822879898900042}
   - component: {fileID: 1631733318}
   m_Layer: 8
-  m_Name: X Axis
+  m_Name: Handle_X
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -266,11 +266,11 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2252521007908362858}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
-  m_Size: {x: 0.033931114, y: 0.01, z: 0.01}
-  m_Center: {x: -0.016983397, y: -0.00025395514, z: 0.00044365553}
+  m_Size: {x: 0.025772212, y: 0.010000001, z: 0.01}
+  m_Center: {x: -0.021062866, y: -0.00025395543, z: 0.00044365556}
 --- !u!1 &3116843377437532516
 GameObject:
   m_ObjectHideFlags: 0
@@ -547,6 +547,7 @@ MonoBehaviour:
   snapToGrid: {fileID: 0}
   rotateVisualizer: {fileID: 3240463682464567214}
   scaleVisualizer: {fileID: 8625542438928609509}
+  gizmoManager: {fileID: 0}
 --- !u!1 &6710267366097947988
 GameObject:
   m_ObjectHideFlags: 0
@@ -560,7 +561,7 @@ GameObject:
   - component: {fileID: 5837839985681526439}
   - component: {fileID: 6106063344478507301}
   m_Layer: 8
-  m_Name: Z Axis
+  m_Name: Handle_Z
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -640,8 +641,8 @@ BoxCollider:
   m_IsTrigger: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Size: {x: 0.01, y: 0.033934653, z: 0.01}
-  m_Center: {x: 0.00025483232, y: -0.016986966, z: 0.00008830265}
+  m_Size: {x: 0.01, y: 0.02633508, z: 0.01}
+  m_Center: {x: 0.0002548325, y: -0.020786775, z: 0.0000883028}
 --- !u!1 &8625542438928609509
 GameObject:
   m_ObjectHideFlags: 0
@@ -657,7 +658,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &3269809338812878834
 Transform:
   m_ObjectHideFlags: 0
@@ -780,8 +781,9 @@ GameObject:
   - component: {fileID: 4943897595502170289}
   - component: {fileID: 1234754367233494215}
   - component: {fileID: 8346865653571750484}
+  - component: {fileID: 1947613013721868548}
   m_Layer: 8
-  m_Name: Center
+  m_Name: Handle_Center
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -795,8 +797,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8816041951277071622}
   m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
-  m_LocalScale: {x: 100, y: 100, z: 100}
+  m_LocalPosition: {x: -0.00000008708, y: 0.07, z: -0}
+  m_LocalScale: {x: 173.04918, y: 173.04918, z: 173.04918}
   m_Children: []
   m_Father: {fileID: 6528232287218714431}
   m_RootOrder: 0
@@ -828,8 +830,8 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5ed27114edf7a5248a4ba5fa708e54fe, type: 2}
-  - {fileID: 2100000, guid: 5ed27114edf7a5248a4ba5fa708e54fe, type: 2}
+  - {fileID: 2100000, guid: 296ca9089248120479ad8535aa4d5f2b, type: 2}
+  - {fileID: 2100000, guid: 296ca9089248120479ad8535aa4d5f2b, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -851,3 +853,16 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &1947613013721868548
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8816041951277071622}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 0.0074902726, y: 0.007966789, z: 0.00782472}
+  m_Center: {x: -0.00014617416, y: -0.0001304232, z: 0.000091618684}
