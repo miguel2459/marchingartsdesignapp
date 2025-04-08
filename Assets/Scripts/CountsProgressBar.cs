@@ -15,11 +15,32 @@ public class CountsProgressBar : MonoBehaviour
     private int activeCountIndex = -1;
     public EnsembleDirector2 director; // Or set a reference
 
+    private void Awake()
+    {
+        countButtons.Clear();
+
+        foreach (Transform child in contentArea)
+        {
+            GameObject buttonObj = child.gameObject;
+
+            if (buttonObj.GetComponent<Button>() != null)
+            {
+                countButtons.Add(buttonObj);
+                Debug.Log($"🔍 Found existing count button in content: {buttonObj.name}");
+            }
+        }
+
+        Debug.Log($"✅ Awake initialized {countButtons.Count} pre-existing count buttons.");
+    }
+
+
     /// <summary>
     /// Renders the given number of counts as buttons.
     /// </summary>
     public void RenderCounts(int setNumber, int countTotal)
     {
+        Debug.Log($"🔄 RenderCounts() called for Set {setNumber} with {countTotal} counts");
+
         ClearCounts();
 
         float spacing = 10f;
@@ -32,18 +53,21 @@ public class CountsProgressBar : MonoBehaviour
         if (countTotal <= visibleCountLimit)
         {
             buttonWidth = availableWidth / countTotal;
+            Debug.Log($"🧮 Using full width: Button width = {buttonWidth:F2}");
         }
         else
         {
             float maxVisibleWidth = viewportWidth - ((visibleCountLimit - 1) * spacing);
             buttonWidth = maxVisibleWidth / visibleCountLimit;
+            Debug.Log($"🧮 Using limited width: Button width = {buttonWidth:F2}");
         }
 
-        // Update layout spacing to match
+        // Update layout spacing
         HorizontalLayoutGroup layout = contentArea.GetComponent<HorizontalLayoutGroup>();
         if (layout != null)
         {
             layout.spacing = spacing;
+            Debug.Log($"📏 Horizontal spacing set to {spacing}");
         }
 
         for (int i = 0; i < countTotal; i++)
@@ -59,7 +83,7 @@ public class CountsProgressBar : MonoBehaviour
             RectTransform rt = buttonObj.GetComponent<RectTransform>();
             if (rt != null)
             {
-                rt.sizeDelta = new Vector2(buttonWidth, rt.sizeDelta.y); // Respect current height
+                rt.sizeDelta = new Vector2(buttonWidth, rt.sizeDelta.y);
             }
 
             Image bg = buttonObj.GetComponent<Image>();
@@ -68,25 +92,26 @@ public class CountsProgressBar : MonoBehaviour
                 bg.color = defaultColor;
             }
 
-            
-             int countIndex = i; // ✅ Local copy for closure
+            int countIndex = i;
 
             buttonObj.GetComponent<Button>().onClick.AddListener(() =>
             {
-                OnCountButtonClicked(setNumber, countIndex + 1); // 1-based display
+                Debug.Log($"🧠 Count Button Listener Triggered → Set {setNumber}, Count {countIndex + 1}");
+                OnCountButtonClicked(setNumber, countIndex + 1);
             });
-
 
             countButtons.Add(buttonObj);
         }
 
-        // Let layout group + content size fitter handle resizing — no need to modify contentArea.sizeDelta manually
+        Debug.Log($"✅ Rendered {countButtons.Count} count buttons for Set {setNumber}");
     }
+
 
     public void OnCountButtonClicked(int setNumber, int clickedCount)
     {
         if (director != null)
         {
+            Debug.Log($"🎯 Count Button Clicked — Set: {setNumber}, Count: {clickedCount}");
             director.PreviewCountPosition(setNumber, clickedCount);
         }
     }

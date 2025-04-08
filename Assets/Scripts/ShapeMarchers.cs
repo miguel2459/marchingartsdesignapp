@@ -36,7 +36,7 @@ public class ShapeMarchers : MonoBehaviour
 
 
     // Main method to set a marching formation and add it to the shapes list
-    public void ArrangeFormation(ShapeGroup shapeGroup)
+    public void ArrangeFormation(ShapeGroup shapeGroup, Vector3? centerOverride = null)
     {
         Debug.Log($"Arranging Formation - ShapeType: {shapeGroup.shapeType}, Interval: {shapeGroup.intervalType}");
 
@@ -52,7 +52,7 @@ public class ShapeMarchers : MonoBehaviour
                 break;
             
             case ShapeType.Box:
-                boxManager.CreateBoxFormation(shapeGroup.marchers, shapeGroup.intervalType, shapeGroup.isFilled);
+                boxManager.CreateBoxFormation(shapeGroup.marchers, shapeGroup.intervalType, shapeGroup.isFilled, centerOverride);
                 break;
             
             case ShapeType.Circle:

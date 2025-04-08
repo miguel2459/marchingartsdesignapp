@@ -14,6 +14,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     private Vector3 offset;
     private bool isDragging = false;
     public TransformGizmoManager gizmoManager;
+    private string activeAxis = "center"; // center, x, z
     public bool IsDragging()
     {
         return isDragging;
@@ -38,6 +39,12 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     {
                         offset = ray.GetPoint(distance) - transform.position;
                     }
+
+                    // Determine which axis handle is clicked
+                    string hitName = hit.collider.gameObject.name.ToLower();
+                    if (hitName.Contains("handle_x")) activeAxis = "x";
+                    else if (hitName.Contains("handle_z")) activeAxis = "z";
+                    else activeAxis = "center";
                 }
             }
         }
@@ -59,11 +66,13 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                         targetPos = snapToGrid.GetSnappedGizmoPosition(targetPos);
                     }
 
-                    // Clamp gizmo itself
-                    targetPos.x = Mathf.Clamp(targetPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
-                    targetPos.z = Mathf.Clamp(targetPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
+                    Vector3 newPos = transform.position;
+                    if (activeAxis == "x" || activeAxis == "center")
+                        newPos.x = Mathf.Clamp(targetPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
+                    if (activeAxis == "z" || activeAxis == "center")
+                        newPos.z = Mathf.Clamp(targetPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
 
-                    transform.position = targetPos;
+                    transform.position = newPos;
 
                     // Clamp each marcher to field bounds (post-move)
                     foreach (GameObject marcher in selectedMarchers.selectedMarchers)
@@ -94,18 +103,24 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     else if (mode == "scale")
                     {
                         float scaleFactor = 1 + mouseDelta * 0.05f;
-                        scaleFactor = Mathf.Clamp(scaleFactor, 0.5f, 2f); // prevent collapse or extreme explode
+                        scaleFactor = Mathf.Clamp(scaleFactor, 0.5f, 2f);
 
                         Vector3 gizmoPos = transform.position;
 
                         foreach (GameObject marcher in selectedMarchers.selectedMarchers)
                         {
                             Vector3 direction = marcher.transform.position - gizmoPos;
-                            direction.y = 0; // keep movement on horizontal plane
+                            direction.y = 0;
 
-                            Vector3 newPos = gizmoPos + direction * scaleFactor;
+                            Vector3 newPos = direction;
+                            if (activeAxis == "x")
+                                newPos = new Vector3(direction.x * scaleFactor, 0, direction.z);
+                            else if (activeAxis == "z")
+                                newPos = new Vector3(direction.x, 0, direction.z * scaleFactor);
+                            else
+                                newPos *= scaleFactor;
 
-                            // Clamp to field bounds (X = min.x to max.x, Z = min.y to max.y)
+                            newPos = gizmoPos + newPos;
                             newPos.x = Mathf.Clamp(newPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
                             newPos.z = Mathf.Clamp(newPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
 
@@ -119,7 +134,29 @@ public class UnifiedGizmoBehavior : MonoBehaviour
         if (Input.GetMouseButtonUp(0) && isDragging)
         {
             isDragging = false;
+            activeAxis = "center"; // reset
+
+            if (mode == "rotate")
+            {
+                // 🔓 Temporarily unparent marchers
+                foreach (var marcher in selectedMarchers.selectedMarchers)
+                {
+                    marcher.transform.SetParent(null);
+                }
+
+                // 🔄 Reset gizmo rotation
+                Vector3 currentRotation = transform.eulerAngles;
+                transform.eulerAngles = new Vector3(currentRotation.x, 0f, currentRotation.z);
+                Debug.Log("UnifiedGizmoBehavior: Rotation reset to Y = 0 after rotate interaction.");
+
+                // 🔗 Re-parent marchers back to the gizmo
+                foreach (var marcher in selectedMarchers.selectedMarchers)
+                {
+                    marcher.transform.SetParent(transform);
+                }
+            }
         }
+
     }
 
     public void SetMode(string newMode)

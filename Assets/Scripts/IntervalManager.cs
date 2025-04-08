@@ -1,4 +1,7 @@
 using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
+
 
 public class IntervalManager : MonoBehaviour
 {
@@ -38,6 +41,52 @@ public class IntervalManager : MonoBehaviour
                 return ONE_STEP_SIZE;
         }
     }
+
+    public IntervalType EstimateIntervalType(List<GameObject> marchers)
+    {
+        if (marchers == null || marchers.Count < 2)
+        {
+            Debug.LogWarning("Not enough marchers to estimate spacing. Defaulting to TwoStep.");
+            return IntervalType.TwoStep;
+        }
+
+        List<float> distances = new List<float>();
+
+        for (int i = 0; i < marchers.Count - 1; i++)
+        {
+            for (int j = i + 1; j < marchers.Count; j++)
+            {
+                float dist = Vector3.Distance(marchers[i].transform.position, marchers[j].transform.position);
+                if (dist > 0)
+                    distances.Add(dist);
+            }
+        }
+
+        float avg = distances.Count > 0 ? distances.Average() : TWO_STEP_SIZE;
+
+        Debug.Log($"IntervalManager: Estimated average spacing: {avg}");
+
+        // Find the closest interval
+        IntervalType closestType = IntervalType.OneStep;
+        float closestDiff = Mathf.Abs(avg - ONE_STEP_SIZE);
+
+        foreach (IntervalType type in System.Enum.GetValues(typeof(IntervalType)))
+        {
+            float spacing = GetIntervalSpacing(type);
+            float diff = Mathf.Abs(avg - spacing);
+
+            if (diff < closestDiff)
+            {
+                closestDiff = diff;
+                closestType = type;
+            }
+        }
+
+        Debug.Log($"IntervalManager: Closest matched IntervalType: {closestType}");
+
+        return closestType;
+    }
+
 
     // Method to convert an integer to IntervalType
     public IntervalType GetIntervalType(float interval)

@@ -19,11 +19,103 @@ public class SelectedMarchers : MonoBehaviour
 
     public List<GameObject> selectedMarchers = new List<GameObject>();
     public bool selectAllMarchers; // for inspector testing
+    public ShapeMarchers shapeMarchers;  // assign in Inspector
+
 
     private void Update()
     {
         CheckForSpaceBarSetPosition();
+
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            SnapSelectedMarchersToGrid();
+        }
+
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            ArrangeSelectedInBox();
+        }
     }
+
+    private void ArrangeSelectedInBox()
+    {
+        if (selectedMarchers.Count == 0 || shapeMarchers == null)
+        {
+            Debug.LogWarning("Box shape failed: No marchers selected or ShapeMarchers not assigned.");
+            return;
+        }
+
+        IntervalManager.IntervalType estimatedInterval = shapeMarchers.intervalManager.EstimateIntervalType(selectedMarchers);
+        ShapeGroup group = new ShapeGroup(ShapeMarchers.ShapeType.Box, estimatedInterval)
+        {
+            marchers = new List<GameObject>(selectedMarchers),
+            isFilled = true // Change to false if you want a hollow box
+        };
+
+        Vector3 center = Vector3.zero;
+        foreach (var m in selectedMarchers)
+            center += m.transform.position;
+        center /= selectedMarchers.Count;
+
+        shapeMarchers.ArrangeFormation(group, center);
+
+        // Optional: Recenter gizmo after box is created
+        if (transformGizmoManager.HasActiveGizmo && selectedMarchers.Count > 0)
+        {
+            transformGizmoManager.ReanchorGizmoToMarcher(selectedMarchers[0]);
+        }
+
+        Debug.Log($"SelectedMarchers: 🧱 Box formation applied to {selectedMarchers.Count} marchers.");
+    }
+
+
+    private void SnapSelectedMarchersToGrid()
+    {
+        if (selectedMarchers.Count == 0 || transformGizmoManager == null || transformGizmoManager.snapToGrid == null)
+            return;
+
+        // Step 1: Snap current positions to nearest grid
+        foreach (GameObject marcher in selectedMarchers)
+        {
+            Vector3 currentPos = marcher.transform.position;
+            Vector3 snapped = transformGizmoManager.snapToGrid.GetSnappedGizmoPosition(currentPos);
+
+            snapped.x = Mathf.Clamp(snapped.x, transformGizmoManager.snapToGrid.currentFieldMin.x, transformGizmoManager.snapToGrid.currentFieldMax.x);
+            snapped.z = Mathf.Clamp(snapped.z, transformGizmoManager.snapToGrid.currentFieldMin.y, transformGizmoManager.snapToGrid.currentFieldMax.y);
+            snapped.y = currentPos.y;
+
+            marcher.transform.position = snapped;
+        }
+
+        Debug.Log($"SelectedMarchers: 🔲 Snapped {selectedMarchers.Count} marchers to grid.");
+
+        // Step 2: Equalize spacing into box formation using detected interval
+        IntervalManager.IntervalType interval = shapeMarchers.intervalManager.EstimateIntervalType(selectedMarchers);
+        Vector3 center = Vector3.zero;
+
+        foreach (var m in selectedMarchers)
+            center += m.transform.position;
+
+        center /= selectedMarchers.Count;
+
+        ShapeGroup group = new ShapeGroup(ShapeMarchers.ShapeType.Box, interval)
+        {
+            marchers = new List<GameObject>(selectedMarchers),
+            isFilled = true
+        };
+
+        shapeMarchers.ArrangeFormation(group, center);
+
+        Debug.Log($"SelectedMarchers: 🧮 Equalized spacing into box using {interval} around center {center}");
+
+        // Step 3: Reanchor gizmo (optional)
+        if (transformGizmoManager.HasActiveGizmo && selectedMarchers.Count > 0)
+        {
+            transformGizmoManager.ReanchorGizmoToMarcher(selectedMarchers[0]);
+        }
+    }
+
+
 
     /// <summary>
     /// If spacebar is pressed, confirms the transform.position as a SetPosition for each selected marcher.

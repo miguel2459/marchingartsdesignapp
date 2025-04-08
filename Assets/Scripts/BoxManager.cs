@@ -23,9 +23,9 @@ public class BoxManager : MonoBehaviour
     }
 
     // Method to create a box formation for marchers
-    public void CreateBoxFormation(List<GameObject> marchers, IntervalManager.IntervalType interval, bool isFilled)
+    public void CreateBoxFormation(List<GameObject> marchers, IntervalManager.IntervalType interval, bool isFilled, Vector3? centerOverride = null)
     {
-        Vector3 center = fieldManager.GetFieldCenter();
+        Vector3 center = centerOverride ?? fieldManager.GetFieldCenter();
         int count = marchers.Count;
         float spacing = intervalManager.GetIntervalSpacing(interval);
 
