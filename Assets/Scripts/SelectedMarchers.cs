@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using UnityEngine.EventSystems;
+
 
 /// <summary>
 /// Handles user selection of marchers and confirms set positions when spacebar is pressed.
@@ -20,6 +22,8 @@ public class SelectedMarchers : MonoBehaviour
     public List<GameObject> selectedMarchers = new List<GameObject>();
     public bool selectAllMarchers; // for inspector testing
     public ShapeMarchers shapeMarchers;  // assign in Inspector
+    public CountsProgressBar countsProgressBar;
+
 
 
     private void Update()
@@ -35,6 +39,33 @@ public class SelectedMarchers : MonoBehaviour
         {
             ArrangeSelectedInBox();
         }
+
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            SelectAllMarchers();
+        }
+    }
+
+    public void SelectAllMarchers()
+    {
+        GameObject[] allMarchers = GameObject.FindGameObjectsWithTag("Marcher");
+
+        if (allMarchers.Length == 0)
+        {
+            Debug.LogWarning("SelectedMarchers: No marchers found with tag 'Marcher'");
+            return;
+        }
+
+        ClearSelection(); // Optional: Clear any previous selection
+
+        foreach (GameObject marcher in allMarchers)
+        {
+            SelectMarcher(marcher);
+        }
+
+        UpdateCameraFocus();
+
+        Debug.Log($"SelectedMarchers: 🔢 Selected all {allMarchers.Length} marchers.");
     }
 
     private void ArrangeSelectedInBox()
@@ -122,21 +153,49 @@ public class SelectedMarchers : MonoBehaviour
     /// </summary>
     public void CheckForSpaceBarSetPosition()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && transformGizmoManager.HasActiveGizmo && selectedMarchers.Count > 0)
+        if (Input.GetKeyDown(KeyCode.Space) && selectedMarchers.Count > 0)
         {
             int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
+            int setToUse;
+            int countToUse;
 
-            Debug.Log($"SelectedMarchers: ⏺️ Setting SetPosition for {selectedMarchers.Count} marchers on Set {currentSet}");
+            // Determine if a count is highlighted in CountsProgressBar
+            int activeCountIndex = countsProgressBar != null ? countsProgressBar.GetActiveCountIndex() : -1;
+
+            if (activeCountIndex >= 0)
+            {
+                // 🧠 A specific count is selected
+                setToUse = currentSet;
+                countToUse = activeCountIndex + 1; // Convert to 1-based
+                Debug.Log($"SelectedMarchers: ⏺️ Setting positions at Set {setToUse}, Count {countToUse}");
+            }
+            else
+            {
+                // 🧠 No count highlighted — use last count of previous set
+                if (currentSet == 1)
+                {
+                    setToUse = 0;
+                    countToUse = 0;
+                    Debug.Log($"SelectedMarchers: ⏺️ Fallback to Set 0, Count 0");
+                }
+                else
+                {
+                    setToUse = currentSet - 1;
+                    countToUse = SessionManager.instance.runtimeCacheSO.SetTimingMap[setToUse].count;
+                    Debug.Log($"SelectedMarchers: ⏺️ Fallback to Set {setToUse}, Last Count {countToUse}");
+                }
+            }
 
             foreach (GameObject marcher in selectedMarchers)
             {
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
-                    posManager.SetPosition(currentSet, marcher.transform.position);
+                    posManager.SetPositionAtCount(setToUse, countToUse, marcher.transform.position);
                 }
             }
         }
     }
+
 
     public void SelectMarcher(GameObject marcher)
     {

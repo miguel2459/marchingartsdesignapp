@@ -105,22 +105,27 @@ public class ShowDataManager
 
         if (director != null)
         {
-            string savedJsonPath = director.SaveMarcherStateToFile();
-            if (!string.IsNullOrEmpty(savedJsonPath))
+            string marcherJson = director.GenerateMarcherStateJSON();
+            if (!string.IsNullOrEmpty(marcherJson))
             {
-                // 🆕 Save to persistent local cache too
-                //CopyFileToLocalCache(savedJsonPath, showStateSO.CurrentShowID + "_marchers.json");
-                coroutineHost.StartCoroutine(UploadMarcherJSON(savedJsonPath));
+                SessionManager.instance.JsonService.SaveJson(
+                    showStateSO.CurrentShowID, 
+                    "marcher", 
+                    marcherJson, 
+                    success => 
+                    Debug.Log($"✅ Marcher JSON upload result: {success}"));
             }
 
-            string timingJsonPath = director.SaveSetTimingMapToFile();
-            if (!string.IsNullOrEmpty(timingJsonPath))
+            string timingJson = director.GenerateSetTimingMapJSON();
+            if (!string.IsNullOrEmpty(timingJson))
             {
-                // 🆕 Save to persistent local cache too
-                //CopyFileToLocalCache(timingJsonPath, showStateSO.CurrentShowID + "_timing.json");
-                coroutineHost.StartCoroutine(UploadSetTimingJSON(timingJsonPath));
+                SessionManager.instance.JsonService.SaveJson(
+                    showStateSO.CurrentShowID, 
+                    "timing", 
+                    timingJson, 
+                    success => 
+                    Debug.Log($"✅ SetTiming JSON upload result: {success}"));
             }
-
         }
 
         // 🔁 Save core show details to Google Sheets

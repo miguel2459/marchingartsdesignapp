@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Analytics;
+using UnityEngine.EventSystems;
 
 public class ClickDragMarcherSelector : MonoBehaviour
 {
@@ -27,6 +27,9 @@ public class ClickDragMarcherSelector : MonoBehaviour
         // Start drag
         if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))
         {
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            return; // 👈 Prevent selection logic if clicking on UI
+
             startMousePos = Input.mousePosition;
             selectionRect = new Rect();
             

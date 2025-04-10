@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class ClickMarcherSelector : MonoBehaviour
 {
@@ -84,6 +85,8 @@ public class ClickMarcherSelector : MonoBehaviour
             {
                 if (!Input.GetKey(KeyCode.LeftControl)) // Only clear if Ctrl is not held
                 {
+                    if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                    return; // 👈 Prevent selection logic if clicking on UI
                     selectedMarchers.ClearSelection();
                 }
                 return;
