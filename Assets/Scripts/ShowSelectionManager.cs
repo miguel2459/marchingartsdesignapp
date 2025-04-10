@@ -1,281 +1,443 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.Networking;
-using SimpleJSON;
-using System.IO;
+using UnityEngine.UI;
+using SimpleJSON; // Assuming you continue using SimpleJSON
 
-
+/// <summary>
+/// Manages the UI for selecting existing shows or creating new ones.
+/// Handles fetching show metadata, triggering the loading of show JSON data (via JsonPersistenceService),
+/// and coordinating the transition to the Show Manager scene.
+/// </summary>
 public class ShowSelectionManager : MonoBehaviour
 {
-    SessionManager session = SessionManager.instance;
-    
+    // --- Dependencies ---
+    private SessionManager session; // Cached reference to the SessionManager instance
+
     [Header("UI References")]
-    public Transform scrollContent; // Parent container for show panels
-    public GameObject panelCreateNewShowPrefab; // Prefab for creating a new show
-    public GameObject panelSavedShowPrefab; // Prefab for saved shows
+    [Tooltip("Parent GameObject where show list panels will be instantiated")]
+    public Transform scrollContent;
+    [Tooltip("Prefab for the 'Create New Show' button/panel")]
+    public GameObject panelCreateNewShowPrefab;
+    [Tooltip("Prefab for displaying an existing saved show")]
+    public GameObject panelSavedShowPrefab;
+
+    //================================================================================
+    #region Lifecycle Methods
+    //================================================================================
 
     private void Start()
     {
+        // Cache SessionManager instance and perform null check
+        session = SessionManager.instance;
+        if (session == null)
+        {
+            Debug.LogError("ShowSelectionManager: SessionManager instance not found! This script requires SessionManager to function.");
+            this.enabled = false; // Disable script if session manager is missing
+            return;
+        }
         StartCoroutine(WaitForSessionAndPopulate());
     }
 
+    /// <summary>
+    /// Waits for the SessionManager to be fully initialized (including user login and JsonService)
+    /// before populating the show list UI and starting the pre-fetch process.
+    /// </summary>
     private IEnumerator WaitForSessionAndPopulate()
     {
-        // Wait until the SessionManager has loaded user data
-        while (SessionManager.instance == null || SessionManager.instance.savedShows == null)
+        while (session == null || session.savedShows == null || session.JsonService == null)
         {
-            Debug.Log("⏳ Waiting for user session to initialize...");
-            yield return new WaitForSeconds(0.5f);
+            Debug.Log("⏳ Waiting for user session and JsonService to initialize...");
+            if (session == null) session = SessionManager.instance; // Retry getting instance
+            yield return new WaitForSeconds(0.5f); // Wait before checking again
         }
 
-        Debug.Log("✅ User session detected, populating show selection.");
+        Debug.Log("✅ User session detected, populating show selection UI.");
         PopulateShowSelection();
+
+        // Start pre-fetching JSON data for existing shows in the background
         StartCoroutine(PreFetchAndCacheAllJSONs());
-
     }
 
-    private IEnumerator PreFetchAndCacheAllJSONs()
-    {
-        var shows = new List<SessionManager.ShowData>(session.savedShows);
-        string localDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
-        Directory.CreateDirectory(localDir);
+     /// <summary>
+     /// Clean up event listeners when the object is destroyed to prevent memory leaks.
+     /// </summary>
+     private void OnDestroy()
+     {
+         if (scrollContent != null)
+         {
+             // Iterate through instantiated show panels and unsubscribe from the selection event
+             foreach (Transform child in scrollContent)
+             {
+                 if (child != null && child.TryGetComponent<ShowPanelUI>(out var panelUI))
+                 {
+                     panelUI.onShowSelected -= OnShowSelected;
+                 }
+             }
+         }
+     }
 
-        Debug.Log($"🧠 Starting prefetch of {shows.Count} shows into: {localDir}");
+    #endregion
 
-        foreach (var show in shows)
-        {
-            string marcherPath = Path.Combine(localDir, $"{show.showID}_marcher_positions.json");
-            string timingPath = Path.Combine(localDir, $"{show.showID}_set_timing.json");
+    //================================================================================
+    #region UI Population
+    //================================================================================
 
-            Debug.Log($"📁 Checking cache for show: {show.showTitle} (ID: {show.showID})");
-
-            if (!File.Exists(marcherPath))
-            {
-                Debug.Log($"📥 Marcher JSON not found locally — downloading from URL:\n{show.marcherJSONLink}");
-                yield return DownloadAndSaveJSON(show.marcherJSONLink, marcherPath, isMarcher: true);
-            }
-            else
-            {
-                Debug.Log($"✅ Marcher JSON already cached: {marcherPath}");
-            }
-
-            if (!File.Exists(timingPath))
-            {
-                Debug.Log($"📥 Timing JSON not found locally — downloading from URL:\n{show.timingJSONLink}");
-                yield return DownloadAndSaveJSON(show.timingJSONLink, timingPath, isMarcher: false);
-            }
-            else
-            {
-                Debug.Log($"✅ Timing JSON already cached: {timingPath}");
-            }
-        }
-
-        Debug.Log("🎉 Finished prefetching and caching JSONs for all available shows.");
-    }
-
-
+    /// <summary>
+    /// Clears the existing show list UI and repopulates it based on the shows
+    /// currently loaded in the SessionManager. Also adds the 'Create New Show' button.
+    /// </summary>
     private void PopulateShowSelection()
     {
-        // Clear existing children (if reloading)
+        // Clear existing UI elements first
         foreach (Transform child in scrollContent)
         {
-            Destroy(child.gameObject);
+            if (child != null) Destroy(child.gameObject);
         }
 
         List<SessionManager.ShowData> savedShows = session.savedShows;
 
-        if (savedShows.Count > 0)
+        // Populate panels for each saved show
+        if (savedShows != null && savedShows.Count > 0)
         {
-            // Populate saved shows dynamically
             foreach (SessionManager.ShowData show in savedShows)
             {
-                GameObject savedShowPanel = Instantiate(panelSavedShowPrefab, scrollContent);
-                ShowPanelUI panelUI = savedShowPanel.GetComponent<ShowPanelUI>();
+                 // Basic validation for show data before creating UI
+                 if (show == null || string.IsNullOrEmpty(show.showID))
+                 {
+                     Debug.LogWarning("Skipping invalid show data entry during UI population.");
+                     continue;
+                 }
 
-                if (panelUI != null)
+                GameObject savedShowPanel = Instantiate(panelSavedShowPrefab, scrollContent);
+                if (savedShowPanel.TryGetComponent<ShowPanelUI>(out var panelUI))
                 {
                     panelUI.SetShowData(show);
+                    // Ensure listener is removed before adding to prevent duplicates
+                    panelUI.onShowSelected -= OnShowSelected;
                     panelUI.onShowSelected += OnShowSelected;
                 }
+                else
+                {
+                     Debug.LogError($"Prefab '{panelSavedShowPrefab.name}' is missing the ShowPanelUI component!");
+                     Destroy(savedShowPanel); // Clean up invalid prefab instance
+                }
             }
+        } else {
+             Debug.Log("No saved shows to display in the UI.");
         }
 
-        // Always add the "Create New Show" button at the end
+        // Always add the "Create New Show" button/panel at the end
         GameObject createNewShowPanel = Instantiate(panelCreateNewShowPrefab, scrollContent);
-        createNewShowPanel.GetComponent<Button>().onClick.AddListener(() => CreateShowManager.instance.OpenCreateShowPanel());
+        if (createNewShowPanel.TryGetComponent<Button>(out var createButton))
+        {
+             // Ensure CreateShowManager instance exists before assigning listener
+            if (CreateShowManager.instance != null) {
+                 createButton.onClick.AddListener(() => CreateShowManager.instance.OpenCreateShowPanel());
+            } else {
+                 Debug.LogError("CreateShowManager instance not found! Cannot assign 'Create New Show' button action.");
+                 createButton.interactable = false; // Disable button if manager is missing
+            }
+        } else {
+             Debug.LogError($"Prefab '{panelCreateNewShowPrefab.name}' is missing the Button component!");
+             Destroy(createNewShowPanel);
+        }
     }
 
+    #endregion
+
+    //================================================================================
+    #region Show Selection Flow
+    //================================================================================
+
+    /// <summary>
+    /// Called when a user clicks on an existing show panel in the UI.
+    /// Stores the selected show data and initiates the process of fetching its details.
+    /// </summary>
+    /// <param name="show">The data associated with the selected show.</param>
     public void OnShowSelected(SessionManager.ShowData show)
     {
-        Debug.Log($"Selected Show: {show.showTitle}");
-        
-        // Store selected show data in a static variable or SessionManager
-        if (!SceneController.instance.IsSceneCurrentlyLoading(4)) // Prevent duplicate loads
+        if (show == null || string.IsNullOrEmpty(show.showID))
+        {
+            Debug.LogError("OnShowSelected called with invalid show data.");
+            return;
+        }
+
+        Debug.Log($"Selected Show: {show.showTitle} (ID: {show.showID})");
+
+        // Ensure required managers are available
+        if (session == null || SceneController.instance == null)
+        {
+             Debug.LogError("Cannot proceed with show selection: SessionManager or SceneController is null.");
+             return;
+        }
+
+        // Prevent duplicate scene loads if already transitioning to the Show Manager scene (index 4)
+        if (!SceneController.instance.IsSceneCurrentlyLoading(4))
         {
             session.selectedShow = show;
+            // Start the process by fetching the detailed metadata from the show's specific Google Sheet
             StartCoroutine(FetchShowDetails(show.showSheetID));
+        } else {
+             Debug.LogWarning("Scene 4 (ShowManagerScene) is already loading, skipping OnShowSelected action.");
         }
     }
 
+    #endregion
+
+    //================================================================================
+    #region Data Fetching Coroutines
+    //================================================================================
+
+    /// <summary>
+    /// Fetches the detailed metadata for a selected show directly from its specific Google Sheet.
+    /// This metadata includes counts, names, etc., but not the large JSON position/timing data.
+    /// </summary>
+    /// <param name="sheetID">The Google Sheet ID for the specific show.</param>
     private IEnumerator FetchShowDetails(string sheetID)
     {
+         // Pre-flight checks
+         if (string.IsNullOrEmpty(session.apiKey) || string.IsNullOrEmpty(sheetID))
+         {
+              Debug.LogError($"FetchShowDetails: Missing API Key or Sheet ID. Cannot fetch details.");
+              yield break; // Stop if essential info is missing
+         }
+
+        // Construct the URL for the Google Sheets API v4
         string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B12?key={session.apiKey}";
-        Debug.Log($"🔗 Fetching show details from: {url}");
+        Debug.Log($"🔗 Fetching show details metadata from: {url}");
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
+            // Set User-Agent header, good practice for web requests
+            request.SetRequestHeader("User-Agent", "UnityWebRequest");
+            // Optional: Add timeout
+            // request.timeout = 30; // 30 seconds
+
             yield return request.SendWebRequest();
 
+            // Handle network or protocol errors
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"❌ Failed to fetch show details: {request.error}");
+                Debug.LogError($"❌ Failed to fetch show details: {request.error} (URL: {url})");
+                // TODO: Implement user-facing error message (e.g., "Could not load show details. Please check connection.")
                 yield break;
             }
 
+            // Process successful response
             string jsonResponse = request.downloadHandler.text;
-            var showDataResponse = JSON.Parse(jsonResponse);
-
-            if (showDataResponse["values"] != null && showDataResponse["values"].Count >= 10)
+            JSONNode showDataResponse = null;
+            try
             {
-                Debug.Log($"📥 Show Details Fetched: {showDataResponse.ToString()}");
+                showDataResponse = JSON.Parse(jsonResponse);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"❌ JSON Parse Error fetching details: {e.Message}\nRaw Response: {jsonResponse}");
+                 // TODO: Implement user-facing error message
+                yield break;
+            }
 
-                // Convert JSONNode values to strings before trimming
-                string showID = showDataResponse["values"][0][0].Value.Trim();       // B1
-                string title = showDataResponse["values"][1][0].Value.Trim();        // B2
-                string group = showDataResponse["values"][2][0].Value.Trim();        // B3
-                string fieldType = showDataResponse["values"][4][0].Value.Trim();    // B5
-                string year = showDataResponse["values"][5][0].Value.Trim();         // B6
-                
-                // Safely parse integer values
-                int marchers = TryParseInt(showDataResponse["values"][6][0].Value); // B7
-                int sets = TryParseInt(showDataResponse["values"][7][0].Value);     // B8
-                int props = TryParseInt(showDataResponse["values"][8][0].Value);    // B9
-                
-                string modified = showDataResponse["values"][9][0].Value.Trim();         // B10
-                string status = showDataResponse["values"][10][0].Value.Trim();          // B11
-                string setOnExit = showDataResponse ["values"][11][0].Value.Trim();      // B12
-                string JSONMarching = session.selectedShow.marcherJSONLink;            
-                string JSONTiming = session.selectedShow.timingJSONLink;                 
+            // Validate the structure of the received JSON data
+            // Expecting 'values' array with at least 12 rows (B1 to B12)
+            if (showDataResponse?["values"] != null && showDataResponse["values"].Count >= 12)
+            {
+                Debug.Log($"📥 Show Details Metadata Fetched Successfully.");
 
-                // Save to SessionManager
+                // Helper function for safer access to potentially missing values in the JSON response
+                string GetValue(int rowIndex) => showDataResponse["values"][rowIndex]?[0]?.Value ?? "";
+
+                // Extract data
+                string showID = GetValue(0).Trim();       // B1
+                string title = GetValue(1).Trim();        // B2
+                string group = GetValue(2).Trim();        // B3
+                string fieldType = GetValue(4).Trim();    // B5
+                string year = GetValue(5).Trim();         // B6
+                int marchers = TryParseInt(GetValue(6)); // B7
+                int sets = TryParseInt(GetValue(7));     // B8
+                int props = TryParseInt(GetValue(8));    // B9
+                string modified = GetValue(9).Trim();     // B10
+                string status = GetValue(10).Trim();      // B11
+                string setOnExit = GetValue(11).Trim();   // B12
+
+                // Get the JSON links from the initially loaded ShowData (these point to Drive/Backend, not fetched here)
+                string JSONMarching = session.selectedShow?.marcherJSONLink ?? "";
+                string JSONTiming = session.selectedShow?.timingJSONLink ?? "";
+
+                // --- Critical Check ---
+                // Ensure the showID fetched from the sheet matches the selected show's ID
+                if (showID != session.selectedShow?.showID)
+                {
+                    Debug.LogError($"❌ Mismatch between selected show ID ('{session.selectedShow?.showID}') and ID fetched from sheet ('{showID}')! Aborting load.");
+                     // TODO: Implement user-facing error message
+                    yield break;
+                }
+
+                // Save the fetched metadata into the persistent ShowStateSO via SessionManager
                 session.SaveToSessionManager(
                     showID, title, group, fieldType, year, marchers, sets, props, modified, status, setOnExit, JSONMarching, JSONTiming
                 );
 
-                StartCoroutine(LoadShowJSONThenPopulate());
+                // Now that metadata is loaded, trigger the loading of the large JSON files (Position/Timing)
+                // This will use the JsonPersistenceService (cache check / backend download)
+                StartCoroutine(LoadShowJsonData()); // Renamed for clarity
             }
             else
             {
-                Debug.LogError("❌ Error: No valid show data found or missing expected rows.");
+                Debug.LogError($"❌ Error: Invalid show details data format or missing rows in response from {url}. Received: {jsonResponse}");
+                 // TODO: Implement user-facing error message
             }
-        }
-    }
-    private IEnumerator LoadShowJSONThenPopulate()
-    {
-        // Load Marcher JSON
-        string localDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
-        string localMarcherPath = Path.Combine(localDir, $"{session.showStateSO.CurrentShowID}_marcher_positions.json");
-
-        bool needDownloadMarcher = false;
-
-        if (File.Exists(localMarcherPath))
-        {
-            try
-            {
-                session.runtimeCacheSO.CachedMarcherJSON = File.ReadAllText(localMarcherPath);
-                Debug.Log("📥 Loaded marcher JSON from local.");
-            }
-            catch
-            {
-                Debug.LogWarning("⚠️ Failed to read local marcher JSON. Will re-download.");
-                needDownloadMarcher = true;
-            }
-        }
-        else
-        {
-            Debug.Log("📥 Marcher JSON not found locally. Downloading...");
-            needDownloadMarcher = true;
-        }
-
-        if (needDownloadMarcher)
-            yield return DownloadAndSaveJSON(session.showStateSO.JSONMarchersURL, localMarcherPath, isMarcher: true);
-
-
-
-        // Load Timing JSON
-        string localTimingPath = Path.Combine(localDir, $"{session.showStateSO.CurrentShowID}_set_timing.json");
-        
-        bool needDownloadTiming = false;
-
-        if (File.Exists(localTimingPath))
-        {
-            try
-            {
-                session.runtimeCacheSO.CachedTimingJSON = File.ReadAllText(localTimingPath);
-                Debug.Log("📥 Loaded timing JSON from local.");
-            }
-            catch
-            {
-                Debug.LogWarning("⚠️ Failed to read local timing JSON. Will re-download.");
-                needDownloadTiming = true;
-            }
-        }
-        else
-        {
-            Debug.Log("📥 Timing JSON not found locally. Downloading...");
-            needDownloadTiming = true;
-        }
-
-        if (needDownloadTiming)
-            yield return DownloadAndSaveJSON(session.showStateSO.JSONSetTimingURL, localTimingPath, isMarcher: false);
-
-
-        SceneController.instance.SwitchScene(4);
+        } // UnityWebRequest is disposed here
     }
 
-    private IEnumerator DownloadAndSaveJSON(string url, string localPath, bool isMarcher)
+    /// <summary>
+    /// Coordinates the loading of Marcher and Timing JSON data using the JsonPersistenceService.
+    /// This handles checking the local cache first, then requesting data from the backend if needed.
+    /// Switches to the ShowManager scene upon successful loading of both JSON files.
+    /// </summary>
+    private IEnumerator LoadShowJsonData() // Renamed from LoadShowJSONThenPopulate
     {
-        UnityWebRequest request = UnityWebRequest.Get(url);
-        yield return request.SendWebRequest();
-
-        if (request.result == UnityWebRequest.Result.Success)
+        // Pre-flight checks for required services and data
+        if (session.JsonService == null || session.showStateSO == null || string.IsNullOrEmpty(session.showStateSO.CurrentShowID))
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(localPath));
-            File.WriteAllText(localPath, request.downloadHandler.text);
+            Debug.LogError("LoadShowJsonData: JsonService or ShowStateSO not ready. Aborting JSON load.");
+            // TODO: Implement user-facing error message
+            yield break;
+        }
 
-            if (isMarcher)
-                session.runtimeCacheSO.CachedMarcherJSON = request.downloadHandler.text;
+        string currentShowId = session.showStateSO.CurrentShowID;
+        Debug.Log($"🚀 Loading Marcher & Timing JSON for Show ID: {currentShowId} using JsonPersistenceService...");
+
+        // Flags to track completion of asynchronous operations
+        bool marcherJsonLoadAttemptComplete = false;
+        bool timingJsonLoadAttemptComplete = false;
+        bool marcherLoadSuccess = false;
+        bool timingLoadSuccess = false;
+
+        // --- Request Marcher JSON ---
+        session.JsonService.GetJson(currentShowId, "marcher", (result) =>
+        {
+            if (!string.IsNullOrEmpty(result))
+            {
+                session.runtimeCacheSO.CachedMarcherJSON = result; // Store result in the Runtime Cache SO
+                marcherLoadSuccess = true;
+                Debug.Log("✅ Marcher JSON loaded/cached successfully.");
+            }
             else
-                session.runtimeCacheSO.CachedTimingJSON = request.downloadHandler.text;
+            {
+                Debug.LogError($"❌ Failed to load/download Marcher JSON for show {currentShowId}.");
+                // Error is logged within JsonService, consider additional user feedback here
+            }
+            marcherJsonLoadAttemptComplete = true; // Mark this request as finished
+        });
 
-            Debug.Log($"📦 Saved JSON locally: {localPath}");
+        // --- Request Timing JSON ---
+        session.JsonService.GetJson(currentShowId, "timing", (result) =>
+        {
+             if (!string.IsNullOrEmpty(result))
+            {
+                session.runtimeCacheSO.CachedTimingJSON = result; // Store result in the Runtime Cache SO
+                timingLoadSuccess = true;
+                Debug.Log("✅ Timing JSON loaded/cached successfully.");
+            }
+            else
+            {
+                Debug.LogError($"❌ Failed to load/download Timing JSON for show {currentShowId}.");
+                 // Error is logged within JsonService, consider additional user feedback here
+            }
+            timingJsonLoadAttemptComplete = true; // Mark this request as finished
+        });
+
+        // --- Wait for both requests to complete ---
+        Debug.Log("⏳ Waiting for JSON loading attempts to complete...");
+        yield return new WaitUntil(() => marcherJsonLoadAttemptComplete && timingJsonLoadAttemptComplete);
+
+        // --- Proceed to next scene only if BOTH were successful ---
+        if (marcherLoadSuccess && timingLoadSuccess)
+        {
+             Debug.Log($"✅ Both JSON files ready for {currentShowId}. Switching to Show Manager scene...");
+             if (SceneController.instance != null)
+             {
+                SceneController.instance.SwitchScene(4); // Switch to ShowManagerScene (index 4)
+             } else {
+                 Debug.LogError("SceneController instance is null! Cannot switch scene.");
+                 // TODO: Implement user-facing error message
+             }
         }
         else
         {
-            Debug.LogWarning($"⚠️ Failed to download JSON: {url} — {request.error}");
+            Debug.LogError($"❌ Failed to load necessary JSON data for show {currentShowId}. Cannot switch scene.");
+            // TODO: Implement user-facing error message (e.g., "Failed to load show data. Please try again.")
         }
     }
 
+     /// <summary>
+    /// Attempts to pre-fetch/cache JSON data for all known shows in the background.
+    /// Uses the JsonPersistenceService to handle cache checks and downloads.
+    /// </summary>
+    private IEnumerator PreFetchAndCacheAllJSONs()
+    {
+        if (session.savedShows == null || session.savedShows.Count == 0)
+        {
+            Debug.Log("ℹ️ No saved shows found to prefetch.");
+            yield break;
+        }
+        if (session.JsonService == null)
+        {
+             Debug.LogError("PreFetchAndCacheAllJSONs: JsonService is not available. Skipping prefetch.");
+             yield break;
+        }
 
+        var showsToPrefetch = new List<SessionManager.ShowData>(session.savedShows);
+        Debug.Log($"🧠 Starting background prefetch/cache check for {showsToPrefetch.Count} shows...");
+
+        // Define a small delay to potentially spread out requests if hitting a backend
+        var delay = new WaitForSeconds(0.1f); // 100ms delay between shows
+
+        foreach (var show in showsToPrefetch)
+        {
+            if (string.IsNullOrEmpty(show.showID)) continue; // Skip invalid show entries
+
+            // Use GetJson for its cache-check/download logic. We discard the result here.
+            session.JsonService.GetJson(show.showID, "marcher", _ => { /* No action needed on result */ });
+            session.JsonService.GetJson(show.showID, "timing", _ => { /* No action needed on result */ });
+
+            yield return delay; // Wait briefly before starting the next show's requests
+        }
+
+        Debug.Log("🎉 Finished initiating background prefetch requests.");
+    }
+
+
+    #endregion
+
+    //================================================================================
+    #region Utility Methods
+    //================================================================================
+
+    /// <summary>
+    /// Safely parses a string into an integer. Returns 0 if parsing fails or input is null/empty.
+    /// Logs a warning if parsing fails.
+    /// </summary>
     private int TryParseInt(string value)
     {
         if (string.IsNullOrEmpty(value))
         {
-            Debug.LogWarning($"⚠️ Empty or null value for integer conversion, defaulting to 0.");
+            // Don't warn if empty is expected, just return 0
             return 0;
         }
-
-        int result;
-        if (int.TryParse(value.Trim(), out result))
+        if (int.TryParse(value.Trim(), out int result))
         {
             return result;
         }
         else
         {
             Debug.LogWarning($"⚠️ Failed to parse integer from: '{value}', defaulting to 0.");
-            return 0; // Default to 0 if parsing fails
+            return 0;
         }
     }
+
+    #endregion
 }

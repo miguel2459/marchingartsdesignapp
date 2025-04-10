@@ -1,22 +1,29 @@
+using System; // Added for Exception handling
 using System.IO;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using SimpleJSON;
 
+/// <summary>
+/// Persistent Singleton manager responsible for the overall application session.
+/// Handles user state, show state, configuration loading, access to sub-managers/services,
+/// and coordinates major application flows like login, logout, and show loading.
+/// </summary>
 public class SessionManager : MonoBehaviour
 {
     public static SessionManager instance;
 
-    [Header("Injected References")]
+    [Header("Injected References (ScriptableObjects)")]
     public UserStateSO userStateSO;
     public ShowStateSO showStateSO;
     public RuntimeCacheSO runtimeCacheSO;
 
-    [Header("Managers")]
+    [Header("Managed Services & Managers")]
     public UserSessionManager userSession = new UserSessionManager();
     public ShowDataManager showDataManager;
     public GoogleSheetsService sheetsService;
+    public JsonCoordinatorService JsonService { get; private set; }
 
     [Header("Configuration")]
     public string apiKey;
@@ -26,148 +33,280 @@ public class SessionManager : MonoBehaviour
     public List<ShowData> savedShows = new List<ShowData>();
     public ShowData selectedShow;
 
+    //================================================================================
+    #region Lifecycle Methods (Awake)
+    //================================================================================
     private void Awake()
     {
+        // Standard Singleton pattern implementation
         if (instance == null)
         {
             instance = this;
             DontDestroyOnLoad(gameObject);
 
-            savedShows.Clear();
-            userStateSO.Clear();
-            showStateSO.Clear();
-            runtimeCacheSO.Clear();
-            LoadApiKey();
+            // --- Initialize State and Services ---
+            InitializeSessionState();
+            LoadConfiguration(); // Load API key and backend URL first
 
-            // Inject ScriptableObject session into managers
-            sheetsService = new GoogleSheetsService(apiKey, this);
-            showDataManager = new ShowDataManager(this, userStateSO, showStateSO, backendURL);
-            userSession.InjectUserState(userStateSO); // Update this in a moment
+            // Ensure config loaded before initializing services that need them
+            if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
+            {
+                Debug.LogError("SessionManager Awake: API Key or Backend URL not loaded. Aborting service initialization.");
+                // Consider disabling functionality or showing an error state
+                return;
+            }
+
+            userSession.InjectUserState(userStateSO); // Inject state into UserSessionManager
         }
-        else
+        else if (instance != this) // Ensure it's not the same instance checking itself
         {
+            Debug.LogWarning("Duplicate SessionManager instance detected. Destroying self.");
             Destroy(gameObject);
         }
     }
+    #endregion
 
-    // 🔹 Initialize user session when they log in
-    public void InitializeUserShows()
-    {    
-        StartCoroutine(FetchUserShows());
+    //================================================================================
+    #region Initialization & Configuration
+    //================================================================================
+
+    /// <summary>
+    /// Clears ScriptableObject states and local lists for a fresh session start.
+    /// </summary>
+    private void InitializeSessionState()
+    {
+        savedShows.Clear();
+        if (userStateSO != null) userStateSO.Clear(); 
+        if (showStateSO != null) showStateSO.Clear(); 
+        if (runtimeCacheSO != null) runtimeCacheSO.Clear();
+        Debug.Log("Session state cleared.");
+    }
+
+    /// <summary>
+    /// Loads configuration values (API Key, Backend URL) from config.json in StreamingAssets.
+    /// </summary>
+    private void LoadConfiguration()
+    {
+        string configPath = Path.Combine(Application.streamingAssetsPath, "config.json");
+        if (File.Exists(configPath))
+        {
+            try
+            {
+                string configContent = File.ReadAllText(configPath);
+                var configJson = JSON.Parse(configContent);
+                apiKey = configJson["googleApiKey"];
+                backendURL = configJson["backendURL"]; // Assign static variable
+
+                if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
+                {
+                     Debug.LogError("❌ config.json is missing 'googleApiKey' or 'backendURL'.");
+                } else {
+                     Debug.Log("✅ API key and Backend URL loaded successfully.");
+                }
+            }
+            catch (Exception e)
+            {
+                 Debug.LogError($"❌ Error reading or parsing config.json: {e.Message}");
+                 apiKey = null;
+                 backendURL = null;
+            }
+        }
+        else
+        {
+            Debug.LogError($"❌ config.json not found at path: {configPath}. API Key and Backend URL will be unavailable.");
+            apiKey = null;
+            backendURL = null;
+        }
+    }
+
+    /// <summary>
+    /// Instantiates and initializes the various services managed by SessionManager.
+    /// Requires configuration (API Key, Backend URL) to be loaded first.
+    /// </summary>
+    public void InitializeJsonService()
+    {
+        if (!string.IsNullOrEmpty(userStateSO.UserFolderId) && !string.IsNullOrEmpty(userStateSO.AccountSheetID))
+        {
+            JsonService = new JsonCoordinatorService(
+                new JsonGenerationService(),
+                new JsonParserService(),
+                new JsonCacheService(),
+                new JsonBackendService(this, backendURL, userStateSO.UserFolderId, userStateSO.AccountSheetID)
+            );
+
+            sheetsService = new GoogleSheetsService(apiKey, this);
+
+            Debug.Log("✅ JsonService initialized after user state was loaded.");
+        }
+        else
+        {
+            Debug.LogError("❌ Cannot initialize JsonService: userFolderId or accountSheetId is missing.");
+        }
     }
 
 
-    // 🔹 Fetch user shows from Google Sheets
+    #endregion
+
+    //================================================================================
+    #region Data Fetching (Google Sheets)
+    //================================================================================
+
+    /// <summary>
+    /// Public method called after successful login or auto-login to fetch the user's show list.
+    /// </summary>
+    public void InitializeUserShows()
+    {
+        // Ensure services needed for fetching are ready
+        if (sheetsService == null || userStateSO == null || string.IsNullOrEmpty(userStateSO.AccountSheetID))
+        {
+             Debug.LogError("InitializeUserShows: Cannot fetch shows. SheetsService not ready or AccountSheetID missing.");
+             return;
+        }
+        StartCoroutine(FetchUserShows());
+    }
+
+    /// <summary>
+    /// Coroutine to fetch basic user metadata and the number of shows from the main user sheet.
+    /// Calls FetchShowList if shows exist.
+    /// </summary>
     private IEnumerator FetchUserShows()
     {
-        Debug.Log("📡 Fetching user data from Google Sheets...");
-
+        Debug.Log("📡 Fetching user metadata and show count from Google Sheets...");
         string sheetId = userStateSO.AccountSheetID;
-
         bool isDone = false;
         string error = null;
         string jsonText = "";
 
+        // Use sheetsService to get data
         sheetsService.FetchUserShowMetadata(sheetId,
-            success => {
-                jsonText = success;
-                isDone = true;
-            },
-            err => {
-                error = err;
-                isDone = true;
-            });
+            success => { jsonText = success; isDone = true; },
+            err => { error = err; isDone = true; }
+        );
 
-        // Wait for async callback
-        yield return new WaitUntil(() => isDone);
+        yield return new WaitUntil(() => isDone); // Wait for the async callback
 
         if (!string.IsNullOrEmpty(error))
         {
-            Debug.LogError($"❌ Error fetching main sheet: {error}");
+            Debug.LogError($"❌ Error fetching main user sheet metadata: {error}");
+            // TODO: Handle error - maybe inform user?
             yield break;
         }
 
-        var mainSheetResponse = JSON.Parse(jsonText);
-        if (mainSheetResponse == null || mainSheetResponse["values"] == null)
+        // Parse the response safely
+        JSONNode mainSheetResponse = null;
+        try { mainSheetResponse = JSON.Parse(jsonText); } catch (Exception e) { Debug.LogError($"❌ JSON Parse Error (User Metadata): {e.Message}"); yield break; }
+
+        // Validate response structure (expecting 'values' array with at least 9 rows for numberOfShows at index 8)
+        if (mainSheetResponse?["values"] == null || mainSheetResponse["values"].Count < 9)
         {
-            Debug.LogError("❌ Deserialization failed. No response received.");
+            Debug.LogError($"❌ Invalid response format or missing data fetching user metadata. Response: {jsonText}");
             yield break;
         }
 
-        string creatorName = mainSheetResponse["values"][1][0];
-        int numberOfShows = int.Parse(mainSheetResponse["values"][8][0]);
+        // Safely extract data
+        string creatorName = mainSheetResponse["values"][1]?[0]?.Value ?? "N/A";
+        int numberOfShows = 0;
+        int.TryParse(mainSheetResponse["values"][8]?[0]?.Value ?? "0", out numberOfShows);
 
-        Debug.Log($"👤 Pulling Shows from Account: {creatorName}");
-        Debug.Log($"📜 Number of Shows: {numberOfShows}");
+        Debug.Log($"👤 Account: {creatorName}");
+        Debug.Log($"📜 Number of Shows reported: {numberOfShows}");
 
+        // Fetch the detailed show list if applicable
         if (numberOfShows > 0)
         {
-            yield return StartCoroutine(FetchShowList());
-            SceneController.instance.OnSessionInitialized();
+            yield return StartCoroutine(FetchShowList()); // Fetch the list of shows
         }
         else
         {
             Debug.Log("ℹ️ No shows found for this user.");
-            SceneController.instance.OnSessionInitialized();
-            //SceneController.instance.SwitchScene(3);
+            // Still need to notify SceneController that initialization is done
+             if (SceneController.instance != null) SceneController.instance.OnSessionInitialized(); else Debug.LogError("FetchUserShows: SceneController instance is null!");
         }
+        // Note: OnSessionInitialized is called within FetchShowList if shows > 0
     }
 
-    // 🔹 Fetch list of shows from the "Shows" sheet
+    /// <summary>
+    /// Coroutine to fetch the list of shows (ID, Title, SheetID, Links, etc.) from the 'Shows' tab of the user sheet.
+    /// Populates the 'savedShows' list.
+    /// </summary>
     private IEnumerator FetchShowList()
     {
+        Debug.Log("📡 Fetching detailed show list...");
         bool isDone = false;
         JSONNode result = null;
         string error = null;
 
         sheetsService.FetchShowList(userStateSO.AccountSheetID,
-            success => {
-                result = success;
-                isDone = true;
-            },
-            err => {
-                error = err;
-                isDone = true;
-            });
+            success => { result = success; isDone = true; },
+            err => { error = err; isDone = true; }
+        );
 
-        yield return new WaitUntil(() => isDone);
+        yield return new WaitUntil(() => isDone); // Wait for async callback
 
         if (!string.IsNullOrEmpty(error))
         {
             Debug.LogError($"❌ Error fetching show list: {error}");
+            // TODO: Handle error
+             if (SceneController.instance != null) SceneController.instance.OnSessionInitialized(); // Still signal init complete, but with error
             yield break;
         }
 
-        if (result["values"] != null && result["values"].Count > 0)
+        // Parse response safely
+        savedShows.Clear(); // Clear previous list before populating
+        if (result?["values"] != null && result["values"].Count > 0)
         {
-            savedShows.Clear();
             foreach (JSONNode row in result["values"].AsArray)
             {
-                if (row.AsArray.Count >= 5)
+                // Expecting at least 7 columns (up to timingJSONLink)
+                if (row.AsArray.Count >= 7)
                 {
+                    // Safely extract values, providing defaults if missing
                     ShowData show = new ShowData
                     {
-                        showID = row[0],
-                        showTitle = row[1],
-                        group = row[2],
-                        showSheetID = row[3],
-                        lastModified = row[4],
-                        marcherJSONLink = row[5],
-                        timingJSONLink = row[6]
+                        showID = row[0]?.Value ?? "",
+                        showTitle = row[1]?.Value ?? "Untitled Show",
+                        group = row[2]?.Value ?? "Unknown Group",
+                        showSheetID = row[3]?.Value ?? "",
+                        lastModified = row[4]?.Value ?? "",
+                        marcherJSONLink = row[5]?.Value ?? "", // Should be backend URL/ID now, not direct link
+                        timingJSONLink = row[6]?.Value ?? ""  // Should be backend URL/ID now, not direct link
                     };
-                    savedShows.Add(show);
-                    Debug.Log($"✅ Added show: {show.showTitle} | ID: {show.showID}");
+
+                    // Basic validation
+                    if (!string.IsNullOrEmpty(show.showID) && !string.IsNullOrEmpty(show.showSheetID))
+                    {
+                         savedShows.Add(show);
+                         // Debug.Log($"✅ Added show: {show.showTitle} | ID: {show.showID}");
+                    } else {
+                         Debug.LogWarning($"Skipping show entry due to missing showID or showSheetID: {row.ToString()}");
+                    }
+                } else {
+                     Debug.LogWarning($"Skipping row in Show List due to insufficient columns: {row.ToString()}");
                 }
             }
-
-            Debug.Log($"🎭 Total Shows Fetched: {savedShows.Count}");
+            Debug.Log($"🎭 Total Valid Shows Fetched: {savedShows.Count}");
+        } else {
+             Debug.Log("ℹ️ No show data found in the 'Shows' sheet or response format incorrect.");
         }
+
+        // Notify SceneController that session initialization (including show list fetch) is complete
+         if (SceneController.instance != null) SceneController.instance.OnSessionInitialized(); else Debug.LogError("FetchShowList: SceneController instance is null!");
     }
 
+    #endregion
 
-    // 🔹 Save selected show details into session
+    //================================================================================
+    #region Show Management
+    //================================================================================
+
+    /// <summary>
+    /// Saves fetched show metadata into the ShowStateSO for the currently selected show.
+    /// Called by ShowSelectionManager after fetching details from the specific show sheet.
+    /// </summary>
     public void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status, string setOnExit, string JSONMarching, string JSONTiming)
     {
+        if (showStateSO == null) { Debug.LogError("SaveToSessionManager: ShowStateSO is null!"); return; }
+
         showStateSO.CurrentShowID = id;
         showStateSO.ShowTitle = title;
         showStateSO.GroupName = group;
@@ -179,112 +318,156 @@ public class SessionManager : MonoBehaviour
         showStateSO.LastModified = modified;
         showStateSO.ShowStatus = status;
         showStateSO.LastSet = setOnExit;
+        // These URLs might become less relevant if JsonPersistenceService always uses backend endpoints based on ID
         showStateSO.JSONMarchersURL = JSONMarching;
         showStateSO.JSONSetTimingURL = JSONTiming;
+         Debug.Log($"ShowStateSO updated for Show ID: {id}");
+
+         // ✅ Initialize ShowDataManager after show metadata is loaded
+        showDataManager = new ShowDataManager(
+            coroutineHost: this,
+            userStateSO: userStateSO,
+            showStateSO: showStateSO,
+            backendURL: backendURL
+        );
+
     }
 
+    /// <summary>
+    /// Called by CreateShowManager after a new show is successfully created on the backend.
+    /// Refreshes the show list and triggers the selection flow for the new show.
+    /// </summary>
+    /// <param name="showTitle">The title of the newly created show.</param>
     public void AddNewShow(string showTitle)
     {
-        Debug.Log($"➕ Adding new show '{showTitle}' to session.");
-
+        Debug.Log($"➕ Adding new show '{showTitle}' to session flow.");
         StartCoroutine(ReinitializeAndSelectNewShow(showTitle));
     }
 
+    /// <summary>
+    /// Coroutine to refresh the show list from the backend and then attempt to find and select
+    /// the newly created show in the ShowSelection scene.
+    /// </summary>
     private IEnumerator ReinitializeAndSelectNewShow(string showTitle)
     {
-        // StesessionStateSOp 1: Refresh the user's shows
-        yield return StartCoroutine(FetchUserShows());
+        Debug.Log("Refreshing show list after new show creation...");
+        yield return StartCoroutine(FetchUserShows()); // Re-fetch user data and show list
 
-        // Step 2: Try to find the newly created show
-        selectedShow = savedShows.Find(show => show.showTitle.Trim() == showTitle.Trim());
+        // Attempt to find the new show by title (assuming titles are unique for the user)
+        selectedShow = savedShows.Find(show => show.showTitle.Trim().Equals(showTitle.Trim(), StringComparison.OrdinalIgnoreCase));
 
         if (selectedShow == null)
         {
-            Debug.LogError($"❌ Could not find newly created show '{showTitle}' in savedShows.");
+            Debug.LogError($"❌ Could not find newly created show '{showTitle}' in refreshed savedShows list.");
+            // TODO: Handle error - maybe inform the user?
             yield break;
         }
 
-        Debug.Log($"✅ Found newly created show: {selectedShow.showTitle} (ID: {selectedShow.showID})");
+        Debug.Log($"✅ Found newly created show: {selectedShow.showTitle} (ID: {selectedShow.showID}). Triggering selection.");
 
-        // Step 3: Trigger show details loading via ShowSelectionManager
-        ShowSelectionManager selectionManager = GameObject.FindObjectOfType<ShowSelectionManager>();
+        // Attempt to trigger the selection logic in ShowSelectionManager
+        // Note: FindObjectOfType is generally discouraged; consider event-based communication or direct reference if possible.
+        ShowSelectionManager selectionManager = FindObjectOfType<ShowSelectionManager>();
         if (selectionManager != null)
         {
-            Debug.Log("📥 Calling ShowSelectionManager.OnShowSelected() with new show.");
             selectionManager.OnShowSelected(selectedShow);
         }
         else
         {
-            Debug.LogWarning("⚠️ ShowSelectionManager not found in scene. Can't auto-select the new show.");
+            // This might happen if the scene changed before this coroutine finished, which shouldn't normally occur here.
+            Debug.LogWarning("⚠️ ShowSelectionManager not found in the current scene. Cannot auto-select the new show.");
         }
     }
 
+    #endregion
 
-    // 🔹 Load API Key from config file
-    private void LoadApiKey()
+    //================================================================================
+    #region Session Actions (Login, Logout, Save, Exit)
+    //================================================================================
+
+    public void AutoLogin()
     {
-        string configPath = Path.Combine(Application.streamingAssetsPath, "config.json");
-        if (File.Exists(configPath))
-        {
-            string configContent = File.ReadAllText(configPath);
-            var configJson = JSON.Parse(configContent);
-            apiKey = configJson["googleApiKey"];
-            backendURL = configJson["backendURL"];
+        // Ensure UserSessionManager is initialized
+         if (userSession == null) { Debug.LogError("AutoLogin: userSession is null!"); return; }
 
-            Debug.Log("✅ API key loaded successfully.");
+        if (userSession.TryAutoLogin()) // TryAutoLogin now also calls InitializeUser
+        {
+            Debug.Log($"🔄 Auto-Login successful. Initializing User Shows for: {userStateSO?.UserName ?? "N/A"}");
+            InitializeUserShows(); // Fetch shows for the logged-in user
         }
         else
         {
-            Debug.LogError("❌ config.json not found or API key missing.");
+            Debug.Log("No persistent login found or auto-login failed.");
+            // If auto-login fails, the SceneController should already handle navigating to Login/Startup scene.
         }
-    }
-
-    public void ExitShow()
-    {
-        Debug.Log("🚪 Exiting Show... Saving changes before exiting...");
-        showDataManager.ExitShow(() => SceneController.instance.SwitchScene(3));
     }
 
     public void SaveShow()
     {
-        //ensembleDirector.SaveMarcherStateToFile();
+         if (showDataManager == null) { Debug.LogError("SaveShow: showDataManager is null!"); return; }
+         Debug.Log("💾 Initiating save process...");
         showDataManager.SaveShow();
     }
 
-    public void AutoLogin()
+    public void ExitShow()
     {
-        if (userSession.TryAutoLogin())
+        Debug.Log("🚪 Exiting Show... Saving changes first...");
+        if (showDataManager == null || SceneController.instance == null)
         {
-            Debug.Log($"🔄 Initializing User's Shows: {userStateSO.UserName} ({userStateSO.UserEmail})");
-            InitializeUserShows();
+             Debug.LogError("ExitShow: showDataManager or SceneController is null! Cannot exit properly.");
+             return;
         }
+        // Tell ShowDataManager to save, and upon completion, switch to Scene 3 (Show Selection)
+        showDataManager.ExitShow(() => SceneController.instance.SwitchScene(3));
     }
 
     public void StartLogout()
     {
-        showDataManager.LogOut();
+         Debug.Log("🔒 Initiating logout process... Saving changes first...");
+         if (showDataManager == null) { Debug.LogError("StartLogout: showDataManager is null! Cannot save before logout."); Logout(); return; }
+        showDataManager.LogOut(); // LogOut now handles the save AND the call to SessionManager.Logout
     }
 
     public void Logout()
     {
-        Debug.Log("🔒 Logging out...");
-        userSession.Logout();
+        Debug.Log("🔒 Performing final logout operations...");
+        if (userSession != null) userSession.Logout(); // Handles PlayerPrefs and clearing UserStateSO
+
+        // Clear remaining session state
         savedShows.Clear();
-        showStateSO.Clear();
-        runtimeCacheSO.Clear();
+        if (showStateSO != null) showStateSO.Clear();
+        if (runtimeCacheSO != null) runtimeCacheSO.Clear();
         selectedShow = null;
-        SceneController.instance.SwitchScene(1);
+
+        // Switch to the initial scene (e.g., Startup or Login)
+        if (SceneController.instance != null)
+        {
+             SceneController.instance.SwitchScene(1); // Switch to Startup Scene (index 1)
+        } else {
+             Debug.LogError("Logout: SceneController instance is null! Cannot switch scene.");
+        }
+        Debug.Log("Logout complete.");
     }
 
+    #endregion
+
+    //================================================================================
+    #region Data Structures
+    //================================================================================
+    /// <summary>
+    /// Represents the basic metadata for a show listed in the user's main sheet.
+    /// </summary>
     [System.Serializable]
     public class ShowData
     {
         public string showID;
         public string showTitle;
-        public string showSheetID;
+        public string showSheetID; // ID of the specific Google Sheet for this show
         public string lastModified;
         public string group;
+        // These URLs might be less relevant now, consider if they should be backend identifiers instead
         public string marcherJSONLink;
         public string timingJSONLink;
     }
+    #endregion
 }

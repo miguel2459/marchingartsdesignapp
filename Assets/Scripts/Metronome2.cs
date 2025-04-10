@@ -29,7 +29,7 @@ public class Metronome2 : MonoBehaviour
         foreach (var marcher in director.marchers)
         {
             var controller = marcher.GetComponent<MarcherController>();
-            controller.InitializeMarcher(director, SessionManager.instance.runtimeCacheSO); // 🟢 Refresh setPositions
+            controller.InitializeMarcher(director, SessionManager.instance.runtimeCacheSO);
             controller.ResetMarcher(startSet);
         }
 
@@ -45,9 +45,28 @@ public class Metronome2 : MonoBehaviour
     {
         int count = 1;
 
+        // 🔁 Determine starting point for smooth interpolation from last set
+        int previousSet = Mathf.Max(0, cycleCount - 1);
+        int lastCount = 0;
+
+        if (previousSet == 0)
+        {
+            lastCount = 0;
+        }
+        else if (SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(previousSet, out var prevTiming))
+        {
+            lastCount = prevTiming.count;
+        }
+
+        // ✅ Initialize marcher movement from correct starting position
+        foreach (var marcher in director.marchers)
+        {
+            Vector3 fromPosition = marcher.GetPositionAtCount(previousSet, lastCount);
+            marcher.GetComponent<MarcherController>().StartMarching(cycleCount, fromPosition);
+        }
+
         while (isRunning)
         {
-            // 🔁 Get current set and timing data
             if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(cycleCount, out var timing))
             {
                 Debug.LogWarning($"❌ No timing data for Set {cycleCount}");
@@ -59,25 +78,13 @@ public class Metronome2 : MonoBehaviour
             float startBPM = timing.startBPM;
             float endBPM = timing.endBPM;
 
-            // Compute current interpolated BPM (for acceleration/deceleration)
             float lerpT = (totalCounts > 1) ? (count - 1f) / (totalCounts - 1f) : 0f;
             float interpolatedBPM = Mathf.Lerp(startBPM, endBPM, lerpT);
             beatInterval = 60f / interpolatedBPM;
 
-            // 🔊 Update UI and audio
             counterText.text = count.ToString();
             audioSource.Play();
-
-            // 🎯 Highlight the count in the UI
-            countsProgressBar?.HighlightCount(count - 1);            
-
-            // 🥁 Start marching on first count of the current playable set
-            if (count == 1)
-            {
-                foreach (var mc in FindObjectsOfType<MarcherController>())
-                    mc.StartMarching(cycleCount);
-            }
-
+            countsProgressBar?.HighlightCount(count - 1);
 
             yield return new WaitForSeconds(beatInterval);
 
@@ -88,17 +95,25 @@ public class Metronome2 : MonoBehaviour
                 count = 1;
                 cycleCount++;
                 setText.text = $"{cycleCount}";
-                // 🔥 Highlight current set in SetProgressBar
+
                 setProgressBar?.HighlightSet(cycleCount);
                 setProgressBar?.UpdateTimingInputsForSet(cycleCount);
-
-                // Reset count bar highlight
                 countsProgressBar?.ResetHighlight();
 
-                // Render next set's count bar if exists
                 if (SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(cycleCount, out var nextSet))
                 {
                     countsProgressBar?.RenderCounts(cycleCount, nextSet.count);
+
+                    // 🔁 New previous set becomes the one we just completed
+                    previousSet = Mathf.Max(0, cycleCount - 1);
+                    lastCount = (previousSet == 0) ? 0 : SessionManager.instance.runtimeCacheSO.SetTimingMap[previousSet].count;
+
+                    // ✅ Start next set's movement from correct last known position
+                    foreach (var marcher in director.marchers)
+                    {
+                        Vector3 fromPosition = marcher.GetPositionAtCount(previousSet, lastCount);
+                        marcher.GetComponent<MarcherController>().StartMarching(cycleCount, fromPosition);
+                    }
                 }
             }
 
@@ -110,17 +125,15 @@ public class Metronome2 : MonoBehaviour
         }
     }
 
+
     public void StopMetronome()
     {
-        audioSource.Play(); // Optional: Play stop sound
+        audioSource.Play();
         isRunning = false;
 
         counterText.text = "00";
         setText.text = $"{cycleCount}";
 
-        //countsProgressBar?.ForceUnhighlight();
-
-        // NEW: Snap all marchers to their last completed count position
         foreach (var mc in FindObjectsOfType<MarcherController>())
         {
             mc.StopMarching();
@@ -130,5 +143,4 @@ public class Metronome2 : MonoBehaviour
 
         Debug.Log("🛑 Metronome stopped. All marchers snapped to last completed position.");
     }
-
 }

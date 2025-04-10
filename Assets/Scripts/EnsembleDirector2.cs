@@ -1,9 +1,6 @@
 using UnityEngine;
-using System.IO;
 using System.Collections.Generic;
 using System.Collections;
-using UnityEngine.Networking;
-using SimpleJSON;
 
 [ExecuteInEditMode]
 public class EnsembleDirector2 : MonoBehaviour
@@ -34,22 +31,43 @@ public class EnsembleDirector2 : MonoBehaviour
     public IntervalManager intervalManager;
     public FieldGridManager fieldManager;
     public EnsembleUIController UIController;
-
     public List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>();
-    private Dictionary<string, Dictionary<int, Vector3>> parsedSetPositions = new Dictionary<string, Dictionary<int, Vector3>>();
-    private Dictionary<string, Dictionary<int, Vector3>> parsedStandbyPositions = new Dictionary<string, Dictionary<int, Vector3>>();
-
+    private Dictionary<string, Dictionary<int, Dictionary<int, Vector3>>> parsedCountPositions = new Dictionary<string, Dictionary<int, Dictionary<int, Vector3>>>();
 
     private IEnumerator Start()
     {
         SnapToGridLines.OnGridReady -= OnGridReadyHandler;
         SnapToGridLines.OnGridReady += OnGridReadyHandler;
-        
-        yield return new WaitUntil(() => !string.IsNullOrEmpty(session.runtimeCacheSO.CachedMarcherJSON) && !string.IsNullOrEmpty(session.runtimeCacheSO.CachedTimingJSON));
-        LoadMarcherStateFromJSON(session.runtimeCacheSO.CachedMarcherJSON);
-        LoadSetTimingMapFromJSON(session.runtimeCacheSO.CachedTimingJSON);
 
-        OnSessionReady();
+        // Wait for JSON strings to be loaded into cache (by ShowSelectionManager)
+        yield return new WaitUntil(() => session != null &&
+                                    session.runtimeCacheSO != null &&
+                                    !string.IsNullOrEmpty(session.runtimeCacheSO.CachedMarcherJSON) &&
+                                    !string.IsNullOrEmpty(session.runtimeCacheSO.CachedTimingJSON) &&
+                                    SessionManager.instance.JsonService != null); // Also wait for JsonService
+
+        Debug.Log("Cached JSON strings found. Parsing using JsonPersistenceService...");
+
+        // *** MODIFIED LINES START ***
+        // Call the service to parse the JSON strings and get the data structures back
+        parsedCountPositions = SessionManager.instance.JsonService.ParseMarcherStateJSON(session.runtimeCacheSO.CachedMarcherJSON);
+
+        // Assign the parsed map directly to the RuntimeCacheSO's map
+        session.runtimeCacheSO.SetTimingMap = SessionManager.instance.JsonService.ParseSetTimingMapJSON(session.runtimeCacheSO.CachedTimingJSON);
+        // *** MODIFIED LINES END ***
+
+
+        // Check if parsing was successful before proceeding
+        if (parsedCountPositions == null || session.runtimeCacheSO.SetTimingMap == null)
+        {
+            Debug.LogError("Failed to parse JSON data via JsonPersistenceService. Aborting OnSessionReady.");
+            // Potentially handle this error state (e.g., show UI message, prevent further execution)
+            yield break; // Stop the coroutine
+        }
+
+
+        Debug.Log("JSON Parsing complete. Proceeding with OnSessionReady.");
+        OnSessionReady(); // Now call OnSessionReady with parsed data available
     }
     void Update()
     {
@@ -58,7 +76,6 @@ public class EnsembleDirector2 : MonoBehaviour
             DeleteCurrentSetPositions();
         }
     }
-
     public void OnSessionReady()
     {
         InitializeSession();
@@ -79,7 +96,6 @@ public class EnsembleDirector2 : MonoBehaviour
         lastSet = int.Parse(session.showStateSO.LastSet);
         UIController.InitializeUI();
     }
-
     public void PopulateMarchers()
     {
         SnapToGridLines.OnGridReady -= PopulateMarchers;
@@ -95,38 +111,37 @@ public class EnsembleDirector2 : MonoBehaviour
 
         bool usedSavedPositions = false;
         int lastSetNum = int.Parse(session.showStateSO.LastSet);
+        int previousSet = Mathf.Max(1, lastSetNum - 1);
+
+        // 🧠 Use SetTimingMap to determine fallback count value
+        int fallbackCount = session.runtimeCacheSO.SetTimingMap.TryGetValue(previousSet, out var timing)
+            ? timing.count
+            : 1;
 
         foreach (var marcher in marchers)
         {
             marcher.InitializeSetCount(numberOfSets);
 
-            // Inject saved positions into the marcher manager
-            if (parsedSetPositions.ContainsKey(marcher.name))
+            // ✅ Inject saved count-based positions
+            if (parsedCountPositions.TryGetValue(marcher.name, out var restored))
             {
-                foreach (var kvp in parsedSetPositions[marcher.name])
-                    marcher.setPositions[kvp.Key] = kvp.Value;
+                marcher.countPositions = restored;
+                marcher.SyncInspectorList();
             }
 
-            if (parsedStandbyPositions.ContainsKey(marcher.name))
+            // ✅ Position based on fallback (Set before current, last count)
+            if (marcher.HasPositionAtCount(previousSet, fallbackCount))
             {
-                foreach (var kvp in parsedStandbyPositions[marcher.name])
-                    marcher.standbyPositions[kvp.Key] = kvp.Value;
-            }
-
-            // Set transform position based on best available data
-            if (marcher.setPositions.ContainsKey(lastSetNum))
-            {
-                marcher.transform.position = marcher.setPositions[lastSetNum];
+                Vector3 startPos = marcher.GetPositionAtCount(previousSet, fallbackCount);
+                marcher.transform.position = startPos;
                 usedSavedPositions = true;
             }
-            else if (marcher.standbyPositions.ContainsKey(lastSetNum))
+            else
             {
-                marcher.transform.position = marcher.standbyPositions[lastSetNum];
-                usedSavedPositions = true;
+                Debug.LogWarning($"{marcher.name} ⚠️ No saved position for Set {previousSet}, Count {fallbackCount}");
             }
         }
 
-        // ✅ Safe to do after all marcher logic is done
         setBar.OnSetButtonClick(lastSet);
 
         if (!usedSavedPositions)
@@ -134,13 +149,11 @@ public class EnsembleDirector2 : MonoBehaviour
             ArrangeMarchersInSquare();
         }
     }
-
     private void AddMarchers(int currentCount)
     {
         for (int i = currentCount; i < numberOfMarchers; i++)
             CreateMarcher(i, new Color(Random.value, Random.value, Random.value), numberOfSets);
     }
-
     public void PreviewCountPosition(int setNumber, int clickedCount)
     {
         var timingMap = session.runtimeCacheSO.SetTimingMap;
@@ -151,41 +164,26 @@ public class EnsembleDirector2 : MonoBehaviour
             return;
         }
 
-        if (!timingMap.ContainsKey(setNumber + 1))
-        {
-            Debug.LogWarning($"❌ Cannot preview count: Set {setNumber + 1} does not exist.");
-            return;
-        }
-
         int totalCounts = Mathf.Max(1, timing.count);
         float t = Mathf.Clamp01(clickedCount / (float)totalCounts);
 
-        Debug.Log($"🧠 Previewing Count {clickedCount} of {totalCounts} in Set {setNumber}");
-        Debug.Log($"➡ Interpolation factor t = {t:F3}");
+        Debug.Log($"🧠 Previewing Set {setNumber}, Count {clickedCount} of {totalCounts}");
 
         foreach (var marcher in marchers)
         {
-            if (marcher.setPositions.TryGetValue(setNumber, out var startPos) &&
-                marcher.setPositions.TryGetValue(setNumber + 1, out var endPos))
+            if (marcher.HasPositionAtCount(setNumber, clickedCount))
             {
-                Vector3 interpolatedPos = Vector3.Lerp(startPos, endPos, t);
+                Vector3 previewPos = marcher.GetPositionAtCount(setNumber, clickedCount);
 
-                Debug.Log($"🔄 {marcher.name}:");
-                Debug.Log($"   StartPos (Set {setNumber})    = {startPos}");
-                Debug.Log($"   EndPos   (Set {setNumber + 1}) = {endPos}");
-                Debug.Log($"   Result   (Interpolated)       = {interpolatedPos}");
-
-                marcher.transform.position = interpolatedPos;
+                Debug.Log($"🔍 {marcher.name} previewed at Set {setNumber}, Count {clickedCount} → {previewPos}");
+                marcher.transform.position = previewPos;
             }
             else
             {
-                Debug.LogWarning($"⚠️ {marcher.name} is missing setPosition data for Set {setNumber} or Set {setNumber + 1}");
+                Debug.LogWarning($"⚠️ {marcher.name} has no position data at Set {setNumber}, Count {clickedCount}");
             }
         }
     }
-
-
-
     private void RemoveExcessMarchers(int currentCount)
     {
         for (int i = currentCount - 1; i >= numberOfMarchers; i--)
@@ -194,7 +192,6 @@ public class EnsembleDirector2 : MonoBehaviour
             marchers.RemoveAt(i);
         }
     }
-
     private void CreateMarcher(int index, Color color, int sets)
     {
         Vector3 position = Vector3.zero;
@@ -210,7 +207,6 @@ public class EnsembleDirector2 : MonoBehaviour
 
         marchers.Add(marcher);
     }
-
     private void ArrangeMarchersInSquare()
     {
         if (shapeMarchers == null)
@@ -233,219 +229,90 @@ public class EnsembleDirector2 : MonoBehaviour
             marcherObjects  // List of all marcher GameObjects.
         );
     }
-
-    public string GenerateMarcherStateJSON()
-    {
-        var root = new JSONObject();
-        root["version"] = "1.0.0";
-        root["timestamp"] = System.DateTime.UtcNow.ToString("o");
-
-        var marcherArray = new JSONArray();
-
-        foreach (var marcher in marchers)
-        {
-            var marcherNode = new JSONObject();
-            marcherNode["id"] = marcher.name;
-
-            var setPosNode = new JSONObject();
-            foreach (var kvp in marcher.setPositions)
-            {
-                var setArray = new JSONArray();
-                setArray.Add(kvp.Value.x);
-                setArray.Add(kvp.Value.y);
-                setArray.Add(kvp.Value.z);
-                setPosNode[kvp.Key.ToString()] = setArray;
-
-            }
-
-            var standbyPosNode = new JSONObject();
-            foreach (var kvp in marcher.standbyPositions)
-            {
-                var standbyArray = new JSONArray();
-                standbyArray.Add(kvp.Value.x);
-                standbyArray.Add(kvp.Value.y);
-                standbyArray.Add(kvp.Value.z);
-                standbyPosNode[kvp.Key.ToString()] = standbyArray;
-            }
-
-            marcherNode["setPositions"] = setPosNode;
-            marcherNode["standbyPositions"] = standbyPosNode;
-
-            marcherArray.Add(marcherNode);
-        }
-
-        root["marchers"] = marcherArray;
-
-        return root.ToString(2); // Pretty print with indent
-    }
-
-    public string SaveMarcherStateToFile()
-    {
-        string json = GenerateMarcherStateJSON();
-        string showID = session.showStateSO.CurrentShowID;
-        string filename = $"{showID}_marcher_positions.json";
-
-        string directory = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
-
-        string path = Path.Combine(directory, filename);
-        File.WriteAllText(path, json);
-        Debug.Log("✅ Marcher state JSON saved to: " + path);
-
-    #if UNITY_EDITOR
-        UnityEditor.AssetDatabase.Refresh();
-    #endif
-
-        return path; // 🔥 Return full path so ShowDataManager can upload it
-    }
-
-    public void LoadMarcherStateFromJSON(string jsonText)
-    {
-        Debug.Log("Attempting to Load JSON position values to marchers");
-
-        parsedSetPositions.Clear();
-        parsedStandbyPositions.Clear();
-
-        var root = JSON.Parse(jsonText);
-        var marcherArray = root["marchers"].AsArray;
-
-        for (int i = 0; i < marcherArray.Count; i++)
-        {
-            var marcherData = marcherArray[i];
-            string id = marcherData["id"];
-
-            var setPositions = marcherData["setPositions"].AsObject;
-            var standbyPositions = marcherData["standbyPositions"].AsObject;
-
-            Dictionary<int, Vector3> setsDict = new Dictionary<int, Vector3>();
-            Dictionary<int, Vector3> standbyDict = new Dictionary<int, Vector3>();
-
-            foreach (KeyValuePair<string, JSONNode> kvp in setPositions)
-            {
-                int set = int.Parse(kvp.Key);
-                var vec = kvp.Value.AsArray;
-                setsDict[set] = new Vector3(vec[0].AsFloat, vec[1].AsFloat, vec[2].AsFloat);
-            }
-
-            foreach (KeyValuePair<string, JSONNode> kvp in standbyPositions)
-            {
-                int set = int.Parse(kvp.Key);
-                var vec = kvp.Value.AsArray;
-                standbyDict[set] = new Vector3(vec[0].AsFloat, vec[1].AsFloat, vec[2].AsFloat);
-            }
-
-            parsedSetPositions[id] = setsDict;
-            parsedStandbyPositions[id] = standbyDict;
-
-            Debug.Log($"🔁 Cached all positions for {id}");
-        }
-    }
-
     public void RepositionMarchersToSet(int setIndex)
     {
+        int targetSet = (setIndex == 1) ? 0 : setIndex - 1;
+        int targetCount = 0;
+
+        if (setIndex > 1)
+        {
+            // Look up last count of the previous set
+            if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(targetSet, out var timing))
+            {
+                Debug.LogWarning($"⚠️ No timing data found for Set {targetSet}");
+                return;
+            }
+
+            targetCount = timing.count;
+        }
+
         foreach (var marcher in marchers)
         {
-            Vector3 newPosition;
-
-            if (marcher.setPositions.TryGetValue(setIndex, out newPosition))
+            if (marcher.HasPositionAtCount(targetSet, targetCount))
             {
+                Vector3 newPosition = marcher.GetPositionAtCount(targetSet, targetCount);
                 marcher.transform.position = newPosition;
-                //Debug.Log($"{marcher.name} repositioned to SetPosition for set {setIndex}");
-            }
-            else if (marcher.standbyPositions.TryGetValue(setIndex, out newPosition))
-            {
-                marcher.transform.position = newPosition;
-                //Debug.Log($"{marcher.name} repositioned to StandbyPosition for set {setIndex}");
+                // Debug.Log($"{marcher.name} repositioned to Set {targetSet}, Count {targetCount}");
             }
             else
             {
-                Debug.Log($"{marcher.name} has no saved position for set {setIndex}");
+                Debug.LogWarning($"{marcher.name} has no position for Set {targetSet}, Count {targetCount}");
             }
         }
     }
-
-    public string SaveSetTimingMapToFile()
-    {
-        var root = new JSONObject();
-
-        foreach (var entry in session.runtimeCacheSO.SetTimingMap)
-        {
-            var setIndex = entry.Key;
-            var data = entry.Value;
-
-            JSONObject setNode = new JSONObject();
-            setNode["count"] = data.count;
-            setNode["startBPM"] = data.startBPM;
-            setNode["endBPM"] = data.endBPM;
-
-            root[setIndex.ToString()] = setNode;
-        }
-
-        string json = root.ToString(2); // Pretty print
-        string showID = session.showStateSO.CurrentShowID;
-        string filename = $"{showID}_set_timing.json";
-
-        string directory = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
-
-        string path = Path.Combine(directory, filename);
-        File.WriteAllText(path, json);
-
-        Debug.Log("✅ SetTiming JSON saved to: " + path);
-    #if UNITY_EDITOR
-        UnityEditor.AssetDatabase.Refresh();
-    #endif
-        return path;
-    }
-
-    public void LoadSetTimingMapFromJSON(string jsonText)
-    {
-        var json = JSON.Parse(jsonText);
-        var map = session.runtimeCacheSO.SetTimingMap;
-        map.Clear();
-
-        foreach (KeyValuePair<string, JSONNode> kvp in json.AsObject)
-        {
-            int setIndex = int.Parse(kvp.Key);
-            int count = kvp.Value["count"];
-            float startBPM = kvp.Value["startBPM"];
-            float endBPM = kvp.Value["endBPM"];
-
-            map[setIndex] = new RuntimeCacheSO.SetTimingData(setIndex, count, startBPM, endBPM);
-        }
-
-        Debug.Log($"✅ Loaded {map.Count} SetTiming entries into SessionState.");
-    }
-
     public void DeleteCurrentSetPositions()
     {
         int currentSet = int.Parse(session.showStateSO.LastSet);
-        int previousSet = Mathf.Max(1, currentSet - 1);
+        int fallbackSet = (currentSet == 1) ? 0 : currentSet - 1;
+        int fallbackCount = 0;
 
-        Debug.Log($"🗑 Deleting Set {currentSet} positions and reverting to Set {previousSet}.");
+        Debug.Log($"🗑 Deleting Set {currentSet} positions and reverting to Set {fallbackSet}, Count {fallbackCount}.");
+
+        if (currentSet > 1)
+        {
+            if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(fallbackSet, out var timing))
+            {
+                Debug.LogWarning($"⚠️ No SetTiming entry for Set {fallbackSet}");
+                return;
+            }
+
+            fallbackCount = timing.count;
+        }
 
         foreach (var marcher in marchers)
         {
-            // Remove the current set's data
-            marcher.setPositions.Remove(currentSet);
-            marcher.standbyPositions.Remove(currentSet);
-            marcher.SyncInspectorLists();
-
-            // Snap marcher to last known position
-            Vector3 newPosition;
-            if (marcher.setPositions.TryGetValue(previousSet, out newPosition) ||
-                marcher.standbyPositions.TryGetValue(previousSet, out newPosition))
+            // Remove current set's counts
+            if (marcher.countPositions.ContainsKey(currentSet))
             {
-                marcher.transform.position = newPosition;
-                Debug.Log($"{marcher.name} ⬅️ Reverted to Set {previousSet} position: {newPosition}");
+                marcher.countPositions.Remove(currentSet);
+                marcher.SyncInspectorList();
+            }
+
+            // Reposition based on fallback logic
+            if (marcher.HasPositionAtCount(fallbackSet, fallbackCount))
+            {
+                Vector3 fallbackPos = marcher.GetPositionAtCount(fallbackSet, fallbackCount);
+                marcher.transform.position = fallbackPos;
+                Debug.Log($"{marcher.name} ⬅️ Reverted to Set {fallbackSet}, Count {fallbackCount}: {fallbackPos}");
             }
             else
             {
-                Debug.LogWarning($"{marcher.name} ⚠️ No fallback position for Set {previousSet}.");
+                Debug.LogWarning($"{marcher.name} ⚠️ No fallback position for Set {fallbackSet}, Count {fallbackCount}.");
             }
         }
 
-        Debug.Log("✅ All marcher positions updated.");
+        Debug.Log("✅ All marcher positions for current set deleted and reverted.");
     }
 
+    public string GenerateMarcherStateJSON()
+    {
+        return session.JsonService.GenerateMarcherStateJSON(marchers);
+    }
+
+    public string GenerateSetTimingMapJSON()
+    {
+        return session.JsonService.GenerateSetTimingMapJSON(session.runtimeCacheSO.SetTimingMap);
+    }
 
     void OnDestroy()
     {

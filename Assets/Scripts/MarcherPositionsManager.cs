@@ -2,28 +2,21 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-public class SetPositionEntry
+public class CountPositionEntry
 {
     public int setIndex;
+    public int countIndex;
     public Vector3 position;
 }
 
-
 /// <summary>
-/// Stores editable position data for this marcher across all sets:
-/// - setPositions: confirmed with spacebar
-/// - standbyPositions: moved but not yet confirmed
+/// Manages confirmed and inferred per-count position data for a marcher.
 /// </summary>
 public class MarcherPositionsManager : MonoBehaviour
 {
-    // ✅ Vector3-only position storage
-    public Dictionary<int, Vector3> setPositions = new Dictionary<int, Vector3>();
-    public Dictionary<int, Vector3> standbyPositions = new Dictionary<int, Vector3>();
+    public Dictionary<int, Dictionary<int, Vector3>> countPositions = new Dictionary<int, Dictionary<int, Vector3>>();
 
-    [SerializeField] private List<SetPositionEntry> inspectorSetPositions = new List<SetPositionEntry>();
-    [SerializeField] private List<SetPositionEntry> inspectorStandbyPositions = new List<SetPositionEntry>();
-
-
+    [SerializeField] private List<CountPositionEntry> inspectorCountPositions = new List<CountPositionEntry>();
 
     private DotMarkerVisualizer visualizer;
 
@@ -32,107 +25,86 @@ public class MarcherPositionsManager : MonoBehaviour
         visualizer = GetComponent<DotMarkerVisualizer>();
     }
 
-    /// <summary>
-    /// Confirms a position for a set (user pressed spacebar).
-    /// Adds to setPositions, clears standby, and updates visual.
-    /// </summary>
-    public void SetPosition(int setIndex, Vector3 position)
+    public void SetPositionAtCount(int setIndex, int countIndex, Vector3 position)
     {
-        setPositions[setIndex] = position;
-        standbyPositions.Remove(setIndex);
+        if (!countPositions.ContainsKey(setIndex))
+            countPositions[setIndex] = new Dictionary<int, Vector3>();
+
+        countPositions[setIndex][countIndex] = position;
 
         visualizer?.ShowMarker(setIndex, position);
-        SyncInspectorLists();
-        
-        Debug.Log($"{name} ✅ SetPosition recorded for Set {setIndex}: {position}");
+        SyncInspectorList();
+
+        Debug.Log($"{name} ✅ SetPosition recorded for Set {setIndex}, Count {countIndex}: {position}");
     }
 
-    /// <summary>
-    /// Saves a temporary (unsaved) position change for a set.
-    /// Used for editing workflows.
-    /// </summary>
-    public void SaveStandbyPosition(int setIndex, Vector3 position)
+    public Vector3 GetPositionAtCount(int setIndex, int countIndex)
     {
-        if (!setPositions.ContainsKey(setIndex))
+        if (countPositions.TryGetValue(setIndex, out var counts))
         {
-            standbyPositions[setIndex] = position;
-            SyncInspectorLists();
+            if (counts.TryGetValue(countIndex, out var position))
+                return position;
 
-            Debug.Log($"{name} 💾 StandbyPosition saved for Set {setIndex}: {position}");
+            // Try inferred hold: find the latest count less than this one
+            for (int i = countIndex - 1; i >= 1; i--)
+            {
+                if (counts.TryGetValue(i, out var fallback))
+                    return fallback;
+            }
         }
-        else
-        {
-            Debug.Log($"{name} ⛔ Set {setIndex} already confirmed — standby not saved.");
-        }
+
+        return transform.position; // Fallback to current position if nothing else found
     }
 
-    /// <summary>
-    /// Gets the current active position for a set (set or standby).
-    /// </summary>
-    public Vector3 GetCurrentPosition(int setIndex)
+    public bool HasPositionAtCount(int setIndex, int countIndex)
     {
-        if (setPositions.TryGetValue(setIndex, out Vector3 setPos))
-            return setPos;
-
-        if (standbyPositions.TryGetValue(setIndex, out Vector3 standbyPos))
-            return standbyPos;
-
-        return transform.position;
+        return countPositions.ContainsKey(setIndex) && countPositions[setIndex].ContainsKey(countIndex);
     }
 
-    /// <summary>
-    /// Returns true if a set position has been confirmed.
-    /// </summary>
-    public bool HasSetPosition(int setIndex) => setPositions.ContainsKey(setIndex);
+    public Vector3[] GetInterpolatedPath(int setIndex, int totalCounts, Vector3 fromPosition)
+    {
+        List<Vector3> path = new List<Vector3>();
 
-    /// <summary>
-    /// Clears all saved positions and visuals.
-    /// </summary>
+        // Start from final position of previous set
+        path.Add(fromPosition);
+
+        for (int i = 1; i <= totalCounts; i++)
+        {
+            path.Add(GetPositionAtCount(setIndex, i));
+        }
+
+        return path.ToArray();
+    }
+
     public void ClearAllPositions()
     {
-        setPositions.Clear();
-        standbyPositions.Clear();
+        countPositions.Clear();
+        inspectorCountPositions.Clear();
         visualizer?.ClearAllMarkers();
     }
 
-    /// <summary>
-    /// Used by the Director to ensure this marcher is aware of new set count.
-    /// </summary>
     public void InitializeSetCount(int totalSets)
     {
-        // Optionally preload standby for each set (or leave dynamic)
-        Debug.Log($"{name} initialized with {totalSets} potential sets.");
+        Debug.Log($"{name} initialized with {totalSets} sets (count-level positioning).");
     }
 
-    /// <summary>
-    /// Returns all set positions sorted by set index (for animation).
-    /// </summary>
-    public Vector3[] GetAllSetPositionsSorted()
+    public void SyncInspectorList()
     {
-        List<Vector3> sortedPositions = new List<Vector3>();
-        for (int i = 0; i < SessionManager.instance.showStateSO.NumberOfSets; i++)
+        inspectorCountPositions = new List<CountPositionEntry>();
+
+        foreach (var set in countPositions)
         {
-            if (setPositions.TryGetValue(i + 1, out Vector3 pos)) // 1-based set index
+            foreach (var count in set.Value)
             {
-                sortedPositions.Add(pos);
+                inspectorCountPositions.Add(new CountPositionEntry
+                {
+                    setIndex = set.Key,
+                    countIndex = count.Key,
+                    position = count.Value
+                });
             }
         }
-        return sortedPositions.ToArray();
     }
 
-    public void SyncInspectorLists()
-    {
-        inspectorSetPositions = new List<SetPositionEntry>();
-        foreach (var kvp in setPositions)
-        {
-            inspectorSetPositions.Add(new SetPositionEntry { setIndex = kvp.Key, position = kvp.Value });
-        }
-
-        inspectorStandbyPositions = new List<SetPositionEntry>();
-        foreach (var kvp in standbyPositions)
-        {
-            inspectorStandbyPositions.Add(new SetPositionEntry { setIndex = kvp.Key, position = kvp.Value });
-        }
-    }
-
+    public Dictionary<int, Dictionary<int, Vector3>> GetAllCountPositions() => countPositions;
 }

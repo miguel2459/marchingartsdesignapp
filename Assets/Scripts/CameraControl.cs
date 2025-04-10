@@ -25,6 +25,8 @@ public class CameraControl : MonoBehaviour
     private bool isFocusing = false;
     private Vector3 initialCameraPosition; // Store the camera's initial position
 
+    public TransformGizmoManager gizmoManager;
+
     void Update()
     {
         if (isFocusing)
@@ -52,9 +54,11 @@ public class CameraControl : MonoBehaviour
     bool HandleUserInputInterrupt()
     {
         // Check if any of the movement, rotation, or zoom inputs are triggered
-        return Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.S) ||
-               Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D) ||
-               Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.E) ||
+        return Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.E) ||
+               Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.R) ||
+               Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.G) ||
+               Input.GetKey(KeyCode.B) || Input.GetKey(KeyCode.V) ||
+               Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.X) ||
                Input.GetMouseButton(1) || Input.GetMouseButton(2) ||
                Input.GetAxis("Mouse ScrollWheel") != 0;
     }
@@ -152,20 +156,52 @@ public class CameraControl : MonoBehaviour
 
     void MoveCameraToFocus()
     {
-        Vector3 directionToFocus = (focusPoint - initialCameraPosition).normalized;
+        Vector3 targetFocus;
+        float targetDistance;
 
-        // Calculate the target distance to stop the camera based on the number of selected marchers
-        float targetDistance = selectedMarchers.Count == 1 ? targetFocusDistance : CalculateRequiredDistanceToFit();
-
-        // Lerp the camera position towards the calculated target position
-        transform.position = Vector3.Lerp(transform.position, focusPoint - directionToFocus * targetDistance, focusSpeed * Time.deltaTime);
-        transform.LookAt(focusPoint);
-
-        if (Vector3.Distance(transform.position, focusPoint - directionToFocus * targetDistance) < 0.1f)
+        // 🧠 Check if TransformGizmo is active
+        if (gizmoManager != null && gizmoManager.IsGizmoActive())
         {
-            isFocusing = false; // Stop focusing once we're close enough
+            targetFocus = gizmoManager.transformGizmo.transform.position;
+            targetDistance = targetFocusDistance; // Optional: use a different zoom if you want
+            Debug.Log("CameraControl: 🎯 Focusing on active TransformGizmo.");
+        }
+        else if (selectedMarchers.Count > 0)
+        {
+            if (selectedMarchers.Count == 1)
+            {
+                targetFocus = selectedMarchers[0].transform.position;
+                targetDistance = targetFocusDistance;
+            }
+            else
+            {
+                Vector3 totalPosition = Vector3.zero;
+                foreach (var marcher in selectedMarchers)
+                    totalPosition += marcher.transform.position;
+
+                targetFocus = totalPosition / selectedMarchers.Count;
+                targetDistance = CalculateRequiredDistanceToFit();
+            }
+        }
+        else
+        {
+            Debug.LogWarning("CameraControl: No selected marchers or gizmo to focus on.");
+            isFocusing = false;
+            return;
+        }
+
+        Vector3 directionToFocus = (targetFocus - initialCameraPosition).normalized;
+        Vector3 finalPosition = targetFocus - directionToFocus * targetDistance;
+
+        transform.position = Vector3.Lerp(transform.position, finalPosition, focusSpeed * Time.deltaTime);
+        transform.LookAt(targetFocus);
+
+        if (Vector3.Distance(transform.position, finalPosition) < 0.1f)
+        {
+            isFocusing = false;
         }
     }
+
 
     float CalculateRequiredDistanceToFit()
     {

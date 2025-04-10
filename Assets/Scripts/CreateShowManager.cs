@@ -104,16 +104,56 @@ public class CreateShowManager : MonoBehaviour
             setOnExit,
             onSuccess: () =>
             {
-                Debug.Log("Show creation completed. Proceeding...");
-                // Close panel after creation
-                panelLoadingNewShow.SetActive(false);
-                panelCreateNewShow.SetActive(false);
+                Debug.Log("✅ Backend show creation successful. Generating and caching default JSONs...");
 
-                session.AddNewShow(showTitle);
+                bool marcherSaveSuccess = false;
+                bool timingSaveSuccess = false;
+
+                // 1. Generate Default Marcher JSON
+                string defaultMarcherJson = session.JsonService.GenerateDefaultMarcherJson(numMarchers);
+                if (!string.IsNullOrEmpty(defaultMarcherJson))
+                {
+                    // 2. Save Default Marcher JSON to Local Cache
+                    session.JsonService.SaveJson(showID, "marcher", defaultMarcherJson, success => marcherSaveSuccess = success);
+                } else {
+                     Debug.LogError("Failed to generate default marcher JSON.");
+                }
+
+                // 3. Generate Default Timing JSON
+                string defaultTimingJson = session.JsonService.GenerateDefaultTimingJson(numSets);
+                 if (!string.IsNullOrEmpty(defaultTimingJson))
+                {
+                    // 4. Save Default Timing JSON to Local Cache
+                    session.JsonService.SaveJson(showID, "timing", defaultTimingJson, success => timingSaveSuccess = success);
+                } else {
+                     Debug.LogError("Failed to generate default timing JSON.");
+                }
+
+                // Check if saving defaults was successful before proceeding
+                if (marcherSaveSuccess && timingSaveSuccess)
+                {
+                     Debug.Log("✅ Default JSONs generated and cached locally.");
+
+                     // Close loading panel
+                     panelLoadingNewShow.SetActive(false);
+                     panelCreateNewShow.SetActive(false);
+
+                     // Trigger SessionManager to refresh show list and select the new one
+                     session.AddNewShow(showTitle);
+                }
+                else
+                {
+                    Debug.LogError("❌ Failed to save one or both default JSON files locally. Aborting show selection.");
+                    // Handle error - maybe show a message to the user?
+                    panelLoadingNewShow.SetActive(false); // Still hide loading
+                    // Optionally: Add logic to inform the user the show was created backend-wise but local setup failed.
+                }
             },
             onError: (err) =>
             {
-                Debug.LogError("Show creation failed: " + err);
+                Debug.LogError($"❌ Backend show creation failed: {err}");
+                // Handle error - hide loading panel, show error message to user
+                panelLoadingNewShow.SetActive(false);
             });
         }
     }

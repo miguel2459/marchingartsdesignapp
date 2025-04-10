@@ -45,7 +45,8 @@ public class UserSessionManager
 
         Debug.Log($"✅ UserSessionManager: User Initialized, Logged in as {name} ({email})");
 
-        SessionManager.instance.InitializeUserShows();
+        SessionManager.instance.InitializeJsonService();
+        SessionManager.instance.InitializeUserShows(); 
     }
 
     public bool TryAutoLogin()

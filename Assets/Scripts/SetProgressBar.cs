@@ -41,7 +41,7 @@ public class SetProgressBar : MonoBehaviour
             if (buttonObj.TryGetComponent(out Button btn))
             {
                 setButtons.Add(btn);
-                Debug.Log($"🔍 Found existing set button: {buttonObj.name}");
+                //Debug.Log($"🔍 Found existing set button: {buttonObj.name}");
             }
         }
 
@@ -114,15 +114,28 @@ public class SetProgressBar : MonoBehaviour
     {
         if (SessionManager.instance != null)
         {
-            lastSet = int.Parse(session.showStateSO.LastSet);
-            currentSetText.text = lastSet.ToString();
+            string lastSetStr = session.showStateSO.LastSet;
+
+            if (int.TryParse(lastSetStr, out int parsedSet))
+            {
+                lastSet = parsedSet;
+                currentSetText.text = lastSet.ToString();
+                Debug.Log($"🔁 Loaded lastSet = {lastSet} from session");
+            }
+            else
+            {
+                lastSet = 1;
+                currentSetText.text = "1";
+                Debug.LogWarning($"⚠️ Invalid LastSet '{lastSetStr}' in session — defaulting to 1");
+            }
         }
         else
         {
             lastSet = 1;
+            Debug.LogWarning("⚠️ SessionManager is null — defaulting lastSet to 1");
         }
     }
-
+    
     public void OnSetButtonClick(int setNumber)
     {
         Debug.Log($"🟦 OnSetButtonClick called for Set {setNumber}");
@@ -130,6 +143,8 @@ public class SetProgressBar : MonoBehaviour
         currentSetIndex = setNumber;
         session.showStateSO.LastSet = setNumber.ToString();
         currentSetText.text = setNumber.ToString();
+
+        countsProgressBar?.ResetHighlight();
 
         Debug.Log($"🔁 Repositioning marchers to Set {setNumber}");
         director.RepositionMarchersToSet(setNumber);
@@ -146,6 +161,13 @@ public class SetProgressBar : MonoBehaviour
             setCountsInput.text = cachedCount.ToString();
             startBPMInput.text = cachedStartBPM.ToString();
             endBPMInput.text = cachedEndBPM.ToString();
+
+            if (cachedCount <= 0)
+            {
+                Debug.Log($"ℹ️ Set {setNumber} has 0 counts — skipping count button rendering.");
+                countsProgressBar?.ClearCounts();
+                return;
+            }
 
             Debug.Log($"✅ Timing Data for Set {setNumber}: Counts = {cachedCount}, Start BPM = {cachedStartBPM}, End BPM = {cachedEndBPM}");
             countsProgressBar?.RenderCounts(setNumber, cachedCount);
