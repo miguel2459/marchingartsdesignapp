@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 
 public class CreateShowManager : MonoBehaviour
 {
@@ -105,49 +105,7 @@ public class CreateShowManager : MonoBehaviour
             onSuccess: () =>
             {
                 Debug.Log("✅ Backend show creation successful. Generating and caching default JSONs...");
-
-                bool marcherSaveSuccess = false;
-                bool timingSaveSuccess = false;
-
-                // 1. Generate Default Marcher JSON
-                string defaultMarcherJson = session.JsonService.GenerateDefaultMarcherJson(numMarchers);
-                if (!string.IsNullOrEmpty(defaultMarcherJson))
-                {
-                    // 2. Save Default Marcher JSON to Local Cache
-                    session.JsonService.SaveJson(showID, "marcher", defaultMarcherJson, success => marcherSaveSuccess = success);
-                } else {
-                     Debug.LogError("Failed to generate default marcher JSON.");
-                }
-
-                // 3. Generate Default Timing JSON
-                string defaultTimingJson = session.JsonService.GenerateDefaultTimingJson(numSets);
-                 if (!string.IsNullOrEmpty(defaultTimingJson))
-                {
-                    // 4. Save Default Timing JSON to Local Cache
-                    session.JsonService.SaveJson(showID, "timing", defaultTimingJson, success => timingSaveSuccess = success);
-                } else {
-                     Debug.LogError("Failed to generate default timing JSON.");
-                }
-
-                // Check if saving defaults was successful before proceeding
-                if (marcherSaveSuccess && timingSaveSuccess)
-                {
-                     Debug.Log("✅ Default JSONs generated and cached locally.");
-
-                     // Close loading panel
-                     panelLoadingNewShow.SetActive(false);
-                     panelCreateNewShow.SetActive(false);
-
-                     // Trigger SessionManager to refresh show list and select the new one
-                     session.AddNewShow(showTitle);
-                }
-                else
-                {
-                    Debug.LogError("❌ Failed to save one or both default JSON files locally. Aborting show selection.");
-                    // Handle error - maybe show a message to the user?
-                    panelLoadingNewShow.SetActive(false); // Still hide loading
-                    // Optionally: Add logic to inform the user the show was created backend-wise but local setup failed.
-                }
+                StartCoroutine(SaveDefaultsAndContinue(showID, showTitle, numMarchers, numSets));
             },
             onError: (err) =>
             {
@@ -157,6 +115,63 @@ public class CreateShowManager : MonoBehaviour
             });
         }
     }
+
+    private IEnumerator SaveDefaultsAndContinue(string showID, string showTitle, int numMarchers, int numSets)
+    {
+        string defaultMarcherJson = session.JsonService.GenerateDefaultMarcherJson(numMarchers);
+        string defaultTimingJson = session.JsonService.GenerateDefaultTimingJson(numSets);
+
+        if (string.IsNullOrEmpty(defaultMarcherJson) || string.IsNullOrEmpty(defaultTimingJson))
+        {
+            Debug.LogError("❌ Failed to generate default JSON.");
+            panelLoadingNewShow.SetActive(false);
+            yield break;
+        }
+
+        bool marcherSaveSuccess = false;
+        bool timingSaveSuccess = false;
+
+        bool marcherDone = false;
+        bool timingDone = false;
+
+        session.JsonService.SaveJson(showID, "marcher", defaultMarcherJson, success => {
+            marcherSaveSuccess = success;
+            marcherDone = true;
+        });
+
+        session.JsonService.SaveJson(showID, "timing", defaultTimingJson, success => {
+            timingSaveSuccess = success;
+            timingDone = true;
+        });
+
+        // Wait until both operations complete
+        yield return new WaitUntil(() => marcherDone && timingDone);
+
+
+        // Wait for both to complete (cheap way)
+        float timeout = 5f;
+        float elapsed = 0f;
+        while ((!marcherSaveSuccess || !timingSaveSuccess) && elapsed < timeout)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (marcherSaveSuccess && timingSaveSuccess)
+        {
+            Debug.Log("✅ Default JSONs generated and cached locally.");
+            panelLoadingNewShow.SetActive(false);
+            panelCreateNewShow.SetActive(false);
+            session.AddNewShow(showTitle);
+            SceneController.instance.SwitchScene(3); // Load ShowManagerScene directly
+        }
+        else
+        {
+            Debug.LogError("❌ Failed to save one or both default JSON files locally. Aborting show selection.");
+            panelLoadingNewShow.SetActive(false);
+        }
+    }
+
 
     private bool ValidateInputFields()
     {

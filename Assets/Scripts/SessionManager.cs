@@ -257,8 +257,8 @@ public class SessionManager : MonoBehaviour
         {
             foreach (JSONNode row in result["values"].AsArray)
             {
-                // Expecting at least 7 columns (up to timingJSONLink)
-                if (row.AsArray.Count >= 7)
+                // Expecting at least 5 columns (up to timingJSONLink)
+                if (row.AsArray.Count >= 5)
                 {
                     // Safely extract values, providing defaults if missing
                     ShowData show = new ShowData
@@ -268,8 +268,8 @@ public class SessionManager : MonoBehaviour
                         group = row[2]?.Value ?? "Unknown Group",
                         showSheetID = row[3]?.Value ?? "",
                         lastModified = row[4]?.Value ?? "",
-                        marcherJSONLink = row[5]?.Value ?? "", // Should be backend URL/ID now, not direct link
-                        timingJSONLink = row[6]?.Value ?? ""  // Should be backend URL/ID now, not direct link
+                        // marcherJSONLink = row[5]?.Value ?? "", // Should be backend URL/ID now, not direct link
+                        // timingJSONLink = row[6]?.Value ?? ""  // Should be backend URL/ID now, not direct link
                     };
 
                     // Basic validation
