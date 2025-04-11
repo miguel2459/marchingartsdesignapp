@@ -82,8 +82,8 @@ public class JsonCoordinatorService
     /// <summary>
     /// Wrapper around parsing methods.
     /// </summary>
-    public Dictionary<string, Dictionary<int, Dictionary<int, Vector3>>> ParseMarcherStateJSON(string jsonText) =>
-        parserService.ParseMarcherStateJSON(jsonText);
+    public Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> ParseMarcherStateJSON(string jsonText) =>
+    parserService.ParseMarcherStateJSON(jsonText);
 
     public Dictionary<int, RuntimeCacheSO.SetTimingData> ParseSetTimingMapJSON(string jsonText) =>
         parserService.ParseSetTimingMapJSON(jsonText);

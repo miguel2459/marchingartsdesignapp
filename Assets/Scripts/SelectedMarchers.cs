@@ -28,22 +28,12 @@ public class SelectedMarchers : MonoBehaviour
 
     private void Update()
     {
-        CheckForSpaceBarSetPosition();
+        CheckForSpaceBarSetPosition(); // march
+        CheckForHoldKeySetPosition();  // hold
 
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            SnapSelectedMarchersToGrid();
-        }
-
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            ArrangeSelectedInBox();
-        }
-
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            SelectAllMarchers();
-        }
+        if (Input.GetKeyDown(KeyCode.G)) SnapSelectedMarchersToGrid();
+        if (Input.GetKeyDown(KeyCode.B)) ArrangeSelectedInBox();
+        if (Input.GetKeyDown(KeyCode.A)) SelectAllMarchers();
     }
 
     public void SelectAllMarchers()
@@ -146,7 +136,47 @@ public class SelectedMarchers : MonoBehaviour
         }
     }
 
+    private void CheckForHoldKeySetPosition()
+    {
+        if (Input.GetKeyDown(KeyCode.H) && selectedMarchers.Count > 0)
+        {
+            int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
+            int setToUse;
+            int countToUse;
 
+            int activeCountIndex = countsProgressBar != null ? countsProgressBar.GetActiveCountIndex() : -1;
+
+            if (activeCountIndex >= 0)
+            {
+                setToUse = currentSet;
+                countToUse = activeCountIndex + 1;
+                Debug.Log($"SelectedMarchers: ✋ Holding positions at Set {setToUse}, Count {countToUse}");
+            }
+            else
+            {
+                if (currentSet == 1)
+                {
+                    setToUse = 0;
+                    countToUse = 0;
+                    Debug.Log($"SelectedMarchers: ✋ Fallback to Set 0, Count 0 (hold)");
+                }
+                else
+                {
+                    setToUse = currentSet - 1;
+                    countToUse = SessionManager.instance.runtimeCacheSO.SetTimingMap[setToUse].count;
+                    Debug.Log($"SelectedMarchers: ✋ Fallback to Set {setToUse}, Last Count {countToUse} (hold)");
+                }
+            }
+
+            foreach (GameObject marcher in selectedMarchers)
+            {
+                if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
+                {
+                    posManager.ConfirmHoldAndFillBack(setToUse, countToUse, marcher.transform.position);
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// If spacebar is pressed, confirms the transform.position as a SetPosition for each selected marcher.
@@ -190,7 +220,7 @@ public class SelectedMarchers : MonoBehaviour
             {
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
-                    posManager.SetPositionAtCount(setToUse, countToUse, marcher.transform.position);
+                    posManager.ConfirmMarchAndFillBack(setToUse, countToUse, marcher.transform.position);
                 }
             }
         }

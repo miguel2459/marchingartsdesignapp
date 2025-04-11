@@ -632,7 +632,7 @@ GameObject:
   - component: {fileID: 3571755950684897236}
   - component: {fileID: 2925679980412189257}
   m_Layer: 5
-  m_Name: Image_EditDetails
+  m_Name: EditShow_Details_Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

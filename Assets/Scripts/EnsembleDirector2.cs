@@ -32,7 +32,7 @@ public class EnsembleDirector2 : MonoBehaviour
     public FieldGridManager fieldManager;
     public EnsembleUIController UIController;
     public List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>();
-    private Dictionary<string, Dictionary<int, Dictionary<int, Vector3>>> parsedCountPositions = new Dictionary<string, Dictionary<int, Dictionary<int, Vector3>>>();
+    private Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> parsedCountPositions = new Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>();
 
     private IEnumerator Start()
     {
@@ -48,14 +48,11 @@ public class EnsembleDirector2 : MonoBehaviour
 
         Debug.Log("Cached JSON strings found. Parsing using JsonPersistenceService...");
 
-        // *** MODIFIED LINES START ***
         // Call the service to parse the JSON strings and get the data structures back
         parsedCountPositions = SessionManager.instance.JsonService.ParseMarcherStateJSON(session.runtimeCacheSO.CachedMarcherJSON);
 
         // Assign the parsed map directly to the RuntimeCacheSO's map
         session.runtimeCacheSO.SetTimingMap = SessionManager.instance.JsonService.ParseSetTimingMapJSON(session.runtimeCacheSO.CachedTimingJSON);
-        // *** MODIFIED LINES END ***
-
 
         // Check if parsing was successful before proceeding
         if (parsedCountPositions == null || session.runtimeCacheSO.SetTimingMap == null)
@@ -69,6 +66,12 @@ public class EnsembleDirector2 : MonoBehaviour
         Debug.Log("JSON Parsing complete. Proceeding with OnSessionReady.");
         OnSessionReady(); // Now call OnSessionReady with parsed data available
     }
+    void OnGridReadyHandler()
+    {
+        Debug.Log("✅ Grid Ready — Populating Marchers");
+        //PopulateMarchers();
+    }
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Delete))
@@ -84,11 +87,6 @@ public class EnsembleDirector2 : MonoBehaviour
         fieldCenter = fieldManager.GetFieldCenter();
 
         PopulateMarchers();
-    }
-    void OnGridReadyHandler()
-    {
-        Debug.Log("✅ Grid Ready — Populating Marchers");
-        //PopulateMarchers();
     }
     private void InitializeSession(){
         numberOfMarchers = session.showStateSO.NumberOfMarchers;
@@ -148,11 +146,29 @@ public class EnsembleDirector2 : MonoBehaviour
         {
             ArrangeMarchersInSquare();
         }
+        ConfirmInitialCenterPosition();
+    }
+    private void ConfirmInitialCenterPosition()
+    {
+        foreach (var marcher in marchers)
+        {
+            Vector3 pos = marcher.transform.position;
+            marcher.SetPositionAtCount(0, 0, pos, "march");
+            Debug.Log($"{marcher.name} 🔒 Confirmed Set 0, Count 0 at {pos}");
+        }
     }
     private void AddMarchers(int currentCount)
     {
         for (int i = currentCount; i < numberOfMarchers; i++)
             CreateMarcher(i, new Color(Random.value, Random.value, Random.value), numberOfSets);
+    }
+    private void RemoveExcessMarchers(int currentCount)
+    {
+        for (int i = currentCount - 1; i >= numberOfMarchers; i--)
+        {
+            DestroyImmediate(marchers[i].gameObject);
+            marchers.RemoveAt(i);
+        }
     }
     public void PreviewCountPosition(int setNumber, int clickedCount)
     {
@@ -171,25 +187,19 @@ public class EnsembleDirector2 : MonoBehaviour
 
         foreach (var marcher in marchers)
         {
-            if (marcher.HasPositionAtCount(setNumber, clickedCount))
+            if (marcher.GetAllCountPositions().TryGetValue(setNumber, out var setData) &&
+                setData.TryGetValue(clickedCount, out var entry))
             {
-                Vector3 previewPos = marcher.GetPositionAtCount(setNumber, clickedCount);
+                Vector3 previewPos = entry.pos;
+                marcher.transform.position = previewPos;
 
                 Debug.Log($"🔍 {marcher.name} previewed at Set {setNumber}, Count {clickedCount} → {previewPos}");
-                marcher.transform.position = previewPos;
             }
             else
             {
                 Debug.LogWarning($"⚠️ {marcher.name} has no position data at Set {setNumber}, Count {clickedCount}");
             }
-        }
-    }
-    private void RemoveExcessMarchers(int currentCount)
-    {
-        for (int i = currentCount - 1; i >= numberOfMarchers; i--)
-        {
-            DestroyImmediate(marchers[i].gameObject);
-            marchers.RemoveAt(i);
+
         }
     }
     private void CreateMarcher(int index, Color color, int sets)
