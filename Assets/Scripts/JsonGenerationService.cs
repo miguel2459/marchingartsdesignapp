@@ -12,61 +12,67 @@ public class JsonGenerationService
     /// </summary>
     public string GenerateMarcherStateJSON(List<MarcherPositionsManager> marchers)
     {
-     if (marchers == null)
+        if (marchers == null)
         {
             Debug.LogError("GenerateMarcherStateJSON: Marchers list cannot be null.");
             return null;
         }
 
         var root = new JSONObject();
-        root["version"] = "2.0.0"; // Or your desired version
+        root["version"] = CurrentVersion;
         root["timestamp"] = System.DateTime.UtcNow.ToString("o");
         var marcherArray = new JSONArray();
 
         foreach (var marcher in marchers)
         {
-            if (marcher == null) continue; // Skip null entries
+            if (marcher == null) continue;
 
             var marcherNode = new JSONObject();
             marcherNode["id"] = marcher.name;
 
             var countPosNode = new JSONObject();
-            var allCountPositions = marcher.GetAllCountPositions();
+            var allCountPositions = marcher.GetAllCountPositions(); // Assume this returns the new PositionEntry-based dictionary
 
-            // Ensure Set 0, Count 0 is included (optional, based on your logic needs)
+            // Ensure Set 0, Count 0 is included
             if (!allCountPositions.ContainsKey(0))
-                allCountPositions[0] = new Dictionary<int, Vector3>();
+                allCountPositions[0] = new Dictionary<int, PositionEntry>();
             if (!allCountPositions[0].ContainsKey(0))
-                // Use current transform position as fallback for Set 0 Count 0 if needed
-                allCountPositions[0][0] = marcher.transform.position;
+                allCountPositions[0][0] = new PositionEntry(marcher.transform.position, "hold");
 
             foreach (var setEntry in allCountPositions)
             {
                 int setIndex = setEntry.Key;
                 var setObj = new JSONObject();
 
-                if (setEntry.Value == null || setEntry.Value.Count == 0)
-                    continue; // Skip sets with no counts if necessary
-
                 foreach (var countEntry in setEntry.Value)
                 {
                     int countIndex = countEntry.Key;
-                    Vector3 pos = countEntry.Value;
+                    PositionEntry entry = countEntry.Value;
+
+                    var entryObj = new JSONObject();
                     var posArray = new JSONArray();
-                    posArray.Add(pos.x);
-                    posArray.Add(pos.y);
-                    posArray.Add(pos.z);
-                    setObj[countIndex.ToString()] = posArray;
+                    posArray.Add(entry.pos.x);
+                    posArray.Add(entry.pos.y);
+                    posArray.Add(entry.pos.z);
+
+                    entryObj["pos"] = posArray;
+                    entryObj["type"] = entry.type;
+
+                    setObj[countIndex.ToString()] = entryObj;
                 }
+
                 countPosNode[setIndex.ToString()] = setObj;
             }
+
             marcherNode["countPositions"] = countPosNode;
             marcherArray.Add(marcherNode);
         }
+
         root["marchers"] = marcherArray;
-        Debug.Log("✅ Generated Marcher State JSON string within JsonPersistenceService.");
-        return root.ToString(2); // Pretty print
+        Debug.Log("✅ Generated tagged Marcher State JSON (v2.0.0) with march/hold/unset structure.");
+        return root.ToString(2);
     }
+
 
     /// <summary>
     /// Generates JSON for the set timing map.
@@ -103,6 +109,7 @@ public class JsonGenerationService
     public string GenerateDefaultMarcherJson(int marcherCount)
     {
         Vector3 defaultPosition = Vector3.zero;
+
         var root = new JSONObject
         {
             ["version"] = CurrentVersion,
@@ -116,25 +123,31 @@ public class JsonGenerationService
             var marcherNode = new JSONObject();
             marcherNode["id"] = $"Marcher{i + 1}";
 
-            var countPosNode = new JSONObject();
-            var set0 = new JSONObject();
-            var posArray = new JSONArray();
+            var countPosNode = new JSONObject(); // sets
+            var set0 = new JSONObject();         // counts
 
+            var posArray = new JSONArray();
             posArray.Add(defaultPosition.x);
             posArray.Add(defaultPosition.y);
             posArray.Add(defaultPosition.z);
 
-            set0["0"] = posArray; // Add Set 0, Count 0 position
-            countPosNode["0"] = set0;
+            var entryObj = new JSONObject();
+            entryObj["pos"] = posArray;
+            entryObj["type"] = "hold";
+
+            set0["0"] = entryObj;      // Count 0
+            countPosNode["0"] = set0;  // Set 0
 
             marcherNode["countPositions"] = countPosNode;
             marcherArray.Add(marcherNode);
         }
 
         root["marchers"] = marcherArray;
-        Debug.Log("✅ JsonGenerationService: Generated default marcher JSON.");
+
+        Debug.Log("✅ JsonGenerationService: Generated default marcher JSON (v2.0.0 compliant).");
         return root.ToString(2);
     }
+
 
     /// <summary>
     /// Generates a default timing JSON for a new show.

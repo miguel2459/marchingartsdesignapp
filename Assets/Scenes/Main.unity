@@ -166,6 +166,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72044e563f1b11e4884005bdbe3f4873, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sceneController: {fileID: 1385377769}
   userStateSO: {fileID: 11400000, guid: 1e80ca0e1755b8546be1362aca28ff16, type: 2}
   showStateSO: {fileID: 11400000, guid: 69c39e0d805d74e4ebcc3d2395ed9d35, type: 2}
   runtimeCacheSO: {fileID: 11400000, guid: 804c85afb66b52342bd40babf2668140, type: 2}
