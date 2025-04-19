@@ -5,34 +5,33 @@ using TMPro;
 
 public class SetProgressBar : MonoBehaviour
 {
-    SessionManager session = SessionManager.instance;
+    [Header("Director")]
+    [SerializeField] private EnsembleDirector2 director;  // drag in your EnsembleDirector2
+    private ISetProgressTracker progressSource => director as ISetProgressTracker;        // cached cast
     public GameObject sectionPrefab;
-    public EnsembleDirector2 director;
     public ScrollRect scrollRect;
     public Text currentSetText;
-
     public InputField setCountsInput;
     public InputField startBPMInput;
     public InputField endBPMInput;
-
     private int currentSetIndex = 1;
     private int cachedCount = 8;
     private float cachedStartBPM = 140f;
     private float cachedEndBPM = 140f;
-
     public CountsProgressBar countsProgressBar; // ⬅️ Reference to the counts bar
-
     public Color selectedColor = new Color(0.7f, 0.85f, 1f);
     public Color defaultColor = Color.white;
-
-    public List<Button> setButtons = new List<Button>();
-
+    private List<SetButtonWrapper> setButtonWrappers = new List<SetButtonWrapper>();
     private int totalSets = 1;
     private int lastSet = 1;
-
     private void Awake()
     {
-        setButtons.Clear();
+        if (director == null)
+            Debug.LogError("SetProgressBar: please assign your EnsembleDirector2!");
+        else if (progressSource != null)
+            progressSource.OnSetProgressChanged += UpdateSetProgressColor;
+
+        setButtonWrappers.Clear();
 
         foreach (Transform child in scrollRect.content)
         {
@@ -40,12 +39,18 @@ public class SetProgressBar : MonoBehaviour
 
             if (buttonObj.TryGetComponent(out Button btn))
             {
-                setButtons.Add(btn);
-                //Debug.Log($"🔍 Found existing set button: {buttonObj.name}");
+                Transform overlay = buttonObj.transform.Find("HighlightOverlay");
+
+                setButtonWrappers.Add(new SetButtonWrapper
+                {
+                    button = btn,
+                    highlightOverlay = overlay != null ? overlay.gameObject : null
+                });
             }
         }
+        
 
-        Debug.Log($"✅ Awake initialized {setButtons.Count} pre-existing set buttons.");
+        Debug.Log($"✅ Awake initialized {setButtonWrappers.Count} pre-existing set buttons.");
     }
 
     private void Start()
@@ -63,7 +68,7 @@ public class SetProgressBar : MonoBehaviour
 
     public void InitializeSetsBar()
     {
-        totalSets = director.numberOfSets;
+        totalSets = director.NumberOfSets;
         UpdateSetBar();
     }
 
@@ -77,23 +82,29 @@ public class SetProgressBar : MonoBehaviour
     public void ClearButtons()
     {
         foreach (Transform child in scrollRect.content)
-        {
             Destroy(child.gameObject);
-        }
-        setButtons.Clear();
+
+        setButtonWrappers.Clear(); // 🧼 clear wrappers instead of plain buttons
     }
+
 
     private void UpdateSetBar()
     {
-        ClearButtons();
-        LoadLastSet();
+        ClearButtons();   // Clears scroll content and list
+        LoadLastSet();    // Sets lastSet and updates currentSetText
 
         for (int i = 0; i < totalSets; i++)
         {
             GameObject newSection = Instantiate(sectionPrefab, scrollRect.content.transform);
             Button sectionButton = newSection.GetComponent<Button>();
-            setButtons.Add(sectionButton);
 
+            // 🔍 Try to find the HighlightOverlay child
+            Transform overlayTransform = newSection.transform.Find("HighlightOverlay");
+            GameObject overlay = overlayTransform != null ? overlayTransform.gameObject : null;
+
+            if (overlay != null) overlay.SetActive(false); // Hide by default
+
+            // 🏷️ Update label text
             Text buttonText = newSection.GetComponentInChildren<Text>();
             if (buttonText != null)
             {
@@ -102,19 +113,29 @@ public class SetProgressBar : MonoBehaviour
 
             int setIndex = i + 1;
             sectionButton.onClick.AddListener(() => OnSetButtonClick(setIndex));
+
+            // ✅ Store wrapper
+            setButtonWrappers.Add(new SetButtonWrapper
+            {
+                button = sectionButton,
+                highlightOverlay = overlay
+            });
         }
 
+        // 🧮 Auto-adjust scroll content size
         float buttonWidth = sectionPrefab.GetComponent<RectTransform>().sizeDelta.x;
         scrollRect.content.sizeDelta = new Vector2(totalSets * (buttonWidth + 10), scrollRect.content.sizeDelta.y);
 
+        // ✨ Highlight currently selected set
         HighlightSet(lastSet);
     }
+
 
     private void LoadLastSet()
     {
         if (SessionManager.instance != null)
         {
-            string lastSetStr = session.showStateSO.LastSet;
+            string lastSetStr = director.SessionLoader.ShowState.LastSet;
 
             if (int.TryParse(lastSetStr, out int parsedSet))
             {
@@ -141,17 +162,18 @@ public class SetProgressBar : MonoBehaviour
         Debug.Log($"🟦 OnSetButtonClick called for Set {setNumber}");
 
         currentSetIndex = setNumber;
-        session.showStateSO.LastSet = setNumber.ToString();
+        director.SessionLoader.ShowState.LastSet = setNumber.ToString();
         currentSetText.text = setNumber.ToString();
 
         countsProgressBar?.ResetHighlight();
 
         Debug.Log($"🔁 Repositioning marchers to Set {setNumber}");
         director.RepositionMarchersToSet(setNumber);
+        director.ColorMarchersForSet(setNumber);
 
         HighlightSet(setNumber);
 
-        var map = session.runtimeCacheSO.SetTimingMap;
+        var map = director.SessionLoader.RuntimeCache.SetTimingMap;
         if (map.TryGetValue(setNumber, out var timing))
         {
             cachedCount = timing.count;
@@ -171,6 +193,7 @@ public class SetProgressBar : MonoBehaviour
 
             Debug.Log($"✅ Timing Data for Set {setNumber}: Counts = {cachedCount}, Start BPM = {cachedStartBPM}, End BPM = {cachedEndBPM}");
             countsProgressBar?.RenderCounts(setNumber, cachedCount);
+            countsProgressBar?.UpdateCountSubtextsForSet(setNumber);
         }
         else
         {
@@ -190,7 +213,7 @@ public class SetProgressBar : MonoBehaviour
             if (int.TryParse(value, out int parsedCount))
             {
                 parsedCount = Mathf.Max(1, parsedCount);
-                session.runtimeCacheSO.SetTimingMap[currentSetIndex].count = parsedCount;
+                director.SessionLoader.RuntimeCache.SetTimingMap[currentSetIndex].count = parsedCount;
                 cachedCount = parsedCount;
                 countsProgressBar.RenderCounts(currentSetIndex, parsedCount);
             }
@@ -211,7 +234,7 @@ public class SetProgressBar : MonoBehaviour
         {
             if (float.TryParse(value, out float parsedStartBPM))
             {
-                session.runtimeCacheSO.SetTimingMap[currentSetIndex].startBPM = parsedStartBPM;
+                director.SessionLoader.RuntimeCache.SetTimingMap[currentSetIndex].startBPM = parsedStartBPM;
                 cachedStartBPM = parsedStartBPM;
             }
             else
@@ -231,7 +254,7 @@ public class SetProgressBar : MonoBehaviour
         {
             if (float.TryParse(value, out float parsedEndBPM))
             {
-                session.runtimeCacheSO.SetTimingMap[currentSetIndex].endBPM = parsedEndBPM;
+                director.SessionLoader.RuntimeCache.SetTimingMap[currentSetIndex].endBPM = parsedEndBPM;
                 cachedEndBPM = parsedEndBPM;
             }
             else
@@ -247,7 +270,7 @@ public class SetProgressBar : MonoBehaviour
 
     public void UpdateTimingInputsForSet(int setIndex)
     {
-        if (session.runtimeCacheSO.SetTimingMap.TryGetValue(setIndex, out var timing))
+        if (director.SessionLoader.RuntimeCache.SetTimingMap.TryGetValue(setIndex, out var timing))
         {
             setCountsInput.text = timing.count.ToString();
             startBPMInput.text = timing.startBPM.ToString();
@@ -264,16 +287,45 @@ public class SetProgressBar : MonoBehaviour
     {
         currentSetIndex = setNumber;
         currentSetText.text = setNumber.ToString();
-        session.showStateSO.LastSet = setNumber.ToString();
+        director.SessionLoader.ShowState.LastSet = setNumber.ToString();
 
-        for (int i = 0; i < setButtons.Count; i++)
+        for (int i = 0; i < setButtonWrappers.Count; i++)
         {
-            Text buttonText = setButtons[i].GetComponentInChildren<Text>();
-            if (buttonText != null && int.TryParse(buttonText.text, out int buttonSetNumber))
-            {
-                bool isActive = (buttonSetNumber == setNumber);
-                setButtons[i].image.color = isActive ? selectedColor : defaultColor;
-            }
+            Text buttonText = setButtonWrappers[i].button.GetComponentInChildren<Text>();
+            bool isActive = int.TryParse(buttonText.text, out int buttonSetNumber) && buttonSetNumber == setNumber;
+
+            if (setButtonWrappers[i].highlightOverlay != null)
+                setButtonWrappers[i].highlightOverlay.SetActive(isActive);
         }
+    }
+
+
+    public void UpdateSetProgressColor(int setIndex, float percent)
+    {
+        if (setIndex < 1 || setIndex > setButtonWrappers.Count) return;
+
+        Color color;
+        if (percent >= 0.999f)
+        {
+            color = Color.white;
+        }
+        else if (percent > 0f)
+        {
+            Color softYellow = new Color(1f, 0.96f, 0.75f);  // pastel yellow
+            Color brightYellow = new Color(1f, 1f, 0f);      // full yellow
+            color = Color.Lerp(softYellow, brightYellow, percent);
+        }
+        else
+        {
+            color = new Color(0.7f, 0.7f, 0.7f); // soft grey
+        }
+
+        setButtonWrappers[setIndex - 1].button.image.color = color; 
+    }
+
+    private class SetButtonWrapper
+    {
+        public Button button;
+        public GameObject highlightOverlay;
     }
 }

@@ -7,8 +7,7 @@ using UnityEngine;
 public class MarcherController : MonoBehaviour
 {
     public RuntimeCacheSO runtimeCacheSO;
-    public MarcherPositionsManager marcherPositionsManager;
-    public EnsembleDirector2 director;
+    public MarcherPositionsManager marcherPositionsManager;        // cached cast
 
     private Vector3[] countPositions;
     private float[] stepDurations;
@@ -20,9 +19,8 @@ public class MarcherController : MonoBehaviour
     /// <summary>
     /// Inject EnsembleDirector and initialize marcher.
     /// </summary>
-    public void InitializeMarcher(EnsembleDirector2 directorReference, RuntimeCacheSO cacheSO)
+    public void InitializeMarcher(RuntimeCacheSO cacheSO)
     {
-        director = directorReference;
         runtimeCacheSO = cacheSO;
     }
 

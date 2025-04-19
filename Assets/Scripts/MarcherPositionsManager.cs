@@ -11,6 +11,7 @@ public class MarcherPositionsManager : MonoBehaviour
     public List<CountPositionEntry> inspectorCountPositions = new List<CountPositionEntry>();
 
     private DotMarkerVisualizer visualizer;
+    public static event System.Action OnAnyMarcherPositionUpdated;
 
     private void Awake()
     {
@@ -216,6 +217,7 @@ public class MarcherPositionsManager : MonoBehaviour
         Debug.Log($"{name} ✅ Confirmed: Set {targetSet}, Count {targetCount} → {finalPos}");
 
         SyncInspectorList();
+        OnAnyMarcherPositionUpdated?.Invoke();
     }
     public void ConfirmHoldAndFillBack(int setIndex, int targetCount, Vector3 pos)
     {
@@ -232,6 +234,7 @@ public class MarcherPositionsManager : MonoBehaviour
 
         countPositions[setIndex][targetCount] = new PositionEntry(pos, "hold"); // ✅ user confirmed
         SyncInspectorList();
+        OnAnyMarcherPositionUpdated?.Invoke();
     }
 
     public void SyncInspectorList()

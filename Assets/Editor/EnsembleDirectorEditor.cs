@@ -12,7 +12,7 @@ public class EnsembleDirectorEditor : Editor
 
         if (GUILayout.Button("Populate Marchers"))
         {
-            ensembleDirector.PopulateMarchers();
+            //ensembleDirector.PopulateMarchers();
         }
     }
 }
