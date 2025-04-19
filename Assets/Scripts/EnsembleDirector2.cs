@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Collections;
 
 [ExecuteInEditMode]
-public class EnsembleDirector2 : MonoBehaviour
+public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTracker
 {
-    SessionManager session = SessionManager.instance;
-    RuntimeCacheData runtimeCache;
-
-    [Header("Marcher Settings")]
+    // IMarcherProvider
+    public IReadOnlyList<MarcherPositionsManager> Marchers =>
+        marcherFactory != null ? marcherFactory.Marchers : marchers;
+    public int NumberOfSets => numberOfSets;
     public int numberOfMarchers;
     public int numberOfSets;
     public int lastSet;
@@ -16,10 +16,6 @@ public class EnsembleDirector2 : MonoBehaviour
     public float bpm;
     public float interval;
     public Vector3 fieldCenter;
-
-    [Header("Prefabs")]
-    public GameObject marcherPrefab;
-    public GameObject positionSpherePrefab;
 
     [Header("Managers & Components")]
     public Metronome2 metronome;
@@ -31,45 +27,43 @@ public class EnsembleDirector2 : MonoBehaviour
     public IntervalManager intervalManager;
     public FieldGridManager fieldManager;
     public EnsembleUIController UIController;
-    public List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>();
-    private Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> parsedCountPositions = new Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>();
+    public SessionBootstrapper bootstrapper;   // drag from scene
+    public MarcherFactory    marcherFactory;   // drag from scene
+    public List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>(); 
+    public List<SetProgressData> inspectorSetProgress = new List<SetProgressData>();
+    private MarcherProgressTracker progressTracker;
+    private System.Action refreshHandler;
+    [SerializeField] private EnsembleSessionLoader sessionLoader;
+    [SerializeField] private MarcherManager marcherManager;
 
-    private IEnumerator Start()
+    [Header("Marcher Progress Colors")]
+    public Color fullProgressColor = Color.white;
+    public Color partialProgressColor = new Color(1f, 0.92f, 0.5f); // soft yellow
+    public Color noProgressColor = new Color(0.6f, 0.6f, 0.6f); // grey
+    void Awake()
     {
-        SnapToGridLines.OnGridReady -= OnGridReadyHandler;
-        SnapToGridLines.OnGridReady += OnGridReadyHandler;
+        sessionLoader.OnReady += HandleSessionReady;
+        marcherManager.OnMarchersReady += OnMarchersReady;
 
-        // Wait for JSON strings to be loaded into cache (by ShowSelectionManager)
-        yield return new WaitUntil(() => session != null &&
-                                    session.runtimeCacheSO != null &&
-                                    !string.IsNullOrEmpty(session.runtimeCacheSO.CachedMarcherJSON) &&
-                                    !string.IsNullOrEmpty(session.runtimeCacheSO.CachedTimingJSON) &&
-                                    SessionManager.instance.JsonService != null); // Also wait for JsonService
-
-        Debug.Log("Cached JSON strings found. Parsing using JsonPersistenceService...");
-
-        // Call the service to parse the JSON strings and get the data structures back
-        parsedCountPositions = SessionManager.instance.JsonService.ParseMarcherStateJSON(session.runtimeCacheSO.CachedMarcherJSON);
-
-        // Assign the parsed map directly to the RuntimeCacheSO's map
-        session.runtimeCacheSO.SetTimingMap = SessionManager.instance.JsonService.ParseSetTimingMapJSON(session.runtimeCacheSO.CachedTimingJSON);
-
-        // Check if parsing was successful before proceeding
-        if (parsedCountPositions == null || session.runtimeCacheSO.SetTimingMap == null)
+        refreshHandler = () =>
         {
-            Debug.LogError("Failed to parse JSON data via JsonPersistenceService. Aborting OnSessionReady.");
-            // Potentially handle this error state (e.g., show UI message, prevent further execution)
-            yield break; // Stop the coroutine
-        }
-
-
-        Debug.Log("JSON Parsing complete. Proceeding with OnSessionReady.");
-        OnSessionReady(); // Now call OnSessionReady with parsed data available
+            progressTracker?.Refresh();
+            UpdateInspectorSetProgress();   
+        };
     }
-    void OnGridReadyHandler()
+
+    private void HandleSessionReady()
     {
-        Debug.Log("✅ Grid Ready — Populating Marchers");
-        //PopulateMarchers();
+        numberOfMarchers = sessionLoader.NumberOfMarchers;
+        numberOfSets     = sessionLoader.NumberOfSets;
+        lastSet          = sessionLoader.LastSet;
+
+        UIController.InitializeUI();
+        setBar.OnTotalSetsChanged(numberOfSets);
+        shapeMarchers.InitializeShapeManagers(
+            marcherFactory.marcherPrefab, interval);        
+
+        fieldCenter = fieldManager.GetFieldCenter();
     }
 
     void Update()
@@ -79,100 +73,23 @@ public class EnsembleDirector2 : MonoBehaviour
             DeleteCurrentSetPositions();
         }
     }
-    public void OnSessionReady()
+
+    private void OnMarchersReady()
     {
-        InitializeSession();
-        setBar.OnTotalSetsChanged(numberOfSets);
-        shapeMarchers.InitializeShapeManagers(marcherPrefab, interval);
         fieldCenter = fieldManager.GetFieldCenter();
-
-        PopulateMarchers();
+        metronome.Marchers = marcherManager.Marchers; // if you expose a setter
+        marchers = new List<MarcherPositionsManager>(marcherManager.Marchers);
+        progressTracker = new MarcherProgressTracker(
+            marcherManager.Marchers,
+            sessionLoader.RuntimeCache.SetTimingMap);
+        progressTracker.OnSetPercentChanged += setBar.UpdateSetProgressColor;
+        UpdateInspectorSetProgress();
+        UIController.InitializeCountsBar();
     }
-    private void InitializeSession(){
-        numberOfMarchers = session.showStateSO.NumberOfMarchers;
-        numberOfSets = session.showStateSO.NumberOfSets;
-        lastSet = int.Parse(session.showStateSO.LastSet);
-        UIController.InitializeUI();
-    }
-    public void PopulateMarchers()
-    {
-        SnapToGridLines.OnGridReady -= PopulateMarchers;
-        marchers.Clear();
 
-        marchers = new List<MarcherPositionsManager>(GetComponentsInChildren<MarcherPositionsManager>());
-        int currentMarcherCount = marchers.Count;
-
-        if (currentMarcherCount < numberOfMarchers)
-            AddMarchers(currentCount: currentMarcherCount);
-        else if (currentMarcherCount > numberOfMarchers)
-            RemoveExcessMarchers(currentCount: currentMarcherCount);
-
-        bool usedSavedPositions = false;
-        int lastSetNum = int.Parse(session.showStateSO.LastSet);
-        int previousSet = Mathf.Max(1, lastSetNum - 1);
-
-        // 🧠 Use SetTimingMap to determine fallback count value
-        int fallbackCount = session.runtimeCacheSO.SetTimingMap.TryGetValue(previousSet, out var timing)
-            ? timing.count
-            : 1;
-
-        foreach (var marcher in marchers)
-        {
-            marcher.InitializeSetCount(numberOfSets);
-
-            // ✅ Inject saved count-based positions
-            if (parsedCountPositions.TryGetValue(marcher.name, out var restored))
-            {
-                marcher.countPositions = restored;
-                marcher.SyncInspectorList();
-            }
-
-            // ✅ Position based on fallback (Set before current, last count)
-            if (marcher.HasPositionAtCount(previousSet, fallbackCount))
-            {
-                Vector3 startPos = marcher.GetPositionAtCount(previousSet, fallbackCount);
-                marcher.transform.position = startPos;
-                usedSavedPositions = true;
-            }
-            else
-            {
-                Debug.LogWarning($"{marcher.name} ⚠️ No saved position for Set {previousSet}, Count {fallbackCount}");
-            }
-        }
-
-        setBar.OnSetButtonClick(lastSet);
-
-        if (!usedSavedPositions)
-        {
-            ArrangeMarchersInSquare();
-        }
-        ConfirmInitialCenterPosition();
-    }
-    private void ConfirmInitialCenterPosition()
-    {
-        foreach (var marcher in marchers)
-        {
-            Vector3 pos = marcher.transform.position;
-            marcher.SetPositionAtCount(0, 0, pos, "march");
-            Debug.Log($"{marcher.name} 🔒 Confirmed Set 0, Count 0 at {pos}");
-        }
-    }
-    private void AddMarchers(int currentCount)
-    {
-        for (int i = currentCount; i < numberOfMarchers; i++)
-            CreateMarcher(i, new Color(Random.value, Random.value, Random.value), numberOfSets);
-    }
-    private void RemoveExcessMarchers(int currentCount)
-    {
-        for (int i = currentCount - 1; i >= numberOfMarchers; i--)
-        {
-            DestroyImmediate(marchers[i].gameObject);
-            marchers.RemoveAt(i);
-        }
-    }
     public void PreviewCountPosition(int setNumber, int clickedCount)
     {
-        var timingMap = session.runtimeCacheSO.SetTimingMap;
+        var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
 
         if (!timingMap.TryGetValue(setNumber, out var timing))
         {
@@ -202,43 +119,6 @@ public class EnsembleDirector2 : MonoBehaviour
 
         }
     }
-    private void CreateMarcher(int index, Color color, int sets)
-    {
-        Vector3 position = Vector3.zero;
-
-        GameObject marcherObject = Instantiate(marcherPrefab, position, Quaternion.identity, transform);
-        marcherObject.name = $"Marcher{index + 1}";
-
-        MarcherPositionsManager marcher = marcherObject.GetComponent<MarcherPositionsManager>();
-        MarcherController marcherController = marcherObject.GetComponent<MarcherController>();
-
-        marcher.InitializeSetCount(sets); // ✅ REPLACED: no need for InitializeSets
-        marcherController.InitializeMarcher(this, session.runtimeCacheSO);
-
-        marchers.Add(marcher);
-    }
-    private void ArrangeMarchersInSquare()
-    {
-        if (shapeMarchers == null)
-        {
-            Debug.LogWarning("ShapeMarchers is null; cannot arrange formation.");
-            return;
-        }
-
-        // Convert the list of marcher components into a list of GameObjects.
-        List<GameObject> marcherObjects = new List<GameObject>();
-        foreach (var marcher in marchers)
-        {
-            marcherObjects.Add(marcher.gameObject);
-        }
-
-        // Utilize ShapeMarchers to position marchers in a square.
-        shapeMarchers.ArrangeFormation(
-            ShapeMarchers.ShapeType.Box,  // Use a Box formation to create a square shape.
-            intervalManager.GetIntervalType(interval),  // Set spacing based on the interval manager.
-            marcherObjects  // List of all marcher GameObjects.
-        );
-    }
     public void RepositionMarchersToSet(int setIndex)
     {
         int targetSet = (setIndex == 1) ? 0 : setIndex - 1;
@@ -247,7 +127,7 @@ public class EnsembleDirector2 : MonoBehaviour
         if (setIndex > 1)
         {
             // Look up last count of the previous set
-            if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(targetSet, out var timing))
+            if (!sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(targetSet, out var timing))
             {
                 Debug.LogWarning($"⚠️ No timing data found for Set {targetSet}");
                 return;
@@ -272,7 +152,7 @@ public class EnsembleDirector2 : MonoBehaviour
     }
     public void DeleteCurrentSetPositions()
     {
-        int currentSet = int.Parse(session.showStateSO.LastSet);
+        int currentSet = lastSet;
         int fallbackSet = (currentSet == 1) ? 0 : currentSet - 1;
         int fallbackCount = 0;
 
@@ -280,7 +160,7 @@ public class EnsembleDirector2 : MonoBehaviour
 
         if (currentSet > 1)
         {
-            if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(fallbackSet, out var timing))
+            if (!sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(fallbackSet, out var timing))
             {
                 Debug.LogWarning($"⚠️ No SetTiming entry for Set {fallbackSet}");
                 return;
@@ -314,18 +194,115 @@ public class EnsembleDirector2 : MonoBehaviour
         Debug.Log("✅ All marcher positions for current set deleted and reverted.");
     }
 
+    public void UpdateInspectorSetProgress()
+    {
+        progressTracker.Refresh();
+        inspectorSetProgress = new List<SetProgressData>();
+        var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
+
+        for (int setIndex = 1; setIndex <= numberOfSets; setIndex++)
+        {
+            int countsPerSet = timingMap.TryGetValue(setIndex, out var timing) ? timing.count : 8;
+            int totalCounts = marchers.Count * countsPerSet;
+            int completedCounts = 0;
+
+            foreach (var marcher in marchers)
+            {
+                if (!marcher.countPositions.TryGetValue(setIndex, out var countData)) continue;
+
+                for (int c = 1; c <= countsPerSet; c++)
+                {
+                    if (countData.TryGetValue(c, out var entry) &&
+                        (entry.IsConfirmed || entry.IsInferred))
+                    {
+                        completedCounts++;
+                    }
+                }
+            }
+
+            inspectorSetProgress.Add(new SetProgressData
+            {
+                setIndex = setIndex,
+                completedCounts = completedCounts,
+                totalCounts = totalCounts
+            });
+        }
+
+        Debug.Log("📊 Inspector set progress updated.");
+    }
+    public void ColorMarchersForSet(int setIndex)
+    {
+        int totalCounts = sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(setIndex, out var timing)
+            ? timing.count : 8;
+
+        foreach (var marcher in marchers)
+        {
+            int confirmedOrInferred = 0;
+
+            if (marcher.countPositions.TryGetValue(setIndex, out var countMap))
+            {
+                for (int c = 1; c <= totalCounts; c++)
+                {
+                    if (countMap.TryGetValue(c, out var entry))
+                    {
+                        if (entry.IsConfirmed || entry.IsInferred)
+                            confirmedOrInferred++;
+                    }
+                }
+            }
+
+            Renderer renderer = marcher.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                if (confirmedOrInferred == totalCounts)
+                    renderer.material.color = fullProgressColor;
+                else if (confirmedOrInferred > 0)
+                    renderer.material.color = partialProgressColor;
+                else
+                    renderer.material.color = noProgressColor;
+            }
+        }
+
+        Debug.Log($"🎨 Colored marchers based on progress in Set {setIndex}");
+    }
+    public float GetSetProgress(int setIndex)
+    {
+        return progressTracker != null ? progressTracker.GetPercent(setIndex) : 0f;
+    }
     public string GenerateMarcherStateJSON()
     {
-        return session.JsonService.GenerateMarcherStateJSON(marchers);
+        return sessionLoader.JsonService.GenerateMarcherStateJSON(marchers);
     }
 
     public string GenerateSetTimingMapJSON()
     {
-        return session.JsonService.GenerateSetTimingMapJSON(session.runtimeCacheSO.SetTimingMap);
+        return sessionLoader.JsonService.GenerateSetTimingMapJSON(sessionLoader.RuntimeCache.SetTimingMap);
     }
+    [System.Serializable]
+    public class SetProgressData
+    {
+        public int setIndex;
+        public int completedCounts; // confirmed or inferred
+        public int totalCounts;     // marchers * counts in set
+        public float percent => totalCounts > 0 ? (float)completedCounts / totalCounts : 0f;
+    }
+    // ISetProgressTracker
+    public event System.Action<int, float> OnSetProgressChanged = delegate { };
+    void OnEnable()  =>
+        MarcherPositionsManager.OnAnyMarcherPositionUpdated += refreshHandler;
+
+    void OnDisable() =>
+        MarcherPositionsManager.OnAnyMarcherPositionUpdated -= refreshHandler;
 
     void OnDestroy()
     {
-        SnapToGridLines.OnGridReady -= OnGridReadyHandler;
+        sessionLoader.OnReady -= HandleSessionReady;
+        marcherManager.OnMarchersReady -= OnMarchersReady;
     }
+
+      /// <summary>Allow UI to reach into our loader.</summary>
+    public EnsembleSessionLoader SessionLoader => sessionLoader;
+
+    /// <summary>Shortcut to the underlying ShowState SO.</summary>
+    public ShowStateSO ShowState => sessionLoader.ShowState;
 }

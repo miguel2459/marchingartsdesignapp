@@ -10,26 +10,55 @@ public class CountsProgressBar : MonoBehaviour
     public RectTransform contentArea; // The container for all buttons
     public Color defaultColor = Color.white;
     public Color highlightColor = new Color(0.843f, 0.510f, 0.973f, 1.0f);// Soft pinkish purple
+    [Header("Count‑Progress Colors")]
+    [Tooltip("All marchers ↦ white")]
+    [SerializeField] private Color countFullProgressColor    = Color.white;
+    [Tooltip("Some marchers ↦ pastel yellow")]
+    [SerializeField] private Color countPartialProgressColor = new Color(1f, 0.96f, 0.75f);
+    [Tooltip("No marchers ↦ grey")]
+    [SerializeField] private Color countNoProgressColor      = new Color(0.6f, 0.6f, 0.6f);
 
-    private List<GameObject> countButtons = new List<GameObject>();
+    private List<CountButtonWrapper> countButtons = new List<CountButtonWrapper>();
+
     private int activeCountIndex = -1;
-    public EnsembleDirector2 director; // Or set a reference
+    public MonoBehaviour directorObject;          // assign the same object in Inspector
+    private IMarcherProvider director;           // cached cast
+    private int currentSetNumber;
 
     private void Awake()
     {
+        director = directorObject as IMarcherProvider;
         countButtons.Clear();
 
         foreach (Transform child in contentArea)
         {
             GameObject buttonObj = child.gameObject;
 
-            if (buttonObj.GetComponent<Button>() != null)
+            if (buttonObj.TryGetComponent(out Button btn))
             {
-                countButtons.Add(buttonObj);
-                //Debug.Log($"🔍 Found existing count button in content: {buttonObj.name}");
+                TextMeshProUGUI[] labels = buttonObj.GetComponentsInChildren<TextMeshProUGUI>();
+                TextMeshProUGUI main = null;
+                TextMeshProUGUI sub = null;
+
+                foreach (var label in labels)
+                {
+                    if (label.name.Contains("Count Text")) main = label;
+                    else if (label.name.Contains("SubText")) sub = label;
+                }
+
+                int countIndex = countButtons.Count + 1;
+
+                countButtons.Add(new CountButtonWrapper
+                {
+                    buttonObj = buttonObj,
+                    mainText = main,
+                    subText = sub,
+                    countIndex = countIndex
+                });
+
+                // Debug.Log($"✅ Rehydrated CountButton {countIndex} from existing child: {buttonObj.name}");
             }
         }
-
         //Debug.Log($"✅ Awake initialized {countButtons.Count} pre-existing count buttons.");
     }
 
@@ -39,7 +68,7 @@ public class CountsProgressBar : MonoBehaviour
     /// </summary>
     public void RenderCounts(int setNumber, int countTotal)
     {
-        //Debug.Log($"🔄 RenderCounts() called for Set {setNumber} with {countTotal} counts");
+        currentSetNumber = setNumber;
 
         ClearCounts();
 
@@ -73,11 +102,24 @@ public class CountsProgressBar : MonoBehaviour
         for (int i = 0; i < countTotal; i++)
         {
             GameObject buttonObj = Instantiate(countButtonPrefab, contentArea);
-            Text label = buttonObj.GetComponentInChildren<Text>();
+            TextMeshProUGUI[] labels = buttonObj.GetComponentsInChildren<TextMeshProUGUI>();
 
-            if (label != null)
+            TextMeshProUGUI main = null;
+            TextMeshProUGUI sub = null;
+
+            foreach (var label in labels)
             {
-                label.text = (i + 1).ToString();
+                if (label.name.Contains("Count Text")) main = label;
+                else if (label.name.Contains("Sub Text")) sub = label;
+            }
+
+            if (main != null)
+                main.text = (i + 1).ToString();
+
+            if (sub != null)
+            {
+                sub.text = ""; // Start blank
+                sub.gameObject.SetActive(true); // Turn on so we can update
             }
 
             RectTransform rt = buttonObj.GetComponent<RectTransform>();
@@ -96,15 +138,56 @@ public class CountsProgressBar : MonoBehaviour
 
             buttonObj.GetComponent<Button>().onClick.AddListener(() =>
             {
-                //Debug.Log($"🧠 Count Button Listener Triggered → Set {setNumber}, Count {countIndex + 1}");
                 OnCountButtonClicked(setNumber, countIndex + 1);
-                HighlightCount(countIndex); 
+                HighlightCount(countIndex);
             });
 
-            countButtons.Add(buttonObj);
+            countButtons.Add(new CountButtonWrapper
+            {
+                buttonObj = buttonObj,
+                mainText = main,
+                subText = sub,
+                countIndex = countIndex + 1 // store as 1-based
+            });
         }
-
+        UpdateCountProgressColors(setNumber);
         //Debug.Log($"✅ Rendered {countButtons.Count} count buttons for Set {setNumber}");
+    }
+
+    public void UpdateCountProgressColors(int setNumber)
+    {
+        if (director == null) return;
+        int totalMarchers = director.Marchers.Count;
+
+        foreach (var wrapper in countButtons)
+        {
+            if (wrapper.countIndex - 1 == activeCountIndex)
+                continue;
+
+            int countIndex = wrapper.countIndex;
+            int confirmed = 0;
+
+            // tally confirmed/inferred positions at this count
+            foreach (var marcher in director.Marchers)
+            {
+                if (marcher.countPositions.TryGetValue(setNumber, out var setData) &&
+                    setData.TryGetValue(countIndex, out var entry) &&
+                    (entry.IsConfirmed || entry.IsInferred))
+                {
+                    confirmed++;
+                }
+            }
+
+            var img = wrapper.buttonObj.GetComponent<Image>();
+            if (img == null) continue;
+
+            if (confirmed == 0)
+                img.color = countNoProgressColor;
+            else if (confirmed < totalMarchers)
+                img.color = countPartialProgressColor;
+            else
+                img.color = countFullProgressColor;
+        }
     }
     public int GetActiveCountIndex()
     {
@@ -126,9 +209,10 @@ public class CountsProgressBar : MonoBehaviour
     /// </summary>
     public void ClearCounts()
     {
-        foreach (var btn in countButtons)
+        foreach (var wrapper in countButtons)
         {
-            Destroy(btn);
+            if (wrapper.buttonObj != null)
+                Destroy(wrapper.buttonObj);
         }
         countButtons.Clear();
         activeCountIndex = -1;
@@ -139,23 +223,18 @@ public class CountsProgressBar : MonoBehaviour
     /// </summary>
     public void HighlightCount(int countIndex)
     {
-        if (countIndex < 0 || countIndex >= countButtons.Count) return;
-
-        // Clear previous highlight
-        if (activeCountIndex >= 0 && activeCountIndex < countButtons.Count)
-        {
-            var img = countButtons[activeCountIndex].GetComponent<Image>();
-            if (img != null) img.color = defaultColor;
-        }
-
-        // Apply new highlight
-        var currentImg = countButtons[countIndex].GetComponent<Image>();
-        if (currentImg != null)
-        {
-            currentImg.color = highlightColor;
-        }
-
-        activeCountIndex = countIndex;
+         if (countIndex < 0 || countIndex >= countButtons.Count) return;
+ 
+         // 1) Mark this as the new active index *before* recoloring
+         activeCountIndex = countIndex;
+ 
+         // 2) Recolor all buttons except the new active one
+         UpdateCountProgressColors(currentSetNumber);
+ 
+         // 3) Finally, paint the new button purple
+         var currentImg = countButtons[countIndex].buttonObj.GetComponent<Image>();
+         if (currentImg != null)
+             currentImg.color = highlightColor;
     }
 
     public void EnsureSetTimingDefaults(int totalSets)
@@ -186,18 +265,40 @@ public class CountsProgressBar : MonoBehaviour
         }
     }
 
-    public void ForceUnhighlight()
+    public void UpdateCountSubtextsForSet(int setIndex)
     {
-        if (activeCountIndex >= 0 && activeCountIndex < countButtons.Count)
+        if (director == null) return;
+        if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(setIndex, out var timing)) return;
+
+        foreach (var wrapper in countButtons)
         {
-            var img = countButtons[activeCountIndex].GetComponent<Image>();
-            if (img != null) img.color = defaultColor;
+            int countIndex = wrapper.countIndex;
+            int confirmed = 0;
+
+            foreach (var marcher in director.Marchers)
+            {
+                if (marcher.countPositions.TryGetValue(setIndex, out var setData))
+                {
+                    if (setData.TryGetValue(countIndex, out var entry) && entry.IsConfirmed)
+                        confirmed++;
+                }
+            }
+
+            if (wrapper.subText != null)
+            {
+                if (confirmed > 0)
+                {
+                    wrapper.subText.text = confirmed.ToString();
+                    wrapper.subText.gameObject.SetActive(true);
+                }
+                else
+                {
+                    wrapper.subText.text = "";
+                    wrapper.subText.gameObject.SetActive(false); // Optional: hide completely
+                }
+            }
         }
-
-        activeCountIndex = -1;
     }
-
-
     /// <summary>
     /// Optional reset for when the metronome ends.
     /// </summary>
@@ -205,9 +306,17 @@ public class CountsProgressBar : MonoBehaviour
     {
         if (activeCountIndex >= 0 && activeCountIndex < countButtons.Count)
         {
-            var img = countButtons[activeCountIndex].GetComponent<Image>();
+            var img = countButtons[activeCountIndex].buttonObj.GetComponent<Image>();
             if (img != null) img.color = defaultColor;
         }
         activeCountIndex = -1;
+    }
+
+    private class CountButtonWrapper
+    {
+        public GameObject buttonObj;
+        public TextMeshProUGUI mainText;
+        public TextMeshProUGUI subText;
+        public int countIndex;
     }
 }

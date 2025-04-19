@@ -15,6 +15,7 @@ public class SelectedMarchers : MonoBehaviour
     public LayerMask marcherLayer;
 
     [Header("References")]
+    public EnsembleDirector2 director;
     public CameraControl cameraControl;
     public Camera cam;
     public TransformGizmoManager transformGizmoManager;
@@ -175,6 +176,8 @@ public class SelectedMarchers : MonoBehaviour
                     posManager.ConfirmHoldAndFillBack(setToUse, countToUse, marcher.transform.position);
                 }
             }
+            countsProgressBar?.UpdateCountSubtextsForSet(setToUse);
+            director.UpdateInspectorSetProgress();
         }
     }
 
@@ -216,13 +219,18 @@ public class SelectedMarchers : MonoBehaviour
                 }
             }
 
+            List<MarcherPositionsManager> updated = new List<MarcherPositionsManager>();
+
             foreach (GameObject marcher in selectedMarchers)
             {
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
                     posManager.ConfirmMarchAndFillBack(setToUse, countToUse, marcher.transform.position);
+                    updated.Add(posManager);
                 }
             }
+            countsProgressBar?.UpdateCountSubtextsForSet(setToUse);
+            director.UpdateInspectorSetProgress();
         }
     }
 
@@ -248,14 +256,26 @@ public class SelectedMarchers : MonoBehaviour
     {
         if (selectedMarchers.Contains(marcher))
         {
+            // 1) Remove from our list
             selectedMarchers.Remove(marcher);
-            marcher.GetComponent<Renderer>().material.color = normalColor;
-            marcher.GetComponent<Unit>()?.SetSelector(false);
 
-            if (transformGizmoManager.HasActiveGizmo)
+            // 2) Tell the director to recolor *all* marchers based on progress
+            int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
+            director.ColorMarchersForSet(currentSet);
+
+            // 3) Now re‑apply the yellow “selected” tint to whatever remains
+            foreach (var sel in selectedMarchers)
             {
-                marcher.transform.SetParent(null);
+                var rend = sel.GetComponent<Renderer>();
+                if (rend != null)
+                    rend.material.color = highlightColor;
             }
+
+            // 4) Hide any gizmo parenting, etc.
+            marcher.GetComponent<Renderer>().material.color = highlightColor; // (optional step to prevent flicker)
+            marcher.GetComponent<Unit>()?.SetSelector(false);
+            if (transformGizmoManager.HasActiveGizmo)
+                marcher.transform.SetParent(null);
 
             Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected.");
         }
@@ -283,16 +303,19 @@ public class SelectedMarchers : MonoBehaviour
 
                 if (transformGizmoManager != null && transformGizmoManager.HasActiveGizmo)
                 {
-                    marcher.transform.SetParent(null);
+                    marcher.transform.SetParent(director.transform);
                 }
             }
         }
-
         selectedMarchers.Clear();
         transformGizmoManager?.HideTransformGizmo();
         transformGizmoManager.isMoving = false;
 
-        Debug.Log("SelectedMarchers: 🧹 Selection cleared.");
+        // Re‑apply progress‑state colors for *all* marchers
+        int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
+        director.ColorMarchersForSet(currentSet);
+
+        Debug.Log("SelectedMarchers: 🧹 Selection cleared and marchers recolored to progress state.");
     }
 
     public void UpdateCameraFocus()

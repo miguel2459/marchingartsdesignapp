@@ -35,7 +35,7 @@ public class SessionStateSerializer
             {
                 CachedMarcherJSON = cache.CachedMarcherJSON,
                 CachedTimingJSON = cache.CachedTimingJSON,
-                MarchersCoordinates = cache.MarchersCoordinates,
+                //MarchersCoordinates = cache.MarchersCoordinates,
                 SetTimingMap = cache.SetTimingMap
             }
         };
@@ -73,7 +73,7 @@ public class SessionStateSerializer
         // RUNTIME CACHE
         cache.CachedMarcherJSON = data.cache.CachedMarcherJSON;
         cache.CachedTimingJSON = data.cache.CachedTimingJSON;
-        cache.MarchersCoordinates = data.cache.MarchersCoordinates;
+        //cache.MarchersCoordinates = data.cache.MarchersCoordinates;
         cache.SetTimingMap = data.cache.SetTimingMap;
     }
 }

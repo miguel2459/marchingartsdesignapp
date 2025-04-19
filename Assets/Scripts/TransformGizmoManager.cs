@@ -156,10 +156,14 @@ public class TransformGizmoManager : MonoBehaviour
     {
         if (activeGizmo != null)
         {
+            Transform ensembleParent = selectedMarchers.director.transform; // 👈 Get reference to EnsembleDirector2
+
             foreach (var marcher in selectedMarchers.selectedMarchers)
             {
-                marcher.transform.SetParent(null);
+                if (marcher != null)
+                    marcher.transform.SetParent(ensembleParent); // ✅ Reparent to EnsembleDirector2
             }
+
             Destroy(activeGizmo);
             activeGizmo = null;
         }

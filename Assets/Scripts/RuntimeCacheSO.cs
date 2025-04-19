@@ -7,9 +7,10 @@ public class RuntimeCacheSO : ScriptableObject
     public string CachedMarcherJSON;
     public string CachedTimingJSON;
 
-    public Dictionary<string, Vector3> MarchersCoordinates = new Dictionary<string, Vector3>();
+    //public Dictionary<string, Vector3> MarchersCoordinates = new Dictionary<string, Vector3>();
     public Dictionary<int, SetTimingData> SetTimingMap = new Dictionary<int, SetTimingData>();
-
+    [System.NonSerialized] // don’t write this big dictionary into the .asset on disk
+    public Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> ParsedCountPositions;
     [System.Serializable]
     public class SetTimingData
     {
@@ -31,7 +32,7 @@ public class RuntimeCacheSO : ScriptableObject
     {
         CachedMarcherJSON = "";
         CachedTimingJSON = "";
-        MarchersCoordinates.Clear();
+        //MarchersCoordinates.Clear();
         SetTimingMap.Clear();
     }
 }
