@@ -165,6 +165,18 @@ public class MarcherPositionsManager : MonoBehaviour
     }
     public void ConfirmMarchAndFillBack(int targetSet, int targetCount, Vector3 finalPos)
     {
+        if (targetSet == 0 && targetCount == 0)
+        {
+            if (!countPositions.ContainsKey(0))
+                countPositions[0] = new Dictionary<int, PositionEntry>();
+
+            countPositions[0][0] = new PositionEntry(finalPos, "march");
+            SyncInspectorList();
+            OnAnyMarcherPositionUpdated?.Invoke();
+            Debug.Log($"{name} ✅ Directly confirmed Set 0, Count 0 (march) at {finalPos}");
+            return;
+        }
+
         if (!countPositions.ContainsKey(targetSet))
             countPositions[targetSet] = new Dictionary<int, PositionEntry>();
 
@@ -221,6 +233,17 @@ public class MarcherPositionsManager : MonoBehaviour
     }
     public void ConfirmHoldAndFillBack(int setIndex, int targetCount, Vector3 pos)
     {
+        if (setIndex == 0 && targetCount == 0)
+        {
+            if (!countPositions.ContainsKey(0))
+                countPositions[0] = new Dictionary<int, PositionEntry>();
+
+            countPositions[0][0] = new PositionEntry(pos, "hold");
+            SyncInspectorList();
+            OnAnyMarcherPositionUpdated?.Invoke();
+            Debug.Log($"{name} ✅ Directly confirmed Set 0, Count 0 (hold) at {pos}");
+            return;
+        }
         if (!countPositions.ContainsKey(setIndex))
             countPositions[setIndex] = new Dictionary<int, PositionEntry>();
 

@@ -25,8 +25,6 @@ public class SelectedMarchers : MonoBehaviour
     public ShapeMarchers shapeMarchers;  // assign in Inspector
     public CountsProgressBar countsProgressBar;
 
-
-
     private void Update()
     {
         CheckForSpaceBarSetPosition(); // march
@@ -240,8 +238,11 @@ public class SelectedMarchers : MonoBehaviour
         if (!selectedMarchers.Contains(marcher))
         {
             selectedMarchers.Add(marcher);
-            marcher.GetComponent<Renderer>().material.color = highlightColor;
-            marcher.GetComponent<Unit>()?.SetSelector(true);
+            var rend = marcher.GetComponent<Renderer>();
+                if (rend != null)
+                    rend.material.color = highlightColor;
+            var unit = marcher.GetComponent<Unit>();
+                if (unit != null) unit.SetSelector(false);
 
             if (transformGizmoManager.HasActiveGizmo)
             {
@@ -265,18 +266,10 @@ public class SelectedMarchers : MonoBehaviour
 
             // 3) Now re‑apply the yellow “selected” tint to whatever remains
             foreach (var sel in selectedMarchers)
-            {
-                var rend = sel.GetComponent<Renderer>();
-                if (rend != null)
-                    rend.material.color = highlightColor;
+            {                
+                var unit = sel.GetComponent<Unit>();
+                if (unit != null) unit.SetSelector(false);
             }
-
-            // 4) Hide any gizmo parenting, etc.
-            marcher.GetComponent<Renderer>().material.color = highlightColor; // (optional step to prevent flicker)
-            marcher.GetComponent<Unit>()?.SetSelector(false);
-            if (transformGizmoManager.HasActiveGizmo)
-                marcher.transform.SetParent(null);
-
             Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected.");
         }
     }

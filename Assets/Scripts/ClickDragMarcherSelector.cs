@@ -13,6 +13,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
     private Vector2 startMousePos;
     private Vector2 endMousePos;
     public Camera cam;
+        public static bool DragSelectionJustOccurred = false;
     void Start(){
         UpdateSelectionBox();
     }
@@ -132,16 +133,14 @@ public class ClickDragMarcherSelector : MonoBehaviour
         // Loop through all marchers in the director's list
         foreach (MarcherPositionsManager marcher in director.marchers)
         {
-            // Check if the marcher is within the selection rectangle
-            if (selectionRect.Contains(cam.WorldToScreenPoint(marcher.gameObject.transform.position)))
-            {
-                // If the marcher is already selected and we're doing additive selection, skip it
-                if (isAdditive && selectMarcher.selectedMarchers.Contains(marcher.gameObject))
-                {
-                    continue;
-                }
+            Vector3 screenPos = cam.WorldToScreenPoint(marcher.gameObject.transform.position);
+            Debug.Log($"{marcher.name} screenPos = {screenPos}, Z = {screenPos.z}");
 
-                // Add marcher to the selection
+            if (screenPos.z > 0 && selectionRect.Contains(new Vector2(screenPos.x, screenPos.y)))
+            {
+                if (isAdditive && selectMarcher.selectedMarchers.Contains(marcher.gameObject))
+                    continue;
+
                 selectMarcher.SelectMarcher(marcher.gameObject);
             }
         }
