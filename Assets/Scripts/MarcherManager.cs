@@ -113,6 +113,13 @@ public class MarcherManager : MonoBehaviour
     {
         foreach (var m in Marchers)
         {
+            // 🧠 Check if Set 0:0 already exists
+            if (m.HasPositionAtCount(0, 0))
+            {
+                Debug.Log($"{m.name} ⏭️ Already has confirmed Set 0:0 — skipping.");
+                continue;
+            }
+
             Vector3 pos = m.transform.position;
             m.SetPositionAtCount(0, 0, pos, "march");
             Debug.Log($"{m.name} 🔒 Confirmed Set 0, Count 0 at {pos}");
