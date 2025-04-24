@@ -6,16 +6,26 @@ using UnityEngine;
 /// </summary>
 public class MarcherPositionsManager : MonoBehaviour
 {
+    [HideInInspector] public MarcherPathVisualizer pathVisualizer;
+
     public Dictionary<int, Dictionary<int, PositionEntry>> countPositions = new Dictionary<int, Dictionary<int, PositionEntry>>();
 
     public List<CountPositionEntry> inspectorCountPositions = new List<CountPositionEntry>();
-
-    private DotMarkerVisualizer visualizer;
     public static event System.Action OnAnyMarcherPositionUpdated;
+    private MarcherInterpolator interpolator;
 
     private void Awake()
     {
-        visualizer = GetComponent<DotMarkerVisualizer>();
+        pathVisualizer = GetComponent<MarcherPathVisualizer>();
+        interpolator = new MarcherInterpolator(
+            this,
+            GetMaxCountForSet,
+            () => transform.position
+        );
+    }
+    public static void RaisePositionUpdatedEvent()
+    {
+        OnAnyMarcherPositionUpdated?.Invoke();
     }
 
     public Dictionary<int, Dictionary<int, PositionEntry>> GetAllCountPositions()
@@ -23,16 +33,14 @@ public class MarcherPositionsManager : MonoBehaviour
         return countPositions;
     }
 
-    public void SetPositionAtCount(int setIndex, int countIndex, Vector3 position, string type = "march")
+    public void ShowPath(Vector3[] path)
     {
-        if (!countPositions.ContainsKey(setIndex))
-            countPositions[setIndex] = new Dictionary<int, PositionEntry>();
+        pathVisualizer?.ShowPath(path);
+    }
 
-        countPositions[setIndex][countIndex] = new PositionEntry(position, type);
-        visualizer?.ShowMarker(setIndex, position);
-        SyncInspectorList();
-
-        Debug.Log($"{name} ✅ SetPosition recorded: Set {setIndex}, Count {countIndex}, Type={type}, Pos={position}");
+    public void HidePath()
+    {
+        pathVisualizer?.HidePath();
     }
 
     public Vector3 GetPositionAtCount(int setIndex, int countIndex)
@@ -95,7 +103,6 @@ public class MarcherPositionsManager : MonoBehaviour
     {
         countPositions.Clear();
         inspectorCountPositions.Clear();
-        visualizer?.ClearAllMarkers();
     }
 
     public void InitializeSetCount(int totalSets)
@@ -117,149 +124,115 @@ public class MarcherPositionsManager : MonoBehaviour
             && countPositions[setIndex][countIndex].IsUnset;
     }
 
-    private bool TryFindLastConfirmedPosition(int currentSetIndex, int beforeCountIndex, out int foundSetIndex, out int foundCountIndex, out Vector3 pos)
-    {
-        foundSetIndex = -1;
-        foundCountIndex = -1;
-        pos = Vector3.zero;
+    // public void DeleteConfirmedPosition(int setIndex, int countIndex)
+    // {
+    //     int lastCount = SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(setIndex, out var timing)
+    //         ? timing.count : -1;
+    //     if (countIndex == lastCount)
+    //     {
+    //         Debug.LogWarning($"{name} ❌ Cannot delete confirmed position at last count of Set {setIndex}");
+    //         return;
+    //     }
 
-        // 1. Look in the current set first
-        if (countPositions.TryGetValue(currentSetIndex, out var currentSet))
-        {
-            for (int i = beforeCountIndex - 1; i >= 1; i--)
-            {
-                if (currentSet.TryGetValue(i, out var entry) && entry.IsConfirmed)
-                {
-                    foundSetIndex = currentSetIndex;
-                    foundCountIndex = i;
-                    pos = entry.pos;
-                    Debug.Log($"{name} 🔎 Found confirmed in current set {currentSetIndex}, Count {i} → {pos}");
-                    return true;
-                }
-            }
-        }
+    //     if (!HasPositionAtCount(setIndex, countIndex) || !countPositions[setIndex][countIndex].IsConfirmed)
+    //     {
+    //         Debug.LogWarning($"{name} ❌ No confirmed position at Set {setIndex}, Count {countIndex} to delete.");
+    //         return;
+    //     }
 
-        // 2. Walk backward through previous sets
-        for (int s = currentSetIndex - 1; s >= 0; s--)
-        {
-            if (!countPositions.TryGetValue(s, out var previousSet)) continue;
+    //     countPositions[setIndex].Remove(countIndex);
+    //     Debug.Log($"{name} 🗑 Deleted confirmed position at Set {setIndex}, Count {countIndex}");
 
-            int maxCount = GetMaxCountForSet(s);
-            int minCount = (s == 0) ? 0 : 1;  // ✅ Only allow Count 0 in Set 0
+    //     bool hasPrev = interpolator.TryFindLastConfirmedPosition(setIndex, countIndex, out int prevSet, out int prevCount, out Vector3 prevPos);
+    //     bool hasNext = interpolator.TryFindNextConfirmedPosition(setIndex, countIndex, out int nextSet, out int nextCount, out Vector3 nextPos);
 
-            for (int i = maxCount; i >= minCount; i--)
-            {
-                if (previousSet.TryGetValue(i, out var entry) && entry.IsConfirmed)
-                {
-                    foundSetIndex = s;
-                    foundCountIndex = i;
-                    pos = entry.pos;
-                    Debug.Log($"{name} 🔁 Fallback to Set {s}, Count {i} → {pos}");
-                    return true;
-                }
-            }
-        }
+    //     if (!hasPrev)
+    //     {
+    //         Debug.LogWarning($"{name} ⚠️ No previous confirmed position found. Path cannot be recalculated.");
+    //     }
 
-        Debug.LogWarning($"{name} 🛑 No confirmed point found before Set {currentSetIndex}, Count {beforeCountIndex}");
-        return false;
-    }
-    public void ConfirmMarchAndFillBack(int targetSet, int targetCount, Vector3 finalPos)
-    {
-        if (targetSet == 0 && targetCount == 0)
-        {
-            if (!countPositions.ContainsKey(0))
-                countPositions[0] = new Dictionary<int, PositionEntry>();
+    //     if (hasPrev && !hasNext)
+    //     {
+    //         pathVisualizer?.HidePath();
+    //     }
 
-            countPositions[0][0] = new PositionEntry(finalPos, "march");
-            SyncInspectorList();
-            OnAnyMarcherPositionUpdated?.Invoke();
-            Debug.Log($"{name} ✅ Directly confirmed Set 0, Count 0 (march) at {finalPos}");
-            return;
-        }
+    //     if (hasPrev && hasNext)
+    //     {
+    //         Debug.Log($"{name} 🔁 Recalculating path from Set {prevSet}, Count {prevCount} ➡ Set {nextSet}, Count {nextCount}");
 
-        if (!countPositions.ContainsKey(targetSet))
-            countPositions[targetSet] = new Dictionary<int, PositionEntry>();
+    //         List<(int s, int c)> steps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, nextSet, nextCount - 1);
+    //         interpolator.ApplyInterpolatedPositions(prevPos, nextPos, steps);
 
-        if (!TryFindLastConfirmedPosition(targetSet, targetCount, out int startSet, out int startCount, out Vector3 startPos))
-        {
-            Debug.LogWarning($"{name} 🧩 No confirmed point before Set {targetSet}, Count {targetCount}");
-            return;
-        }
+    //         if (countPositions.TryGetValue(setIndex, out var currentSet) &&
+    //             currentSet.TryGetValue(countIndex, out var interpolated))
+    //         {
+    //             transform.position = interpolated.pos;
+    //             Debug.Log($"{name} ⬅️ Snapped to recalculated inferred position at Set {setIndex}, Count {countIndex}: {interpolated.pos}");
+    //         }
 
-        Debug.Log($"{name} 🧠 Interpolating from Set {startSet}, Count {startCount} to Set {targetSet}, Count {targetCount}");
+    //         if (TryGetComponent<Unit>(out var unit))
+    //         {
+    //             unit.SetSelector(false);
+    //         }
 
-        List<(int set, int count)> steps = new List<(int set, int count)>();
+    //         Debug.Log($"{name} ✅ Refilled {steps.Count} inferred counts between confirmed anchors.");
+    //     }
 
-        for (int s = startSet; s <= targetSet; s++)
-        {
-            int startC = (s == startSet) ? startCount + 1 : 1;
+    //     SyncInspectorList();
+    //     OnAnyMarcherPositionUpdated?.Invoke();
+    // }
 
-            if (s == 0) //Never interpolate in Set 0
-            continue;
 
-            int endC = (s == targetSet) 
-            ? targetCount - 1 
-            : (s == startSet ? GetMaxCountForSet(s) : Mathf.Min(GetMaxCountForSet(s), targetCount - 1));
+    // public void ConfirmMarchAndFillBack(int targetSet, int targetCount, Vector3 finalPos)
+    // {
+    //     // === EDGE CASE: Set 0, Count 0 ===
+    //     if (targetSet == 0 && targetCount == 0)
+    //     {
+    //         if (!countPositions.ContainsKey(0))
+    //             countPositions[0] = new Dictionary<int, PositionEntry>();
 
-            if (endC < startC) continue;
+    //         countPositions[0][0] = new PositionEntry(finalPos, "march");
+    //         SyncInspectorList();
+    //         OnAnyMarcherPositionUpdated?.Invoke();
+    //         Debug.Log($"{name} ✅ Directly confirmed Set 0, Count 0 (march) at {finalPos}");
+    //         return;
+    //     }
 
-            for (int c = startC; c <= endC; c++)
-            {
-                if (c > GetMaxCountForSet(s)) break;
-                steps.Add((s, c));
-            }
-        }
+    //     // === Ensure Set Exists ===
+    //     if (!countPositions.ContainsKey(targetSet))
+    //         countPositions[targetSet] = new Dictionary<int, PositionEntry>();
 
-        int totalSteps = steps.Count + 1;
-        for (int i = 0; i < steps.Count; i++)
-        {
-            float t = (i + 1f) / totalSteps;
-            Vector3 pos = Vector3.Lerp(startPos, finalPos, t);
-            int s = steps[i].set;
-            int c = steps[i].count;
+    //     // === Confirm Current Position ===
+    //     countPositions[targetSet][targetCount] = new PositionEntry(finalPos, "march");
+    //     Debug.Log($"{name} ✅ Confirmed: Set {targetSet}, Count {targetCount} → {finalPos}");
 
-            if (!countPositions.ContainsKey(s))
-                countPositions[s] = new Dictionary<int, PositionEntry>();
+    //     // === BACKWARD INTERPOLATION ===
+    //     if (interpolator.TryFindLastConfirmedPosition(targetSet, targetCount, out int prevSet, out int prevCount, out Vector3 prevPos))
+    //     {
+    //         Debug.Log($"{name} 🔙 Interpolating from Set {prevSet}, Count {prevCount} → Set {targetSet}, Count {targetCount}");
+    //         var backSteps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, targetSet, targetCount - 1);
+    //         interpolator.ApplyInterpolatedPositions(prevPos, finalPos, backSteps);
+    //     }
+    //     else
+    //     {
+    //         Debug.LogWarning($"{name} ⚠️ No previous confirmed position found before Set {targetSet}, Count {targetCount}");
+    //     }
 
-            countPositions[s][c] = new PositionEntry(pos, "inferred");
-            Debug.Log($"{name} 🟡 Inferred: Set {s}, Count {c} → {pos}");
-        }
+    //     // === FORWARD INTERPOLATION ===
+    //     if (interpolator.TryFindNextConfirmedPosition(targetSet, targetCount, out int nextSet, out int nextCount, out Vector3 nextPos))
+    //     {
+    //         Debug.Log($"{name} 🔜 Interpolating forward to Set {nextSet}, Count {nextCount}");
+    //         var fwdSteps = interpolator.GetInterpolationSteps(targetSet, targetCount + 1, nextSet, nextCount - 1);
+    //         interpolator.ApplyInterpolatedPositions(finalPos, nextPos, fwdSteps);
+    //     }
 
-        countPositions[targetSet][targetCount] = new PositionEntry(finalPos, "march");
-        Debug.Log($"{name} ✅ Confirmed: Set {targetSet}, Count {targetCount} → {finalPos}");
+    //     // === Visual Feedback ===
+    //     if (TryGetComponent<Unit>(out var unit))
+    //         unit.SetSelector(true);
 
-        SyncInspectorList();
-        OnAnyMarcherPositionUpdated?.Invoke();
-    }
-    public void ConfirmHoldAndFillBack(int setIndex, int targetCount, Vector3 pos)
-    {
-        if (setIndex == 0 && targetCount == 0)
-        {
-            if (!countPositions.ContainsKey(0))
-                countPositions[0] = new Dictionary<int, PositionEntry>();
-
-            countPositions[0][0] = new PositionEntry(pos, "hold");
-            SyncInspectorList();
-            OnAnyMarcherPositionUpdated?.Invoke();
-            Debug.Log($"{name} ✅ Directly confirmed Set 0, Count 0 (hold) at {pos}");
-            return;
-        }
-        if (!countPositions.ContainsKey(setIndex))
-            countPositions[setIndex] = new Dictionary<int, PositionEntry>();
-
-        for (int i = 1; i < targetCount; i++)
-        {
-            if (!countPositions[setIndex].ContainsKey(i) || countPositions[setIndex][i].IsUnset)
-            {
-                countPositions[setIndex][i] = new PositionEntry(pos, "inferred"); // 🟡 inferred
-            }
-        }
-
-        countPositions[setIndex][targetCount] = new PositionEntry(pos, "hold"); // ✅ user confirmed
-        SyncInspectorList();
-        OnAnyMarcherPositionUpdated?.Invoke();
-    }
-
+    //     SyncInspectorList();
+    //     OnAnyMarcherPositionUpdated?.Invoke();
+    // }
     public void SyncInspectorList()
     {
         inspectorCountPositions = new List<CountPositionEntry>();

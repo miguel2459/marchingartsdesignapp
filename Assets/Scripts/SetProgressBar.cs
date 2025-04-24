@@ -7,6 +7,7 @@ public class SetProgressBar : MonoBehaviour
 {
     [Header("Director")]
     [SerializeField] private EnsembleDirector2 director;  // drag in your EnsembleDirector2
+    [SerializeField] private TransformGizmoManager transformGizmoManager;
     private ISetProgressTracker progressSource => director as ISetProgressTracker;        // cached cast
     public GameObject sectionPrefab;
     public ScrollRect scrollRect;
@@ -168,8 +169,18 @@ public class SetProgressBar : MonoBehaviour
         countsProgressBar?.ResetHighlight();
 
         Debug.Log($"🔁 Repositioning marchers to Set {setNumber}");
+        if (transformGizmoManager.HasActiveGizmo)
+            transformGizmoManager.HideTransformGizmo();
         director.RepositionMarchersToSet(setNumber);
         director.ColorMarchersForSet(setNumber);
+        director.VisualizePathsForSet(setNumber);
+        foreach (var marcher in director.Marchers)
+        {
+            if (marcher.TryGetComponent(out Unit unit))
+            {
+                unit.SetSelector(false); // 📴 turn off selector
+            }
+        }
 
         HighlightSet(setNumber);
 

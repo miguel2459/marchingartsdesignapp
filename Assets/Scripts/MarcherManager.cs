@@ -52,9 +52,20 @@ public class MarcherManager : MonoBehaviour
 
     private void PositionMarchers()
     {
-        int prevSet = Mathf.Max(1, sessionLoader.LastSet - 1);
-        var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
-        int fallbackCount = timingMap.TryGetValue(prevSet, out var t) ? t.count : 1;
+        int prevSet;
+        int fallbackCount;
+
+        if (sessionLoader.LastSet == 1)
+        {
+            prevSet = 0;
+            fallbackCount = 0;
+        }
+        else
+        {
+            prevSet = sessionLoader.LastSet - 1;
+            var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
+            fallbackCount = timingMap.TryGetValue(prevSet, out var t) ? t.count : 1;
+        }
         bool usedSaved = false;
 
         foreach (var m in Marchers)
@@ -87,9 +98,6 @@ public class MarcherManager : MonoBehaviour
         // if nothing saved, arrange in a square
         if (!usedSaved)
             ArrangeInSquare();
-
-        // confirm the center as Set0‐Count0
-        ConfirmInitialCenter();
     }
 
     private void ArrangeInSquare()
@@ -107,22 +115,5 @@ public class MarcherManager : MonoBehaviour
           ShapeMarchers.ShapeType.Box,
           intervalManager.GetIntervalType(sessionLoader.RuntimeCache.SetTimingMap[1].count),
           objs);
-    }
-
-    private void ConfirmInitialCenter()
-    {
-        foreach (var m in Marchers)
-        {
-            // 🧠 Check if Set 0:0 already exists
-            if (m.HasPositionAtCount(0, 0))
-            {
-                Debug.Log($"{m.name} ⏭️ Already has confirmed Set 0:0 — skipping.");
-                continue;
-            }
-
-            Vector3 pos = m.transform.position;
-            m.SetPositionAtCount(0, 0, pos, "march");
-            Debug.Log($"{m.name} 🔒 Confirmed Set 0, Count 0 at {pos}");
-        }
     }
 }

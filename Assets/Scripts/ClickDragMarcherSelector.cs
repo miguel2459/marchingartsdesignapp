@@ -9,19 +9,31 @@ public class ClickDragMarcherSelector : MonoBehaviour
     public EnsembleDirector2 director;
     public SelectedMarchers selectMarcher;
     public TransformGizmoManager transformGizmoManager;
-
     private Vector2 startMousePos;
     private Vector2 endMousePos;
     public Camera cam;
-        public static bool DragSelectionJustOccurred = false;
+    private bool isDragging = false;
+    private float dragThreshold = 10f; // pixels
+
     void Start(){
         UpdateSelectionBox();
     }
     void Update(){
+        if (Input.GetMouseButton(0))
+        {
+            isDragging = (Vector2.Distance(Input.mousePosition, startMousePos) > dragThreshold);
+        }
+        else
+        {
+            isDragging = false;
+        }
+
         HandleMouseInput();
     }
     void HandleMouseInput()
     {
+         if (InputRouter.BlockSceneInputThisFrame) return;
+         
         // Early exit if components aren't initialized
         if (selectMarcher == null || transformGizmoManager == null) return;
 
@@ -46,11 +58,14 @@ public class ClickDragMarcherSelector : MonoBehaviour
                 }
             }
 
-            // Only clear if not Shift/Ctrl AND we didn't click a selected marcher
-            if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl) && !transformGizmoManager.HasActiveGizmo && !clickedSelectedMarcher)
+            if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl) &&
+                !transformGizmoManager.HasActiveGizmo && !clickedSelectedMarcher)
             {
-                selectMarcher.ClearSelection();
+                // Only clear if the user will actually perform a drag selection
+                // This prevents premature clearing before a click is resolved
+                Invoke(nameof(DeferredClearSelection), 0.02f); // allow mouse-up to cancel this if it's just a click
             }
+
 
             // Initialize selection box size to zero
             if (selectionImage != null)
@@ -93,7 +108,7 @@ public class ClickDragMarcherSelector : MonoBehaviour
         if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt) && !transformGizmoManager.HasActiveGizmo)
         {
             // Only process selection if we have a valid drag area
-            if (startMousePos != Vector2.zero && endMousePos != Vector2.zero)
+            if (isDragging && startMousePos != Vector2.zero && endMousePos != Vector2.zero)
             {
                 if (Input.GetKey(KeyCode.LeftControl))
                 {
@@ -110,6 +125,14 @@ public class ClickDragMarcherSelector : MonoBehaviour
             }
             
             ResetSelectionBox();
+        }
+    }
+
+    private void DeferredClearSelection()
+    {
+        if (isDragging)
+        {
+            selectMarcher.ClearSelection();
         }
     }
         

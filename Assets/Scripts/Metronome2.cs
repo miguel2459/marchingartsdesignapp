@@ -14,7 +14,7 @@ public class Metronome2 : MonoBehaviour
 
     [Header("Director for Previews")]
     public MonoBehaviour directorObject;          // assign your EnsembleDirector2 (for PreviewCountPosition)
-    private IMarcherProvider director;           // cached cast
+    private EnsembleDirector2 director;           // cached cast
     private ISetProgressTracker setProgressTracker;
 
     [Header("Playback Settings")]
@@ -39,8 +39,8 @@ public class Metronome2 : MonoBehaviour
     void Awake()
     {
         // preserve preview functionality
-        director = directorObject as IMarcherProvider;
-        setProgressTracker = directorObject as ISetProgressTracker;
+        director = directorObject as EnsembleDirector2;
+        setProgressTracker = director as ISetProgressTracker;
     }
 
     void Start()
@@ -144,6 +144,8 @@ public class Metronome2 : MonoBehaviour
                 setProgressBar?.HighlightSet(cycleCount);
                 setProgressBar?.UpdateTimingInputsForSet(cycleCount);
                 countsProgressBar?.ResetHighlight();
+
+                director.VisualizePathsForSet(cycleCount);
 
                 if (runtimeCache
                         .SetTimingMap.TryGetValue(cycleCount, out var nextSet))

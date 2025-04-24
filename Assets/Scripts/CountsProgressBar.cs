@@ -24,6 +24,7 @@ public class CountsProgressBar : MonoBehaviour
     public MonoBehaviour directorObject;          // assign the same object in Inspector
     private IMarcherProvider director;           // cached cast
     private int currentSetNumber;
+    [SerializeField] private TransformGizmoManager transformGizmoManager;
 
     private void Awake()
     {
@@ -200,6 +201,21 @@ public class CountsProgressBar : MonoBehaviour
         {
             //Debug.Log($"🎯 Count Button Clicked — Set: {setNumber}, Count: {clickedCount}");
             director.PreviewCountPosition(setNumber, clickedCount);
+            if (transformGizmoManager.HasActiveGizmo)
+                transformGizmoManager.HideTransformGizmo();
+
+            foreach (var marcher in director.Marchers)
+            {
+                if (marcher.TryGetComponent(out Unit unit))
+                {
+                    bool hasConfirmedPosition =
+                    marcher.HasPositionAtCount(setNumber, clickedCount) &&
+                    (marcher.GetTagForCount(setNumber, clickedCount) == "march" ||
+                    marcher.GetTagForCount(setNumber, clickedCount) == "hold");
+
+                    unit.SetSelector(hasConfirmedPosition);
+                }
+            }
         }
     }
 
