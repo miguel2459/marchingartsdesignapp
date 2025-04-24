@@ -8,5 +8,5 @@ public interface IMarcherProvider
 
     void PreviewCountPosition(int setNumber, int countNumber);
     void RepositionMarchersToSet(int setNumber);
-    void ColorMarchersForSet(int setNumber);
+    void ColorMarchersForSet(int setIndex, IEnumerable<MarcherPositionsManager> subset = null);
 }

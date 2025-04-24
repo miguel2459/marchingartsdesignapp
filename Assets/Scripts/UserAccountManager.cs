@@ -57,7 +57,7 @@ public class UserAccountManager : MonoBehaviour
 
     private void OnSaveShowClicked()
     {
-        string date = DateTime.Now.ToString("dd/MM");
+        string date = DateTime.Now.ToString("MM/dd");
         string time = DateTime.Now.ToString("HH:mm");
 
         if (lastSaveDate != null) lastSaveDate.text = date;
@@ -75,7 +75,7 @@ public class UserAccountManager : MonoBehaviour
 
         if (DateTime.TryParse(modified, out DateTime parsedDate))
         {
-            if (lastSaveDate != null) lastSaveDate.text = parsedDate.ToString("dd/MM");
+            if (lastSaveDate != null) lastSaveDate.text = parsedDate.ToString("MM/dd");
             if (lastSaveTime != null) lastSaveTime.text = parsedDate.ToString("HH:mm");
         }
         else if (!string.IsNullOrEmpty(modified))
