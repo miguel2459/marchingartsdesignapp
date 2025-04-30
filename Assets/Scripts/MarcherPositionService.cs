@@ -11,28 +11,22 @@ public class MarcherPositionService : MonoBehaviour
 
     [SerializeField] private EnsembleSessionLoader sessionLoader;
     [SerializeField] private MarcherPositionHistory positionHistory;
+    [SerializeField] private EnsembleDirector2 director;
 
     /// <summary>
     /// Confirm a "march" tag and interpolate around it.
     /// </summary>
     public void ConfirmMarcherPosition(MarcherPositionsManager marcher, int set, int count, Vector3 finalPos)
     {
-        if (set == 0 && count == 0)
-        {
-            EnsureSetExists(marcher, 0);
-            PositionEntry before = marcher.HasPositionAtCount(set, count)
-                ? marcher.countPositions[set][count]
-                : new PositionEntry();
-
-            positionHistory.RecordChange(marcher, set, count, before, new PositionEntry(finalPos, "march"));
-
-            marcher.countPositions[0][0] = new PositionEntry(finalPos, "march");
-            SyncAndNotify(marcher);
-            return;
-        }
-
         EnsureSetExists(marcher, set);
+
+        PositionEntry before = marcher.HasPositionAtCount(set, count)
+            ? marcher.countPositions[set][count]
+            : new PositionEntry();
+
         marcher.countPositions[set][count] = new PositionEntry(finalPos, "march");
+
+        positionHistory.RecordChange(marcher, set, count, before, marcher.countPositions[set][count]);
 
         MarcherInterpolator interpolator = new MarcherInterpolator(
             marcher,
@@ -40,12 +34,14 @@ public class MarcherPositionService : MonoBehaviour
             () => marcher.transform.position
         );
 
+        // === BACKWARD INTERPOLATION ===
         if (interpolator.TryFindLastConfirmedPosition(set, count, out int prevSet, out int prevCount, out Vector3 prevPos))
         {
             var backSteps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, set, count - 1);
             interpolator.ApplyInterpolatedPositions(prevPos, finalPos, backSteps);
         }
 
+        // === FORWARD INTERPOLATION ===
         if (interpolator.TryFindNextConfirmedPosition(set, count, out int nextSet, out int nextCount, out Vector3 nextPos))
         {
             var forwardSteps = interpolator.GetInterpolationSteps(set, count + 1, nextSet, nextCount - 1);
@@ -53,7 +49,13 @@ public class MarcherPositionService : MonoBehaviour
         }
 
         SyncAndNotify(marcher);
+
+        // 🔁 Visualize next affected set (nextSet or set+1 fallback)
+        int visualizeSet = (set == 0) ? 1 : set;
+        if (director != null)
+            director.VisualizePathsForSet(visualizeSet);
     }
+
 
     /// <summary>
     /// Delete a confirmed dot and reinterpolate the surrounding area.
@@ -83,6 +85,15 @@ public class MarcherPositionService : MonoBehaviour
             var steps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, nextSet, nextCount - 1);
             interpolator.ApplyInterpolatedPositions(prevPos, nextPos, steps);
         }
+        // ✅ Move marcher to their new interpolated position if one was filled in
+        if (marcher.HasPositionAtCount(set, count))
+        {
+            Vector3 newPos = marcher.GetPositionAtCount(set, count);
+            marcher.transform.position = newPos;
+
+            if (marcher.TryGetComponent<MarcherVisualStateController>(out var visual))
+                visual.SetSelectorVisible(false); // optional: reset selector
+        }
 
         SyncAndNotify(marcher);
     }
@@ -95,6 +106,7 @@ public class MarcherPositionService : MonoBehaviour
         if (!marcher.countPositions.ContainsKey(set))
             marcher.countPositions[set] = new Dictionary<int, PositionEntry>();
     }
+    
 
     private int GetMaxCountForSet(int setIndex)
     {

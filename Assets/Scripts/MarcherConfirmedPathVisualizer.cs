@@ -1,7 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(LineRenderer))]
-public class MarcherPathVisualizer : MonoBehaviour
+public class MarcherConfirmedPathVisualizer : MonoBehaviour
 {
     private LineRenderer lineRenderer;
 

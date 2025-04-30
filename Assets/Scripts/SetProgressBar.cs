@@ -174,11 +174,23 @@ public class SetProgressBar : MonoBehaviour
         director.RepositionMarchersToSet(setNumber);
         director.ColorMarchersForSet(setNumber);
         director.VisualizePathsForSet(setNumber);
+        director.selectedMarchers.ReCacheAnchorsForSelected();
+
         foreach (var marcher in director.Marchers)
         {
             if (marcher.TryGetComponent(out Unit unit))
             {
-                unit.SetSelector(false); // 📴 turn off selector
+                int currentSet = setNumber;
+                int currentCount = 1; // default fallback count
+
+                bool hasConfirmedPosition =
+                    marcher.HasPositionAtCount(currentSet, currentCount) &&
+                    (marcher.GetTagForCount(currentSet, currentCount) == "march" ||
+                    marcher.GetTagForCount(currentSet, currentCount) == "hold");
+
+                bool isHolding = marcher.IsHoldingAtCount(currentSet, currentCount);
+
+                unit.SetSelector(hasConfirmedPosition, isHolding); // not selected
             }
         }
 

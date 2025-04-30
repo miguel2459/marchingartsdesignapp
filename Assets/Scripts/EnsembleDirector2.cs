@@ -30,21 +30,28 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
     public SessionBootstrapper bootstrapper;   // drag from scene
     public MarcherFactory    marcherFactory;   // drag from scene
     public SelectedMarchers selectedMarchers;
+    public CountsProgressBar counts;
     public List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>(); 
     public List<SetProgressData> inspectorSetProgress = new List<SetProgressData>();
     private MarcherProgressTracker progressTracker;
     private System.Action refreshHandler;
     [SerializeField] private EnsembleSessionLoader sessionLoader;
     [SerializeField] private MarcherManager marcherManager;
-    [SerializeField] private PathRenderCoordinator pathRenderer;
+    [SerializeField] private EnsemblePathRenderCoordinator pathRenderer;
     [SerializeField] private MarcherPositionService marcherPositionService;
 
     [Header("Marcher Progress Colors")]
     public Color fullProgressColor = Color.white;
     public Color partialProgressColor = new Color(1f, 0.92f, 0.5f); // soft yellow
     public Color noProgressColor = new Color(0.6f, 0.6f, 0.6f); // grey
+    public static EnsembleDirector2 instance;
+
     void Awake()
     {
+        if (instance == null)
+        {
+            instance = this;
+        }
         sessionLoader.OnReady += HandleSessionReady;
         marcherManager.OnMarchersReady += OnMarchersReady;
 
@@ -62,9 +69,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         lastSet          = sessionLoader.LastSet;
 
         UIController.InitializeUI();
-        setBar.OnTotalSetsChanged(numberOfSets);
-        //shapeMarchers.InitializeShapeManagers(
-            //marcherFactory.marcherPrefab, interval);        
+        setBar.OnTotalSetsChanged(numberOfSets);      
 
         fieldCenter = fieldManager.GetFieldCenter();
     }
@@ -114,7 +119,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
                 Vector3 previewPos = entry.pos;
                 marcher.transform.position = previewPos;
 
-                Debug.Log($"🔍 {marcher.name} previewed at Set {setNumber}, Count {clickedCount} → {previewPos}");
+                //Debug.Log($"🔍 {marcher.name} previewed at Set {setNumber}, Count {clickedCount} → {previewPos}");
             }
             else
             {
@@ -160,6 +165,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             }
         }
     }
+
     public void DeleteCurrentSetPositions()
     {
         int currentSet = lastSet;
@@ -260,31 +266,52 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         {
             for (int c = 1; c <= totalCounts; c++)
             {
-                if (countMap.TryGetValue(c, out var entry))
+                if (countMap.TryGetValue(c, out var entry) &&
+                    (entry.IsConfirmed || entry.IsInferred))
                 {
-                    if (entry.IsConfirmed || entry.IsInferred)
-                        confirmedOrInferred++;
+                    confirmedOrInferred++;
                 }
             }
         }
 
-            // ✅ Skip if marcher is currently selected
+        // ✅ Skip if marcher is currently selected
         if (selectedMarchers != null && selectedMarchers.selectedMarchers.Contains(marcher.gameObject))
-        {
-            // Do not override selection highlight
             return;
-        }
 
         Renderer renderer = marcher.GetComponent<Renderer>();
         if (renderer != null)
         {
             if (confirmedOrInferred == totalCounts)
+            {
                 renderer.material.color = fullProgressColor;
+            }
             else if (confirmedOrInferred > 0)
+            {
                 renderer.material.color = partialProgressColor;
+            }
             else
+            {
                 renderer.material.color = noProgressColor;
+            }
         }
+        
+        if (marcher.TryGetComponent(out MarcherVisualStateController visual))
+        {
+            int currentCount = GetCurrentCountForSet(setIndex);
+            visual.ApplyHoldColorIfEligible(setIndex, currentCount);
+        }
+    }
+
+    private int GetCurrentCountForSet(int setIndex)
+    {
+        int activeIndex = counts.GetActiveCountIndex();
+        return (activeIndex >= 0) ? activeIndex + 1 : 1; // Convert from 0-based to 1-based
+    }
+
+
+    public bool IsMarcherSelected(GameObject marcher)
+    {
+        return selectedMarchers != null && selectedMarchers.selectedMarchers.Contains(marcher);
     }
 
     public float GetSetProgress(int setIndex)
