@@ -10,6 +10,7 @@ public class MarcherManager : MonoBehaviour
     [Header("Dependencies")]
     [SerializeField] private EnsembleSessionLoader sessionLoader;  // for counts & timing
     [SerializeField] private MarcherFactory    marcherFactory;   // builds marchers
+    [SerializeField] private MarcherPositionService marcherPositionService;   // builds marchers
 
     [Header("Fallback Arrangement")]
     [SerializeField] private ShapeMarchers     shapeMarchers;     // for square fallback
@@ -84,20 +85,40 @@ public class MarcherManager : MonoBehaviour
             // position at last saved dot
             if (m.HasPositionAtCount(prevSet, fallbackCount))
             {
-                m.transform.position =
-                    m.GetPositionAtCount(prevSet, fallbackCount);
-                usedSaved = true;
+                var pos = m.GetPositionAtCount(prevSet, fallbackCount);
+                if (pos != Vector3.zero)
+                {
+                    m.transform.position = pos;
+                    usedSaved = true;
+                }
+                else
+                {
+                    Debug.LogWarning($"{m.name} ⚠️ position is (0,0,0), ignoring default filler value");
+                }
             }
             else
             {
-                Debug.LogWarning(
-                  $"{m.name} ⚠️ no saved pos for Set {prevSet}, Count {fallbackCount}");
+                Debug.LogWarning($"{m.name} ⚠️ no saved pos for Set {prevSet}, Count {fallbackCount}");
             }
+
         }
 
         // if nothing saved, arrange in a square
-        if (!usedSaved)
+        if (!usedSaved){
             ArrangeInSquare();
+            foreach (var m in Marchers)
+            {
+                if (marcherPositionService != null)
+                {
+                    marcherPositionService.ConfirmMarcherPosition(m, 0, 0, m.transform.position);
+                }
+                else
+                {
+                    Debug.LogError("❌ marcherPositionService is null! Cannot confirm initial marcher positions.");
+                }
+            }
+        }
+            
     }
 
     private void ArrangeInSquare()
@@ -109,7 +130,9 @@ public class MarcherManager : MonoBehaviour
         }
 
         var objs = new List<GameObject>();
-        foreach (var m in Marchers) objs.Add(m.gameObject);
+        foreach (var m in Marchers){
+            objs.Add(m.gameObject);
+        } 
 
         shapeMarchers.ArrangeFormation(
           ShapeMarchers.ShapeType.Box,

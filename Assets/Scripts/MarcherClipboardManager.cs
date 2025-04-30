@@ -12,6 +12,8 @@ public class MarcherClipboardManager : MonoBehaviour
     public CountsProgressBar countsProgressBar;
     public EnsembleDirector2 director;
     public MarcherPositionService marcherPositionService;
+    public GameObject ghostPrefab;
+    private List<GameObject> activeGhosts = new List<GameObject>();
     private Dictionary<MarcherPositionsManager, Vector3> copiedPositions = new Dictionary<MarcherPositionsManager, Vector3>();
 
     void Update()
@@ -31,6 +33,8 @@ public class MarcherClipboardManager : MonoBehaviour
         int set, count;
         GetTargetSetAndCount(out set, out count);
 
+        DestroyActiveGhosts(); // Clean up any existing ghosts
+
         foreach (GameObject marcherObj in selectedMarchers.selectedMarchers)
         {
             if (marcherObj.TryGetComponent(out MarcherPositionsManager posManager))
@@ -38,11 +42,27 @@ public class MarcherClipboardManager : MonoBehaviour
                 if (posManager.HasPositionAtCount(set, count))
                 {
                     copiedPositions[posManager] = posManager.GetPositionAtCount(set, count);
+
+                    // 🧠 Create ghost marcher at this position
+                    GameObject ghost = Instantiate(ghostPrefab, marcherObj.transform.position, Quaternion.identity);
+                    ghost.transform.localScale = marcherObj.transform.localScale * 1.2f;
+                    ghost.transform.SetParent(director.transform); // Optional: keep hierarchy tidy
+                    activeGhosts.Add(ghost);
                 }
             }
         }
 
         Debug.Log($"📋 Copied {copiedPositions.Count} marcher positions from Set {set}, Count {count}");
+    }
+
+    private void DestroyActiveGhosts()
+    {
+        foreach (var ghost in activeGhosts)
+        {
+            if (ghost != null)
+                Destroy(ghost);
+        }
+        activeGhosts.Clear();
     }
 
     private void PasteToCurrent(string tag)
@@ -74,6 +94,7 @@ public class MarcherClipboardManager : MonoBehaviour
         Debug.Log($"📌 Pasted {copiedPositions.Count} marchers to Set {set}, Count {count} with tag: {tag}");
         countsProgressBar?.UpdateCountSubtextsForSet(set);
         director?.UpdateInspectorSetProgress();
+        DestroyActiveGhosts(); // 🧼 Clean up the ghost marchers after paste
     }
 
     private void GetTargetSetAndCount(out int setIndex, out int countIndex)

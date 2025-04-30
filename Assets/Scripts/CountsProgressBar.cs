@@ -23,6 +23,7 @@ public class CountsProgressBar : MonoBehaviour
     private int activeCountIndex = -1;
     public MonoBehaviour directorObject;          // assign the same object in Inspector
     private IMarcherProvider director;           // cached cast
+    public EnsembleDirector2 ensemble;
     private int currentSetNumber;
     [SerializeField] private TransformGizmoManager transformGizmoManager;
 
@@ -213,10 +214,14 @@ public class CountsProgressBar : MonoBehaviour
                     (marcher.GetTagForCount(setNumber, clickedCount) == "march" ||
                     marcher.GetTagForCount(setNumber, clickedCount) == "hold");
 
-                    unit.SetSelector(hasConfirmedPosition);
+                    marcher.GetComponent<MarcherVisualStateController>()?.ApplyHoldColorIfEligible(setNumber, clickedCount);
+                    
+                    bool isHolding = marcher.IsHoldingAtCount(setNumber, clickedCount);
+                    unit.SetSelector(hasConfirmedPosition, isHolding);
                 }
             }
-        }
+            ensemble.selectedMarchers.ReCacheAnchorsForSelected();
+        }        
     }
 
 

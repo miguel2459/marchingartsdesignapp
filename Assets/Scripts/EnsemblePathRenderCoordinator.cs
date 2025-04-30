@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class PathRenderCoordinator : MonoBehaviour
+public class EnsemblePathRenderCoordinator : MonoBehaviour
 {
     [SerializeField] private SelectedMarchers selectedMarchers;
     [SerializeField] private EnsembleDirector2 director;

@@ -5,6 +5,8 @@ public class MarcherVisualStateController : MonoBehaviour
 {
     private MarcherPositionsManager positionManager;
     private Unit unit;
+    public bool isSelected = false;
+    private static readonly Color selectorColor = new Color(0f, 0.81f, 1f, 1f); // Blue
 
     private void Awake()
     {
@@ -53,6 +55,30 @@ public class MarcherVisualStateController : MonoBehaviour
 
         RepositionToDot(fallbackSet, fallbackCount);
     }
+    public void ApplyHoldColorIfEligible(int setIndex, int countIndex)
+    {
+        if (!positionManager.HasFullProgressForSet(setIndex))
+            return;
+
+        bool isHolding = positionManager.IsHoldingAtCount(setIndex, countIndex);
+
+        // 🟦 PRIORITY 1: Selected → Always blue, regardless of hold
+        if (isSelected)
+        {
+            SetMaterialColor(selectorColor); // blue marcher
+            return;
+        }
+
+        // 🟪 PRIORITY 2: Holding (and not selected)
+        if (isHolding)
+        {
+            SetMaterialColor(new Color(0.8f, 0.6f, 1f, 1f)); // purple marcher
+        }
+        else
+        {
+            SetMaterialColor(Color.white);                  // normal unselected marcher
+        }
+    }
 
     /// <summary>
     /// Optional future: set marcher color externally.
@@ -61,5 +87,18 @@ public class MarcherVisualStateController : MonoBehaviour
     {
         var rend = GetComponent<Renderer>();
         if (rend != null) rend.material.color = c;
+    }
+
+    public void SetSelected(bool selected)
+    {
+        isSelected = selected;
+        if (selected)
+        {
+            SetMaterialColor(selectorColor);
+        }
+        else
+        {
+            SetMaterialColor(Color.white); // reset to progress-state, can be overridden
+        }
     }
 }

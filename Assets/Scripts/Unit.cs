@@ -18,7 +18,25 @@ public class Unit : MonoBehaviour
         
     }
 
-    public void SetSelector(bool toggle){
+    public void SetSelector(bool toggle, bool isHolding = false)
+    {
         selector.SetActive(toggle);
+
+        if (!toggle)
+            return;
+
+        Color selectorColor = isHolding
+            ? new Color(0.8f, 0.6f, 1f, 1f) // light purple
+            : new Color(0f, 0.81f, 1f, 1f); // blue
+
+        SetSelectorColor(selectorColor);
     }
+
+    public void SetSelectorColor(Color color)
+    {
+        if (selector.TryGetComponent<Renderer>(out var rend))
+            rend.material.color = color;
+    }
+
+
 }

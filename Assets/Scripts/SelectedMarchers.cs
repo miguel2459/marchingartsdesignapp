@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using System.Collections;
 using UnityEngine.EventSystems;
 
 
@@ -10,22 +11,17 @@ using UnityEngine.EventSystems;
 public class SelectedMarchers : MonoBehaviour
 {
     [Header("Selection Settings")]
-    public Color highlightColor = Color.blue;
     public Color normalColor = Color.white;
     public LayerMask marcherLayer;
-
-    [Header("References")]
     public EnsembleDirector2 director;
     public CameraControl cameraControl;
     public Camera cam;
     public TransformGizmoManager transformGizmoManager;
-
     public List<GameObject> selectedMarchers = new List<GameObject>();
-    public bool selectAllMarchers; // for inspector testing
     public ShapeMarchers shapeMarchers;  // assign in Inspector
     public CountsProgressBar countsProgressBar;
     public MarcherPositionService marcherPositionService;
-
+    public DashedPathPreviewManager dashedPathPreviewManager; // assign in inspector
 
     private void Update()
     {
@@ -35,6 +31,8 @@ public class SelectedMarchers : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.G)) SnapSelectedMarchersToGrid();
         if (Input.GetKeyDown(KeyCode.B)) ArrangeSelectedInBox();
         if (Input.GetKeyDown(KeyCode.A)) SelectAllMarchers();
+
+        dashedPathPreviewManager?.UpdatePreviewCycle();
     }
 
     public void SelectAllMarchers()
@@ -53,8 +51,9 @@ public class SelectedMarchers : MonoBehaviour
         {
             SelectMarcher(marcher);
         }
-
+        
         UpdateCameraFocus();
+        dashedPathPreviewManager?.RegisterSelectedMarchers(selectedMarchers);
 
         Debug.Log($"SelectedMarchers: 🔢 Selected all {allMarchers.Length} marchers.");
     }
@@ -89,7 +88,6 @@ public class SelectedMarchers : MonoBehaviour
 
         Debug.Log($"SelectedMarchers: 🧱 Box formation applied to {selectedMarchers.Count} marchers.");
     }
-
 
     private void SnapSelectedMarchersToGrid()
     {
@@ -137,9 +135,6 @@ public class SelectedMarchers : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// If spacebar is pressed, confirms the transform.position as a SetPosition for each selected marcher.
-    /// </summary>
     public void CheckForSpaceBarSetPosition()
     {
         if (Input.GetKeyDown(KeyCode.Space) && selectedMarchers.Count > 0)
@@ -180,78 +175,62 @@ public class SelectedMarchers : MonoBehaviour
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
                     marcherPositionService.ConfirmMarcherPosition(posManager, setToUse, countToUse, marcher.transform.position);
-                    marcher.GetComponent<MarcherVisualStateController>()?.SetSelectorVisible(true);
+                    bool isHolding = posManager.IsHoldingAtCount(setToUse, countToUse);
+                    Unit unit = posManager.GetComponent<Unit>();
+                    unit.SetSelector(true, isHolding);
                 }
             }
             countsProgressBar?.UpdateCountSubtextsForSet(setToUse);
             director.UpdateInspectorSetProgress();
             director.VisualizePathsForSet(setToUse);
+            dashedPathPreviewManager?.StopAllPreviews();
         }
     }
 
-
     public void SelectMarcher(GameObject marcher)
     {
-        if (!selectedMarchers.Contains(marcher))
-        {
-            selectedMarchers.Add(marcher);
+        if (selectedMarchers.Contains(marcher))
+            return;
 
-            var rend = marcher.GetComponent<Renderer>();
-            if (rend != null) rend.material.color = highlightColor;
+        selectedMarchers.Add(marcher);
+        //initialPositions[marcher] = marcher.transform.position; // Keep track for drag start detection
 
-            // Hide all paths first
-            foreach (var m in director.Marchers)
-            {
-                m.HidePath();
-            }
+        // 1. Set visual state (Highlight color, selector visibility)
+        if (marcher.TryGetComponent(out MarcherVisualStateController visual))
+            visual.SetSelected(true); // Handles material color too
 
-            // Only show for selected with vibrant blue
-            Color highlightLineColor = new Color(0f, 0.81f, 1f, 1f); // #00CFFF
-            int set = int.Parse(SessionManager.instance.showStateSO.LastSet);
+        // 2. Cache anchors for dashed preview (logic remains the same)
+        marcher.GetComponent<MarcherDashedPathCoordinator>()?.CacheAnchorsFromSceneContext();
+        int currentSetIndex = int.Parse(SessionManager.instance.showStateSO.LastSet);
+        director.VisualizePathsForSet(currentSetIndex);
+        dashedPathPreviewManager?.RegisterSelectedMarchers(selectedMarchers);
+        UpdateCameraFocus(); // Let CameraControl know about the selection change
 
-            if (SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(set, out var timing))
-            {
-                int totalCounts = timing.count;
-                int fallbackSet = (set == 1) ? 0 : set - 1;
-                int fallbackCount = 0;
-
-                if (set > 1 &&
-                    SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(fallbackSet, out var prevTiming))
-                {
-                    fallbackCount = prevTiming.count;
-                }
-
-                foreach (var selected in selectedMarchers)
-                {
-                    if (selected.TryGetComponent(out MarcherPositionsManager pos))
-                    {
-                        Vector3 start = pos.GetPositionAtCount(fallbackSet, fallbackCount);
-                        Vector3[] path = pos.GetInterpolatedPath(set, totalCounts, start);
-                        pos.ShowPath(path);
-                        pos.pathVisualizer?.SetColor(highlightLineColor);
-                    }
-                }
-            }
-            Debug.Log($"SelectedMarchers: ✅ {marcher.name} selected.");
-        }
+        Debug.Log($"✅ [SelectedMarchers] {marcher.name} selected. Path visualization updated for set {currentSetIndex}. Anchors cached.");
     }
 
     public void DeselectMarcher(GameObject marcher)
     {
         if (selectedMarchers.Contains(marcher))
         {
-            // 1) Remove from our list
             selectedMarchers.Remove(marcher);
-
-            int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
-
-            if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
+            if (marcher.TryGetComponent(out MarcherVisualStateController visual))
             {
-                director.ColorMarchersForSet(currentSet, new[] { posManager });
-                posManager.HidePath();
+                visual.SetSelected(false); // Reset visual state
             }
 
-            Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected.");
+            // ADDED: Refresh path visualization after deselecting
+            int currentSetIndex = int.Parse(SessionManager.instance.showStateSO.LastSet);
+            director.VisualizePathsForSet(currentSetIndex); // Refresh paths for current set
+
+            // Re-apply progress color if needed (optional, VisualizePathsForSet might handle this implicitly if no selection)
+            director.ColorMarchersForSet(currentSetIndex, new[] { marcher.GetComponent<MarcherPositionsManager>() });
+
+             // Keep camera focus update
+             UpdateCameraFocus();
+             //dashedPathPreviewManager?.StopAllPreviews();
+
+            Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected. Path visualization updated for set {currentSetIndex}.");
         }
     }
 
@@ -265,6 +244,9 @@ public class SelectedMarchers : MonoBehaviour
 
     public void ClearSelection()
     {
+        // Re‑apply progress‑state colors for *all* marchers
+        int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
+        
         foreach (GameObject marcher in selectedMarchers.ToList())
         {
             if (marcher != null)
@@ -278,35 +260,40 @@ public class SelectedMarchers : MonoBehaviour
                 {
                     marcher.transform.SetParent(director.transform);
                 }
+                // Re‑apply progress‑state visuals
+                DeselectMarcher(marcher);
             }
         }
         selectedMarchers.Clear();
         transformGizmoManager?.HideTransformGizmo();
         transformGizmoManager.isMoving = false;
 
-        // Re‑apply progress‑state colors for *all* marchers
-        int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
-
-        // Reapply path lines for all marchers
-        if (SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(currentSet, out var timing))
-        {
-            int totalCounts = timing.count;
-            int fallbackSet = (currentSet == 1) ? 0 : currentSet - 1;
-            int fallbackCount = 0;
-
-            if (currentSet > 1 &&
-                SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(fallbackSet, out var prevTiming))
-            {
-                fallbackCount = prevTiming.count;
-            }
-
-            RenderDefaultPathsForAll();
-        }
-
-        // Re‑apply progress‑state visuals
-        director.ColorMarchersForSet(currentSet);
+        RenderDefaultPathsForAll();
+        dashedPathPreviewManager?.StopAllPreviews();
 
         Debug.Log("SelectedMarchers: 🧹 Selection cleared and marchers recolored to progress state.");
+    }
+
+    public void ReCacheAnchorsForSelected()
+    {
+        StartCoroutine(DelayedCacheAnchors());
+    }
+
+    private IEnumerator DelayedCacheAnchors()
+    {
+        yield return null; // Wait one frame to allow UI state to update
+
+        if (selectedMarchers == null || selectedMarchers.Count == 0)
+            yield break;
+
+        foreach (var marcher in selectedMarchers)
+        {
+            if (marcher == null)
+                continue;
+
+            marcher.GetComponent<MarcherDashedPathCoordinator>()?.CacheAnchorsFromSceneContext();
+            dashedPathPreviewManager?.DisableAllPreviews();
+        }
     }
 
     private void RenderDefaultPathsForAll()
@@ -372,9 +359,9 @@ public class SelectedMarchers : MonoBehaviour
             countsProgressBar?.UpdateCountSubtextsForSet(currentSet);
             director.UpdateInspectorSetProgress();
             director.VisualizePathsForSet(currentSet);
+            dashedPathPreviewManager?.StopAllPreviews();
         }
     }
-
 
     public void UpdateCameraFocus()
     {

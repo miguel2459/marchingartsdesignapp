@@ -15,6 +15,7 @@ public class MarcherController : MonoBehaviour
     private int currentStep = 0;
     private float elapsedTime = 0f;
     private bool isMarching = false;
+    private int currentSetIndex = 1;
 
     /// <summary>
     /// Inject EnsembleDirector and initialize marcher.
@@ -29,10 +30,11 @@ public class MarcherController : MonoBehaviour
     /// </summary>
     public void StartMarching(int setIndex, Vector3 fromPosition)
     {
+        currentSetIndex = setIndex; // 🔧 store correct marching set
+
         if (runtimeCacheSO.SetTimingMap.TryGetValue(setIndex, out var timing))
         {
             PrepareCountStepPositions(setIndex, timing, fromPosition);
-
             isMarching = true;
         }
         else
@@ -41,7 +43,6 @@ public class MarcherController : MonoBehaviour
             isMarching = false;
         }
     }
-
 
     /// <summary>
     /// Prepare interpolated step positions for the current set using count-level data.
@@ -82,15 +83,20 @@ public class MarcherController : MonoBehaviour
     private void Update()
     {
         if (!isMarching || countPositions == null || currentStep >= stepDurations.Length)
-        return;
+            return;
+
+        // ✅ Color logic BEFORE animation
+        int set = currentSetIndex;
+        int count = currentStep + 1;
+
+        GetComponent<MarcherVisualStateController>()?.ApplyHoldColorIfEligible(set, count);
 
         elapsedTime += Time.deltaTime;
         float t = elapsedTime / stepDurations[currentStep];
-        t = Mathf.Clamp01(t); // prevent overshoot due to frame delay
+        t = Mathf.Clamp01(t); // prevent overshoot
 
         Vector3 start = countPositions[currentStep];
         Vector3 end = countPositions[currentStep + 1];
-
 
         transform.position = Vector3.Lerp(start, end, t);
 
@@ -100,10 +106,7 @@ public class MarcherController : MonoBehaviour
             elapsedTime = 0f;
 
             if (currentStep >= countPositions.Length)
-            {
                 isMarching = false;
-            }
         }
     }
-
 }

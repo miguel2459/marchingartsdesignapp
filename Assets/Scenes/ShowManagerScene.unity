@@ -445,7 +445,6 @@ GameObject:
   - component: {fileID: 31250196}
   - component: {fileID: 31250194}
   - component: {fileID: 31250200}
-  - component: {fileID: 31250199}
   m_Layer: 0
   m_Name: Marchers Transform
   m_TagString: Untagged
@@ -519,6 +518,7 @@ MonoBehaviour:
   shapeMarchers: {fileID: 583371126}
   countsProgressBar: {fileID: 1171218387}
   marcherPositionService: {fileID: 31250200}
+  dashedPathPreviewManager: {fileID: 1948889903}
 --- !u!4 &31250198
 Transform:
   m_ObjectHideFlags: 0
@@ -531,24 +531,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 13
+  m_RootOrder: 10
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &31250199
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 31250193}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 812058a06b6101a4895d07925fda4c98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  selectedMarchers: {fileID: 31250197}
-  countsProgressBar: {fileID: 1171218387}
-  director: {fileID: 1219379203}
-  marcherPositionService: {fileID: 31250200}
 --- !u!114 &31250200
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -563,6 +547,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sessionLoader: {fileID: 1219379207}
   positionHistory: {fileID: 2118709100}
+  director: {fileID: 1219379203}
 --- !u!21 &45218744
 Material:
   serializedVersion: 6
@@ -5013,7 +4998,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 10
+  m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &583371128
 MonoBehaviour:
@@ -8253,7 +8238,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 12
+  m_RootOrder: 15
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!21 &927040006
 Material:
@@ -9715,7 +9700,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 11
+  m_RootOrder: 14
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1171218386
 MonoBehaviour:
@@ -9761,6 +9746,7 @@ MonoBehaviour:
   countPartialProgressColor: {r: 1, g: 0.96, b: 0.75, a: 1}
   countNoProgressColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
   directorObject: {fileID: 1219379203}
+  ensemble: {fileID: 1219379203}
   transformGizmoManager: {fileID: 31250194}
 --- !u!21 &1177218479
 Material:
@@ -10413,9 +10399,9 @@ GameObject:
   - component: {fileID: 1219379203}
   - component: {fileID: 1219379208}
   - component: {fileID: 1219379206}
+  - component: {fileID: 1219379209}
   - component: {fileID: 1219379207}
   - component: {fileID: 1219379205}
-  - component: {fileID: 1219379209}
   m_Layer: 0
   m_Name: EnsembleDirector
   m_TagString: Untagged
@@ -10460,6 +10446,7 @@ MonoBehaviour:
   bootstrapper: {fileID: 1219379205}
   marcherFactory: {fileID: 1219379206}
   selectedMarchers: {fileID: 31250197}
+  counts: {fileID: 1171218387}
   marchers: []
   inspectorSetProgress: []
   sessionLoader: {fileID: 1219379207}
@@ -10537,6 +10524,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sessionLoader: {fileID: 1219379207}
   marcherFactory: {fileID: 1219379206}
+  marcherPositionService: {fileID: 31250200}
   shapeMarchers: {fileID: 583371126}
   intervalManager: {fileID: 583371133}
 --- !u!114 &1219379209
@@ -10548,7 +10536,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1219379202}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3e01be6ac4939b4a8180f054afa5ae4, type: 3}
+  m_Script: {fileID: 11500000, guid: 587a0019567dd364784ba0bf228ebce3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   selectedMarchers: {fileID: 31250197}
@@ -14682,7 +14670,7 @@ Transform:
   - {fileID: 6290455084939416767}
   - {fileID: 543450653437305529}
   m_Father: {fileID: 0}
-  m_RootOrder: 9
+  m_RootOrder: 12
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!21 &1669680305
 Material:
@@ -17483,6 +17471,49 @@ Material:
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
+--- !u!1 &1948889902
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1948889904}
+  - component: {fileID: 1948889903}
+  m_Layer: 0
+  m_Name: Dashed Line Preview
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1948889903
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1948889902}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdaa28e9a894e8a4390deaf4e13c575d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1948889904
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1948889902}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 9
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!21 &1950864413
 Material:
   serializedVersion: 6
@@ -19089,6 +19120,7 @@ GameObject:
   - component: {fileID: 2118709102}
   - component: {fileID: 2118709101}
   - component: {fileID: 2118709100}
+  - component: {fileID: 2118709103}
   m_Layer: 0
   m_Name: History
   m_TagString: Untagged
@@ -19133,8 +19165,25 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 14
+  m_RootOrder: 11
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2118709103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2118709099}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 812058a06b6101a4895d07925fda4c98, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  selectedMarchers: {fileID: 31250197}
+  countsProgressBar: {fileID: 1171218387}
+  director: {fileID: 1219379203}
+  marcherPositionService: {fileID: 31250200}
+  ghostPrefab: {fileID: 5783072409151532751, guid: 96f49b822d37185449f7647fd5716c84, type: 3}
 --- !u!1 &2120062610
 GameObject:
   m_ObjectHideFlags: 0
