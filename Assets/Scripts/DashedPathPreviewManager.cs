@@ -60,10 +60,25 @@ public class DashedPathPreviewManager : MonoBehaviour
     private void StartPreview()
     {
         previewStarted = true;
+
+        bool metronomeRunning = EnsembleDirector2.instance.metronome.IsRunning();
+
         foreach (var coord in activeCoordinators)
         {
-            coord.EnableDashedPreview(); // ✅ allow rendering
-            coord.StartPreview();        // ✅ show the visuals
+            bool shouldAllowPreview =
+                !metronomeRunning || // metronome is NOT running
+                !EnsembleDirector2.instance.IsMarcherSelected(coord.gameObject); // OR marcher is NOT selected
+
+            if (shouldAllowPreview)
+            {
+                coord.EnableDashedPreview();
+                coord.StartPreview();
+            }
+            else
+            {
+                coord.DisableDashedPreview();
+                coord.StopDashedPreview(); // make sure visuals are hidden
+            }
         }
     }
 

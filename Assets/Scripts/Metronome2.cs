@@ -193,4 +193,9 @@ public class Metronome2 : MonoBehaviour
         cycleCount = 0;
         Debug.Log("🛑 Metronome stopped. All marchers snapped to last completed position.");
     }
+
+    public bool IsRunning()
+    {
+        return isRunning;
+    }
 }

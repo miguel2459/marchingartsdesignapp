@@ -107,7 +107,7 @@ public class MarcherPositionsManager : MonoBehaviour
 
     public void InitializeSetCount(int totalSets)
     {
-        Debug.Log($"{name} initialized with {totalSets} sets (count-level positioning).");
+        //Debug.Log($"{name} initialized with {totalSets} sets (count-level positioning).");
     }
 
     public string GetTagForCount(int setIndex, int countIndex)

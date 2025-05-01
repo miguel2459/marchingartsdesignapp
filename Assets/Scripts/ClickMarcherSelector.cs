@@ -145,7 +145,7 @@ public class ClickMarcherSelector : MonoBehaviour
                 {
                     SelectMarchersInDrag(Input.GetKey(KeyCode.LeftShift)); // Pass additive flag
                 }
-                selectedMarchers.UpdateCameraFocus(); // Update camera after potential selection change
+                //selectedMarchers.UpdateCameraFocus(); // Update camera after potential selection change
             }
             // --- Case 2: We were NOT dragging (it was a click) ---
             // Process click logic regardless of gizmo state (gizmo-specific clicks handled within)
@@ -166,7 +166,7 @@ public class ClickMarcherSelector : MonoBehaviour
                         if (hit.collider?.gameObject?.GetComponent<Unit>() != null)
                         {
                             selectedMarchers.DeselectMarcher(hit.collider.gameObject);
-                            selectedMarchers.UpdateCameraFocus();
+                            //selectedMarchers.UpdateCameraFocus();
                             // Reset drag state just in case
                             isDragging = false;
                             ResetSelectionBox();
@@ -237,7 +237,7 @@ public class ClickMarcherSelector : MonoBehaviour
                                 selectedMarchers.ClearSelection(); // Clear first
                                 selectedMarchers.SelectMarcher(clicked);
                             }
-                            selectedMarchers.UpdateCameraFocus();
+                            //selectedMarchers.UpdateCameraFocus();
                         }
                         // else: Hit something on marcher layer, but not a Unit - do nothing
                     }

@@ -22,7 +22,6 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
     public void EnableDashedPreview() => allowDashedPreview = true;
     public void DisableDashedPreview() => allowDashedPreview = false;
 
-
     public void CacheAnchorsFromSceneContext()
     {
         
@@ -73,9 +72,16 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
 
         // 🧷 Only cache anchor if the current dot is confirmed ("march" or "inferred")
         Vector3? active = null;
-        if (marcherPosManager.HasPositionAtCount(activeSet, activeCount) &&
-            (marcherPosManager.GetTagForCount(activeSet, activeCount) == "march" ||
-            marcherPosManager.GetTagForCount(activeSet, activeCount) == "inferred"))
+
+        // Special case: always anchor if Set 0: Count 0 exists
+        if (activeSet == 0 && activeCount == 0 && marcherPosManager.HasPositionAtCount(0, 0))
+        {
+            active = marcherPosManager.GetPositionAtCount(0, 0);
+            Debug.Log($"📍 [Coordinator:{gameObject.name}] Anchor set using Set 0:Count 0 → {active.Value}");
+        }
+        else if (marcherPosManager.HasPositionAtCount(activeSet, activeCount) &&
+                (marcherPosManager.GetTagForCount(activeSet, activeCount) == "march" ||
+                marcherPosManager.GetTagForCount(activeSet, activeCount) == "inferred"))
         {
             active = marcherPosManager.GetPositionAtCount(activeSet, activeCount);
         }
@@ -84,7 +90,6 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         CacheAnchors(previous, next, active);
         StartPreview();
     }
-
 
     public void CacheAnchors(Vector3 previousPos, Vector3? nextPos = null, Vector3? activeConfirmedPos = null)
     {
@@ -98,35 +103,57 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
     public void UpdateDashedPreview(Vector3 currentPosition)
     {
         if (!allowDashedPreview) return;
-        
-        // Optimization: Only update if the marcher has actually moved significantly
+
         if (Vector3.Distance(lastUpdatePosition, currentPosition) < 0.01f)
             return;
 
         lastUpdatePosition = currentPosition;
 
-        // 💡 Edge case: Only show anchor when editing Set 1 at Set 0:Count 0
-        bool isSet1 = SessionManager.instance.showStateSO.LastSet == "1";
-        int activeCountIndex = EnsembleDirector2.instance.counts.GetActiveCountIndex();
-        bool isCount0 = (activeCountIndex < 0); // no count selected or user is on Count 0
-        bool anchorOnlyMode = isSet1 && isCount0;
+        bool isAtSet0Count0 =
+            SessionManager.instance.showStateSO.LastSet == "1" &&
+            EnsembleDirector2.instance.counts.GetActiveCountIndex() < 0;
 
-        if (anchorOnlyMode)
+        if (isAtSet0Count0)
         {
-            if (previousConfirmedPosition.HasValue && anchorDashedVisualizer != null)
+            // ✅ Anchor to Set 0:0 confirmed dot
+            if (TryGetComponent(out MarcherPositionsManager posManager) &&
+                posManager.HasPositionAtCount(0, 0))
             {
-                anchorDashedVisualizer.SetAnchorPath(currentPosition, previousConfirmedPosition.Value);
+                Vector3 set0Pos = posManager.GetPositionAtCount(0, 0);
+                anchorDashedVisualizer?.SetAnchorPath(currentPosition, set0Pos);
+            }
+            else
+            {
+                anchorDashedVisualizer?.Hide();
             }
 
-            forwardDashedVisualizer?.Hide();
+            // ✅ Forward line if next confirmed dot exists
+            if (nextConfirmedPosition.HasValue && forwardDashedVisualizer != null)
+            {
+                forwardDashedVisualizer.SetForwardPath(currentPosition, nextConfirmedPosition.Value);
+
+                if (forwardDashedVisualizer.Renderer != null)
+                {
+                    UpdateColorBasedOnStepSize(forwardDashedVisualizer.Renderer, currentPosition, nextConfirmedPosition.Value);
+                    AdjustTilingBasedOnPath(forwardDashedVisualizer.Renderer, currentPosition, nextConfirmedPosition.Value);
+                }
+            }
+            else
+            {
+                forwardDashedVisualizer?.Hide();
+            }
+
+            // ❌ No backward line
             backwardDashedVisualizer?.Hide();
             return;
         }
 
-        // --- Update Backward Path ---
+
+        // --- BACKWARD PATH ---
         if (previousConfirmedPosition.HasValue && backwardDashedVisualizer != null)
         {
             backwardDashedVisualizer.SetBackwardPath(currentPosition, previousConfirmedPosition.Value);
+
             if (backwardDashedVisualizer.Renderer != null)
             {
                 UpdateColorBasedOnStepSize(backwardDashedVisualizer.Renderer, currentPosition, previousConfirmedPosition.Value);
@@ -138,10 +165,11 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
             backwardDashedVisualizer?.Hide();
         }
 
-        // --- Update Forward Path ---
+        // --- FORWARD PATH ---
         if (nextConfirmedPosition.HasValue && forwardDashedVisualizer != null)
         {
             forwardDashedVisualizer.SetForwardPath(currentPosition, nextConfirmedPosition.Value);
+
             if (forwardDashedVisualizer.Renderer != null)
             {
                 UpdateColorBasedOnStepSize(forwardDashedVisualizer.Renderer, currentPosition, nextConfirmedPosition.Value);
@@ -153,7 +181,7 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
             forwardDashedVisualizer?.Hide();
         }
 
-        // --- Update Anchor Path ---
+        // --- ANCHOR LINE ---
         if (activeConfirmedPosition.HasValue && anchorDashedVisualizer != null)
         {
             anchorDashedVisualizer.SetAnchorPath(currentPosition, activeConfirmedPosition.Value);
@@ -164,9 +192,16 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         }
     }
 
+
+
     public void StartPreview()
     {
         UpdateDashedPreview(transform.position); // force refresh on current position
+        // 🔁 Force anchor to render even if no movement has happened yet
+        if (activeConfirmedPosition.HasValue && anchorDashedVisualizer != null)
+        {
+            anchorDashedVisualizer.SetAnchorPath(transform.position, activeConfirmedPosition.Value);
+        }
         Debug.Log($"▶️ [Coordinator] {gameObject.name} started preview.");
     }
 

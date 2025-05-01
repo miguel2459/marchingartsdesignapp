@@ -189,4 +189,19 @@ public class TransformGizmoManager : MonoBehaviour
             activeGizmo.transform.position = finalPosition;
         }
     }
+
+    public void SetActiveCamera(Camera activeCam)
+    {
+        cam = activeCam;
+
+        if (activeGizmo != null)
+        {
+            UnifiedGizmoBehavior behavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
+            if (behavior != null)
+            {
+                behavior.cam = activeCam;
+            }
+        }
+    }
+
 }
