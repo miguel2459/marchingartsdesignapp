@@ -14,7 +14,7 @@ public class SelectedMarchers : MonoBehaviour
     public Color normalColor = Color.white;
     public LayerMask marcherLayer;
     public EnsembleDirector2 director;
-    public CameraControl cameraControl;
+    public ICameraFocusHandler cameraFocusHandler;
     public Camera cam;
     public TransformGizmoManager transformGizmoManager;
     public List<GameObject> selectedMarchers = new List<GameObject>();
@@ -33,6 +33,11 @@ public class SelectedMarchers : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.A)) SelectAllMarchers();
 
         dashedPathPreviewManager?.UpdatePreviewCycle();
+
+        if (Input.GetKeyDown(KeyCode.F) && selectedMarchers.Count > 0)
+        {
+            UpdateCameraFocus();
+        }
     }
 
     public void SelectAllMarchers()
@@ -52,7 +57,6 @@ public class SelectedMarchers : MonoBehaviour
             SelectMarcher(marcher);
         }
         
-        UpdateCameraFocus();
         dashedPathPreviewManager?.RegisterSelectedMarchers(selectedMarchers);
 
         Debug.Log($"SelectedMarchers: 🔢 Selected all {allMarchers.Length} marchers.");
@@ -183,7 +187,8 @@ public class SelectedMarchers : MonoBehaviour
             countsProgressBar?.UpdateCountSubtextsForSet(setToUse);
             director.UpdateInspectorSetProgress();
             director.VisualizePathsForSet(setToUse);
-            dashedPathPreviewManager?.StopAllPreviews();
+            ReCacheAnchorsForSelected();              // update anchor context
+            dashedPathPreviewManager?.DisableAllPreviews();
         }
     }
 
@@ -204,7 +209,7 @@ public class SelectedMarchers : MonoBehaviour
         int currentSetIndex = int.Parse(SessionManager.instance.showStateSO.LastSet);
         director.VisualizePathsForSet(currentSetIndex);
         dashedPathPreviewManager?.RegisterSelectedMarchers(selectedMarchers);
-        UpdateCameraFocus(); // Let CameraControl know about the selection change
+      
 
         Debug.Log($"✅ [SelectedMarchers] {marcher.name} selected. Path visualization updated for set {currentSetIndex}. Anchors cached.");
     }
@@ -225,10 +230,6 @@ public class SelectedMarchers : MonoBehaviour
 
             // Re-apply progress color if needed (optional, VisualizePathsForSet might handle this implicitly if no selection)
             director.ColorMarchersForSet(currentSetIndex, new[] { marcher.GetComponent<MarcherPositionsManager>() });
-
-             // Keep camera focus update
-             UpdateCameraFocus();
-             //dashedPathPreviewManager?.StopAllPreviews();
 
             Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected. Path visualization updated for set {currentSetIndex}.");
         }
@@ -359,12 +360,39 @@ public class SelectedMarchers : MonoBehaviour
             countsProgressBar?.UpdateCountSubtextsForSet(currentSet);
             director.UpdateInspectorSetProgress();
             director.VisualizePathsForSet(currentSet);
-            dashedPathPreviewManager?.StopAllPreviews();
+            ReCacheAnchorsForSelected();
+            dashedPathPreviewManager?.DisableAllPreviews();
         }
     }
 
     public void UpdateCameraFocus()
     {
-        cameraControl?.SetSelectedMarchers(selectedMarchers);
+        if (selectedMarchers == null || selectedMarchers.Count == 0) return;
+
+        Vector3 focalPoint = GetFocalPoint();
+        cameraFocusHandler?.SetSelectedMarchers(selectedMarchers);
+        cameraFocusHandler?.FocusOnSelection(focalPoint);
+        Debug.Log("SelectedMarchers.cs calling to set marchers and focusonSelection");
+    }
+
+    public Vector3 GetFocalPoint()
+    {
+        if (selectedMarchers == null || selectedMarchers.Count == 0)
+            return Vector3.zero;
+
+        Vector3 total = Vector3.zero;
+        foreach (var m in selectedMarchers)
+            total += m.transform.position;
+        
+        Vector3 focal = total / selectedMarchers.Count;
+        Debug.Log("Getting Focal Point for camera focus" + focal);
+
+        return focal;
+    }
+
+    public void SetActiveCamera(Camera activeCam)
+    {
+        cam = activeCam;
+        transformGizmoManager.SetActiveCamera(activeCam);
     }
 }

@@ -1,59 +1,63 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class CameraControl : MonoBehaviour
+public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
+
 {
     public float moveSpeed = 10f;
     public float fastMoveSpeed = 50f;
     public float rotationSpeed = 3f;
     public float zoomSpeed = 50f;
     public float panSpeed = 0.3f;
-    public float pivotDistance = 5f; // Distance in front of the camera for pivot point
-    public float altZoomSpeed = 5f; // Speed for zooming when Alt + RMB is held
-    public float focusSpeed = 5f; // Speed for focusing on marchers
-    public float zoomMultiplier = 1.5f; // How close to zoom in based on the distance to the focus point
-    public float additionalDistanceFactor = 1.2f; // Factor to ensure the entire object is in view
-
-    // The target distance to stop the camera when focusing on a single marcher
+    public float pivotDistance = 5f;
+    public float altZoomSpeed = 5f;
+    public float focusSpeed = 5f;
+    public float zoomMultiplier = 1.5f;
+    public float additionalDistanceFactor = 1.2f;
     public float targetFocusDistance = 5f;
-
+    private Camera topDownCam;
     private float yaw = 0f;
     private float pitch = 0f;
 
     private Vector3 focusPoint;
+    private Vector3 initialCameraPosition;
     private List<GameObject> selectedMarchers = new List<GameObject>();
     private bool isFocusing = false;
-    private Vector3 initialCameraPosition; // Store the camera's initial position
+    private bool isActive = true;
 
     public TransformGizmoManager gizmoManager;
 
+    void Awake()
+    {
+        //Debug.Log($"[FlyingCameraController] 🔵 Awake — Position: {transform.position}, Rotation: {transform.rotation}");
+        yaw = transform.eulerAngles.y;
+        pitch = transform.eulerAngles.x;
+    }
+
     void Update()
     {
+        if (!isActive) return;
+
         if (isFocusing)
         {
-            if (HandleUserInputInterrupt()) // Check if the user interrupts the focus
-            {
-                isFocusing = false;
-            }
-            else
-            {
-                MoveCameraToFocus();
-            }
+            if (HandleUserInputInterrupt()) isFocusing = false;
+            else MoveCameraToFocus();
         }
         else
         {
             HandleRotation();
             HandleZoom();
             HandlePanning();
-            HandlePivotRotation(); // Alt + Left Mouse Button Rotation
-            HandleAltZoom(); // Alt + Right Mouse Button Zoom
-            HandleCameraFocus(); // Focus on selected marchers
+            HandlePivotRotation();
+            HandleAltZoom();
         }
     }
 
+    public void Enable() => isActive = true;
+    public void Disable() => isActive = false;
+
     bool HandleUserInputInterrupt()
     {
-        // Check if any of the movement, rotation, or zoom inputs are triggered
         return Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.E) ||
                Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.R) ||
                Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.G) ||
@@ -63,13 +67,21 @@ public class CameraControl : MonoBehaviour
                Input.GetAxis("Mouse ScrollWheel") != 0;
     }
 
+    public void SetInitialTransform(Vector3 pos, Quaternion rot)
+    {
+        transform.position = pos;
+        transform.rotation = rot;
+        yaw = transform.eulerAngles.y;
+        pitch = transform.eulerAngles.x;
+        //Debug.Log($"[FlyingCameraController] 🧭 SetInitialTransform — Position: {transform.position}, Rotation: {transform.rotation}");
+    }
+
     void HandleRotation()
     {
-        if (Input.GetMouseButton(1) && !Input.GetKey(KeyCode.LeftAlt)) // Right mouse button without Alt key
+        if (Input.GetMouseButton(1) && !Input.GetKey(KeyCode.LeftAlt))
         {
             yaw += rotationSpeed * Input.GetAxis("Mouse X");
             pitch -= rotationSpeed * Input.GetAxis("Mouse Y");
-
             transform.eulerAngles = new Vector3(pitch, yaw, 0f);
         }
     }
@@ -82,7 +94,7 @@ public class CameraControl : MonoBehaviour
 
     void HandlePanning()
     {
-        if (Input.GetMouseButton(2)) // Middle mouse button
+        if (Input.GetMouseButton(2))
         {
             Vector3 panDirection = new Vector3(-Input.GetAxis("Mouse X") * panSpeed, -Input.GetAxis("Mouse Y") * panSpeed, 0);
             transform.Translate(panDirection, Space.Self);
@@ -91,20 +103,15 @@ public class CameraControl : MonoBehaviour
 
     void HandlePivotRotation()
     {
-        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(0)) // Alt + Left mouse button
+        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(0))
         {
-            // Calculate the pivot point in front of the camera
             Vector3 pivotPoint = transform.position + transform.forward * pivotDistance;
-
-            // Calculate rotation angles based on mouse movement
             float rotationX = Input.GetAxis("Mouse X") * rotationSpeed;
             float rotationY = -Input.GetAxis("Mouse Y") * rotationSpeed;
 
-            // Rotate the camera around the pivot point
             transform.RotateAround(pivotPoint, Vector3.up, rotationX);
             transform.RotateAround(pivotPoint, transform.right, rotationY);
 
-            // Update yaw and pitch to reflect the new rotation (optional)
             yaw = transform.eulerAngles.y;
             pitch = transform.eulerAngles.x;
         }
@@ -112,59 +119,68 @@ public class CameraControl : MonoBehaviour
 
     void HandleAltZoom()
     {
-        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(1)) // Alt + Right mouse button
+        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(1))
         {
-            // Calculate the zoom amount based on both X and Y mouse movements
             float zoomAmountX = Input.GetAxis("Mouse X") * altZoomSpeed * Time.deltaTime;
             float zoomAmountY = Input.GetAxis("Mouse Y") * altZoomSpeed * Time.deltaTime;
-
-            // Combine the zoom amounts to move the camera forward or backward
             Vector3 zoomDirection = transform.forward * (zoomAmountY + zoomAmountX);
             transform.position += zoomDirection;
         }
     }
 
-    void HandleCameraFocus()
-    {
-        if (Input.GetKeyDown(KeyCode.F)) // Press F to focus on selected marchers
-        {
-            if (selectedMarchers.Count > 0)
-            {
-                CalculateFocusPoint();
-                initialCameraPosition = transform.position; // Store the initial camera position
-                isFocusing = true;
-            }
-        }
-    }
+    // void MoveCameraToFocus()
+    // {
+    //     Vector3 targetFocus;
+    //     float targetDistance;
 
-    void CalculateFocusPoint()
-    {
-        if (selectedMarchers.Count == 1)
-        {
-            focusPoint = selectedMarchers[0].transform.position;
-        }
-        else
-        {
-            Vector3 totalPosition = Vector3.zero;
-            foreach (var marcher in selectedMarchers)
-            {
-                totalPosition += marcher.transform.position;
-            }
-            focusPoint = totalPosition / selectedMarchers.Count;
-        }
-    }
+    //     if (gizmoManager != null && gizmoManager.IsGizmoActive())
+    //     {
+    //         targetFocus = gizmoManager.transformGizmo.transform.position;
+    //         targetDistance = targetFocusDistance;
+    //     }
+    //     else if (selectedMarchers.Count > 0)
+    //     {
+    //         if (selectedMarchers.Count == 1)
+    //         {
+    //             targetFocus = selectedMarchers[0].transform.position;
+    //             targetDistance = targetFocusDistance;
+    //         }
+    //         else
+    //         {
+    //             Vector3 totalPosition = Vector3.zero;
+    //             foreach (var marcher in selectedMarchers)
+    //                 totalPosition += marcher.transform.position;
+
+    //             targetFocus = totalPosition / selectedMarchers.Count;
+    //             targetDistance = CalculateRequiredDistanceToFit();
+    //         }
+    //     }
+    //     else
+    //     {
+    //         isFocusing = false;
+    //         return;
+    //     }
+
+    //     Vector3 directionToFocus = (targetFocus - initialCameraPosition).normalized;
+    //     Vector3 finalPosition = targetFocus - directionToFocus * targetDistance;
+
+    //     transform.position = Vector3.Lerp(transform.position, finalPosition, focusSpeed * Time.deltaTime);
+    //     transform.LookAt(targetFocus);
+
+    //     if (Vector3.Distance(transform.position, finalPosition) < 0.1f)
+    //         isFocusing = false;
+    // }
 
     void MoveCameraToFocus()
     {
         Vector3 targetFocus;
         float targetDistance;
 
-        // 🧠 Check if TransformGizmo is active
         if (gizmoManager != null && gizmoManager.IsGizmoActive())
         {
             targetFocus = gizmoManager.transformGizmo.transform.position;
-            targetDistance = targetFocusDistance; // Optional: use a different zoom if you want
-            Debug.Log("CameraControl: 🎯 Focusing on active TransformGizmo.");
+            targetDistance = targetFocusDistance;
+            Debug.Log($"🎯 Focusing on Gizmo at {targetFocus} with fixed distance {targetDistance}");
         }
         else if (selectedMarchers.Count > 0)
         {
@@ -172,6 +188,7 @@ public class CameraControl : MonoBehaviour
             {
                 targetFocus = selectedMarchers[0].transform.position;
                 targetDistance = targetFocusDistance;
+                Debug.Log($"🎯 Focusing on single marcher at {targetFocus} with fixed distance {targetDistance}");
             }
             else
             {
@@ -181,11 +198,13 @@ public class CameraControl : MonoBehaviour
 
                 targetFocus = totalPosition / selectedMarchers.Count;
                 targetDistance = CalculateRequiredDistanceToFit();
+
+                Debug.Log($"🎯 Focusing on center of {selectedMarchers.Count} marchers at {targetFocus} with dynamic distance {targetDistance}");
             }
         }
         else
         {
-            Debug.LogWarning("CameraControl: No selected marchers or gizmo to focus on.");
+            Debug.LogWarning("❌ No target for camera focus — no gizmo and no marchers selected.");
             isFocusing = false;
             return;
         }
@@ -193,11 +212,19 @@ public class CameraControl : MonoBehaviour
         Vector3 directionToFocus = (targetFocus - initialCameraPosition).normalized;
         Vector3 finalPosition = targetFocus - directionToFocus * targetDistance;
 
+        Debug.DrawLine(initialCameraPosition, finalPosition, Color.cyan); // Visual line in Scene view
+
+        Debug.Log($"📸 Moving camera from {transform.position} → {finalPosition} (direction {directionToFocus})");
+
         transform.position = Vector3.Lerp(transform.position, finalPosition, focusSpeed * Time.deltaTime);
         transform.LookAt(targetFocus);
 
-        if (Vector3.Distance(transform.position, finalPosition) < 0.1f)
+        float distanceToTarget = Vector3.Distance(transform.position, finalPosition);
+        Debug.Log($"📏 Distance to target: {distanceToTarget}");
+
+        if (distanceToTarget < 0.1f)
         {
+            Debug.Log("✅ Focus complete — camera arrived at target.");
             isFocusing = false;
         }
     }
@@ -206,22 +233,33 @@ public class CameraControl : MonoBehaviour
     float CalculateRequiredDistanceToFit()
     {
         if (selectedMarchers.Count == 1)
-        {
             return targetFocusDistance;
-        }
 
         Bounds bounds = new Bounds(selectedMarchers[0].transform.position, Vector3.zero);
         foreach (var marcher in selectedMarchers)
-        {
             bounds.Encapsulate(marcher.transform.position);
-        }
 
         return bounds.size.magnitude * zoomMultiplier * additionalDistanceFactor;
     }
 
-    // This method should be called by the MarcherSelector script whenever marchers are selected/deselected
     public void SetSelectedMarchers(List<GameObject> marchers)
     {
         selectedMarchers = marchers;
+    }
+    public void FocusOnSelection(Vector3 focalPoint)
+    {
+        if (selectedMarchers.Count == 0)
+        {
+            Debug.LogWarning("❌ Focus aborted: No marchers selected.");
+            return;
+        }
+
+        Debug.Log($"📸 Focus triggered on {selectedMarchers.Count} selected marcher(s). Focal point = {focalPoint}");
+
+        focusPoint = focalPoint;
+        initialCameraPosition = transform.position;
+        isFocusing = true;
+
+        MoveCameraToFocus();
     }
 }

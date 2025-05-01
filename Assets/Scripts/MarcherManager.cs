@@ -67,59 +67,79 @@ public class MarcherManager : MonoBehaviour
             var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
             fallbackCount = timingMap.TryGetValue(prevSet, out var t) ? t.count : 1;
         }
+
         bool usedSaved = false;
 
         foreach (var m in Marchers)
         {
             m.InitializeSetCount(sessionLoader.NumberOfSets);
 
-            // restore saved data if exists
-            if (sessionLoader.RuntimeCache
-                             .ParsedCountPositions
-                             .TryGetValue(m.name, out var restored))
+            if (sessionLoader.RuntimeCache.ParsedCountPositions.TryGetValue(m.name, out var restored))
             {
                 m.countPositions = restored;
                 m.SyncInspectorList();
             }
 
-            // position at last saved dot
-            if (m.HasPositionAtCount(prevSet, fallbackCount))
+            var interpolator = new MarcherInterpolator(
+                m,
+                setIndex => sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(setIndex, out var timing) ? timing.count : 8,
+                () => m.transform.position
+            );
+
+            if (TryFindLatestConfirmedPositionAcrossSets(m, sessionLoader.LastSet, out int latestSet, out int latestCount, out Vector3 latestPos))
             {
-                var pos = m.GetPositionAtCount(prevSet, fallbackCount);
-                if (pos != Vector3.zero)
-                {
-                    m.transform.position = pos;
-                    usedSaved = true;
-                }
-                else
-                {
-                    Debug.LogWarning($"{m.name} ⚠️ position is (0,0,0), ignoring default filler value");
-                }
+                m.transform.position = latestPos;
+                usedSaved = true;
+                //Debug.Log($"{m.name} ✅ positioned at Set {latestSet}, Count {latestCount} → {latestPos}");
             }
             else
             {
-                Debug.LogWarning($"{m.name} ⚠️ no saved pos for Set {prevSet}, Count {fallbackCount}");
+                Debug.LogWarning($"{m.name} ⚠️ no confirmed fallback found. Will require ArrangeInSquare.");
             }
-
         }
 
-        // if nothing saved, arrange in a square
-        if (!usedSaved){
+        if (!usedSaved)
+        {
             ArrangeInSquare();
             foreach (var m in Marchers)
             {
-                if (marcherPositionService != null)
+                marcherPositionService?.ConfirmMarcherPosition(m, 0, 0, m.transform.position);
+            }
+        }
+    }
+
+    private bool TryFindLatestConfirmedPositionAcrossSets(
+    MarcherPositionsManager marcher,
+    int maxSet,
+    out int latestSet,
+    out int latestCount,
+    out Vector3 latestPos)
+    {
+        latestSet = -1;
+        latestCount = -1;
+        latestPos = Vector3.zero;
+
+        int cappedSet = Mathf.Max(0, maxSet - 1);
+        for (int s = cappedSet; s >= 0; s--)
+        {
+            if (!marcher.countPositions.TryGetValue(s, out var counts))
+                continue;
+
+            for (int c = 100; c >= 0; c--) // assume max 100 counts per set
+            {
+                if (counts.TryGetValue(c, out var entry) && entry.IsConfirmed)
                 {
-                    marcherPositionService.ConfirmMarcherPosition(m, 0, 0, m.transform.position);
-                }
-                else
-                {
-                    Debug.LogError("❌ marcherPositionService is null! Cannot confirm initial marcher positions.");
+                    latestSet = s;
+                    latestCount = c;
+                    latestPos = entry.pos;
+                    return true;
                 }
             }
         }
-            
+
+        return false;
     }
+
 
     private void ArrangeInSquare()
     {
