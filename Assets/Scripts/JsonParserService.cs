@@ -9,15 +9,19 @@ using SimpleJSON;
 /// </summary>
 public class JsonParserService
 {
-    public Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> ParseMarcherStateJSON(string jsonText)
+    public void ParseMarcherStateJSON(string jsonText,
+    out Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> parsedCountPositions,
+    out Dictionary<string, MarcherIdentity> parsedIdentities)
     {
-        Debug.Log("📥 Parsing Marcher State JSON (v2.0.0) with tagging support...");
-        var parsedData = new Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>();
+        Debug.Log("📥 Parsing Marcher State JSON (v3.0.0) with tagging and identity support...");
+
+        parsedCountPositions = new Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>();
+        parsedIdentities = new Dictionary<string, MarcherIdentity>();
 
         if (string.IsNullOrEmpty(jsonText))
         {
             Debug.LogError("ParseMarcherStateJSON: Input JSON text is null or empty.");
-            return parsedData;
+            return;
         }
 
         try
@@ -28,7 +32,7 @@ public class JsonParserService
             if (marcherArray == null)
             {
                 Debug.LogError("ParseMarcherStateJSON: 'marchers' array not found or invalid.");
-                return parsedData;
+                return;
             }
 
             for (int i = 0; i < marcherArray.Count; i++)
@@ -43,6 +47,19 @@ public class JsonParserService
                     continue;
                 }
 
+                // Parse identity if it exists
+                if (marcherData.HasKey("identity"))
+                {
+                    var identityNode = marcherData["identity"];
+                    parsedIdentities[id] = new MarcherIdentity
+                    {
+                        section = identityNode["section"],
+                        abbr = identityNode["abbr"],
+                        number = identityNode["number"].AsInt
+                    };
+                }
+
+                // Parse position data
                 Dictionary<int, Dictionary<int, PositionEntry>> restoredSetData = new Dictionary<int, Dictionary<int, PositionEntry>>();
 
                 foreach (var setKvp in countPositions)
@@ -80,18 +97,20 @@ public class JsonParserService
                     restoredSetData[setIndex] = countDict;
                 }
 
-                parsedData[id] = restoredSetData;
+                parsedCountPositions[id] = restoredSetData;
             }
         }
         catch (Exception e)
         {
             Debug.LogError($"❌ ParseMarcherStateJSON: Error parsing JSON: {e.Message}\n{jsonText}");
-            return new Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>();
+            parsedCountPositions = new Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>();
+            parsedIdentities = new Dictionary<string, MarcherIdentity>();
+            return;
         }
 
-        Debug.Log($"✅ Parsed marcher state JSON for {parsedData.Count} performers.");
-        return parsedData;
+        Debug.Log($"✅ Parsed JSON for {parsedCountPositions.Count} marchers and {parsedIdentities.Count} identities.");
     }
+
 
 
     public Dictionary<int, RuntimeCacheSO.SetTimingData> ParseSetTimingMapJSON(string jsonText)

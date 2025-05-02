@@ -394,5 +394,17 @@ public class SelectedMarchers : MonoBehaviour
     {
         cam = activeCam;
         transformGizmoManager.SetActiveCamera(activeCam);
+
+        bool isTopDown = (activeCam.orthographic == true);
+
+        foreach (var marcher in director.Marchers)
+        {
+            var billboard = marcher.GetComponentInChildren<MarcherLabelBillboard>();
+            if (billboard != null)
+            {
+                billboard.SetCamera(activeCam);
+                billboard.SetMode(isTopDown);
+            }
+        }
     }
 }

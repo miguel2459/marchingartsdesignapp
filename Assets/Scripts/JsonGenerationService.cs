@@ -5,7 +5,7 @@ using SimpleJSON;
 
 public class JsonGenerationService
 {
-    public const string CurrentVersion = "2.0.0";
+    public const string CurrentVersion = "3.0.0";
 
     /// <summary>
     /// Generates JSON representing all marcher positions (by set and count) for upload or caching.
@@ -62,6 +62,16 @@ public class JsonGenerationService
                 }
 
                 countPosNode[setIndex.ToString()] = setObj;
+            }
+            // Inside foreach (var marcher in marchers)
+            if (marcher.TryGetComponent(out MarcherIdentityManager identityManager))
+            {
+                var id = identityManager.GetIdentity();
+                var identityObj = new JSONObject();
+                identityObj["section"] = id.section;
+                identityObj["abbr"] = id.abbr;
+                identityObj["number"] = id.number;
+                marcherNode["identity"] = identityObj;
             }
 
             marcherNode["countPositions"] = countPosNode;
