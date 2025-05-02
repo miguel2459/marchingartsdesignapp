@@ -6,7 +6,10 @@ public class MarcherVisualStateController : MonoBehaviour
     private MarcherPositionsManager positionManager;
     private Unit unit;
     public bool isSelected = false;
-    private static readonly Color selectorColor = new Color(0f, 0.81f, 1f, 1f); // Blue
+    public Color selectedColor = new Color(0f, 0.81f, 1f, 1f); // Blue
+    public Color holdColor = new Color(0.8f, 0.6f, 1f, 1f);     // Purple
+    public Color defaultColor = Color.white;
+    
 
     private void Awake()
     {
@@ -65,18 +68,18 @@ public class MarcherVisualStateController : MonoBehaviour
         // 🟦 PRIORITY 1: Selected → Always blue, regardless of hold
         if (isSelected)
         {
-            SetMaterialColor(selectorColor); // blue marcher
+            SetMaterialColor(selectedColor); // blue marcher
             return;
         }
 
         // 🟪 PRIORITY 2: Holding (and not selected)
         if (isHolding)
         {
-            SetMaterialColor(new Color(0.8f, 0.6f, 1f, 1f)); // purple marcher
+            SetMaterialColor(holdColor); // purple marcher
         }
         else
         {
-            SetMaterialColor(Color.white);                  // normal unselected marcher
+            SetMaterialColor(defaultColor);                  // normal unselected marcher
         }
     }
 
@@ -94,7 +97,7 @@ public class MarcherVisualStateController : MonoBehaviour
         isSelected = selected;
         if (selected)
         {
-            SetMaterialColor(selectorColor);
+            SetMaterialColor(selectedColor);
         }
         else
         {

@@ -37,12 +37,21 @@ public class MarcherFactory : MonoBehaviour
     private void Spawn(int nextIndex, int totalSets)
     {
         GameObject go = Instantiate(marcherPrefab, Vector3.zero, Quaternion.identity, transform);
+        
+        // Keep GameObject name consistent for JSON key
         go.name = $"Marcher{nextIndex + 1}";
+
         var mgr  = go.GetComponent<MarcherPositionsManager>();
         var ctrl = go.GetComponent<MarcherController>();
 
         mgr.InitializeSetCount(totalSets);
         ctrl.InitializeMarcher(runtimeCache);
+
+        // Label only — for display
+        if (go.TryGetComponent(out MarcherIdentityManager identity))
+        {
+            identity.SetName("MR ", nextIndex + 1); // Label shows MR1, MR2...
+        }
 
         marchers.Add(mgr);
     }

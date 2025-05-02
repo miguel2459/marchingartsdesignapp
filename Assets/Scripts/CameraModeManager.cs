@@ -12,11 +12,14 @@ public class CameraModeManager : MonoBehaviour
     private bool isTopDownActive = false;
     private List<GameObject> selectedMarchers = new List<GameObject>();
     [SerializeField] private SelectedMarchers selected;
+    [SerializeField] private EnsembleDirector2 director;
 
     void Start()
     {
-        //Debug.Log($"[CameraModeManager] 🔵 Awake — Position: {transform.position}, Rotation: {transform.rotation}");
-        ActivateFlyingMode();
+        if (director != null)
+        {
+            director.GetComponent<MarcherManager>().OnMarchersReady += ActivateFlyingMode;
+        }
     }
 
 
@@ -63,5 +66,6 @@ public class CameraModeManager : MonoBehaviour
             new Vector3(-10f, 20f, 60f),
             new Quaternion(0.2418447f, 0.664463f, -0.2418447f, 0.664463f)
         );
+        director.GetComponent<MarcherManager>().OnMarchersReady -= ActivateFlyingMode;
     }
 }

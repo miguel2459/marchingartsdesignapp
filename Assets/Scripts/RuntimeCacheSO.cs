@@ -11,6 +11,7 @@ public class RuntimeCacheSO : ScriptableObject
     public Dictionary<int, SetTimingData> SetTimingMap = new Dictionary<int, SetTimingData>();
     [System.NonSerialized] // don’t write this big dictionary into the .asset on disk
     public Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> ParsedCountPositions;
+    public Dictionary<string, MarcherIdentity> ParsedIdentities { get; set; }
     [System.Serializable]
     public class SetTimingData
     {

@@ -27,9 +27,14 @@ public class SessionBootstrapper : MonoBehaviour
 
         Debug.Log("SessionBootstrapper: 📦 Raw JSON ready — parsing…");
 
-        // 2. Parse via JsonService
-        sessionManager.runtimeCacheSO.ParsedCountPositions =
-            jsonService.ParseMarcherStateJSON(sessionManager.runtimeCacheSO.CachedMarcherJSON);
+       // Parse both marcher positions and identities
+        jsonService.ParseMarcherStateJSON(
+            sessionManager.runtimeCacheSO.CachedMarcherJSON,
+            out var countData,
+            out var identityData);
+
+        sessionManager.runtimeCacheSO.ParsedCountPositions = countData;
+        sessionManager.runtimeCacheSO.ParsedIdentities = identityData;
 
         sessionManager.runtimeCacheSO.SetTimingMap =
             jsonService.ParseSetTimingMapJSON(sessionManager.runtimeCacheSO.CachedTimingJSON);

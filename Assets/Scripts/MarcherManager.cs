@@ -79,6 +79,14 @@ public class MarcherManager : MonoBehaviour
                 m.countPositions = restored;
                 m.SyncInspectorList();
             }
+            // Inject identity if available
+            if (sessionLoader.RuntimeCache.ParsedIdentities.TryGetValue(m.name, out var identityData))
+            {
+                if (m.TryGetComponent(out MarcherIdentityManager identity))
+                {
+                    identity.LoadIdentity(identityData.section, identityData.abbr, identityData.number);
+                }
+            }
 
             var interpolator = new MarcherInterpolator(
                 m,
