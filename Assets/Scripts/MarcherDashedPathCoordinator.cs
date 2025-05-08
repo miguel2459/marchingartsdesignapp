@@ -97,7 +97,7 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         nextConfirmedPosition = nextPos;
         activeConfirmedPosition = activeConfirmedPos;
         lastUpdatePosition = transform.position;
-        Debug.Log($"[Coordinator:{gameObject.name}] Anchors Cached: Prev={previousPos}, Next={nextPos?.ToString() ?? "None"}, Active={activeConfirmedPos?.ToString() ?? "None"}");
+        //Debug.Log($"[Coordinator:{gameObject.name}] Anchors Cached: Prev={previousPos}, Next={nextPos?.ToString() ?? "None"}, Active={activeConfirmedPos?.ToString() ?? "None"}");
     }
 
     public void UpdateDashedPreview(Vector3 currentPosition)
@@ -202,7 +202,7 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         {
             anchorDashedVisualizer.SetAnchorPath(transform.position, activeConfirmedPosition.Value);
         }
-        Debug.Log($"▶️ [Coordinator] {gameObject.name} started preview.");
+        //Debug.Log($"▶️ [Coordinator] {gameObject.name} started preview.");
     }
 
     public void StopDashedPreview()
@@ -211,7 +211,7 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         backwardDashedVisualizer?.Hide();
         anchorDashedVisualizer?.Hide();
         // Reset cached positions maybe? Or handled by new CacheAnchors call? Let's keep them for now.
-        Debug.Log($"[Coordinator:{gameObject.name}] Stopping Dashed Preview.");
+        //Debug.Log($"[Coordinator:{gameObject.name}] Stopping Dashed Preview.");
     }
 
     private void UpdateColorBasedOnStepSize(LineRenderer renderer, Vector3 current, Vector3 anchor)

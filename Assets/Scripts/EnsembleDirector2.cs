@@ -38,7 +38,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
     [SerializeField] private EnsembleSessionLoader sessionLoader;
     [SerializeField] private MarcherManager marcherManager;
     [SerializeField] private EnsemblePathRenderCoordinator pathRenderer;
-    [SerializeField] private MarcherPositionService marcherPositionService;
+    [SerializeField] private MarcherPositionHistory positionHistory;
 
     [Header("Marcher Progress Colors")]
     public Color fullProgressColor = Color.white;
@@ -67,6 +67,8 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         numberOfMarchers = sessionLoader.NumberOfMarchers;
         numberOfSets     = sessionLoader.NumberOfSets;
         lastSet          = sessionLoader.LastSet;
+        positionHistory.SetActiveEditContext(lastSet, 1);
+
 
         UIController.InitializeUI();
         setBar.OnTotalSetsChanged(numberOfSets);      
@@ -76,10 +78,10 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Delete))
-        {
-            DeleteCurrentSetPositions();
-        }
+        // if (Input.GetKeyDown(KeyCode.Delete))
+        // {
+        //     DeleteCurrentSetPositions();
+        // }
     }
 
     private void OnMarchersReady()
@@ -123,7 +125,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             }
             else
             {
-                Debug.LogWarning($"⚠️ {marcher.name} has no position data at Set {setNumber}, Count {clickedCount}");
+                //Debug.LogWarning($"⚠️ {marcher.name} has no position data at Set {setNumber}, Count {clickedCount}");
             }
 
         }
@@ -166,45 +168,45 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         }
     }
 
-    public void DeleteCurrentSetPositions()
-    {
-        int currentSet = lastSet;
-        int fallbackSet = (currentSet == 1) ? 0 : currentSet - 1;
-        int fallbackCount = 0;
+    // public void DeleteCurrentSetPositions()
+    // {
+    //     int currentSet = lastSet;
+    //     int fallbackSet = (currentSet == 1) ? 0 : currentSet - 1;
+    //     int fallbackCount = 0;
 
-        Debug.Log($"🗑 Deleting Set {currentSet} positions and reverting to Set {fallbackSet}, Count {fallbackCount}.");
+    //     Debug.Log($"🗑 Deleting Set {currentSet} positions and reverting to Set {fallbackSet}, Count {fallbackCount}.");
 
-        if (currentSet > 1)
-        {
-            if (!sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(fallbackSet, out var timing))
-            {
-                Debug.LogWarning($"⚠️ No SetTiming entry for Set {fallbackSet}");
-                return;
-            }
+    //     if (currentSet > 1)
+    //     {
+    //         if (!sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(fallbackSet, out var timing))
+    //         {
+    //             Debug.LogWarning($"⚠️ No SetTiming entry for Set {fallbackSet}");
+    //             return;
+    //         }
 
-            fallbackCount = timing.count;
-        }
+    //         fallbackCount = timing.count;
+    //     }
 
-        foreach (var marcher in marchers)
-        {
-            // Delete every count in this set using centralized service
-            if (marcher.countPositions.TryGetValue(currentSet, out var countDict))
-            {
-                var countsToDelete = new List<int>(countDict.Keys);
+    //     foreach (var marcher in marchers)
+    //     {
+    //         // Delete every count in this set using centralized service
+    //         if (marcher.countPositions.TryGetValue(currentSet, out var countDict))
+    //         {
+    //             var countsToDelete = new List<int>(countDict.Keys);
 
-                foreach (int count in countsToDelete)
-                {
-                    marcherPositionService.DeleteConfirmedPosition(marcher, currentSet, count);
-                }
-            }
+    //             foreach (int count in countsToDelete)
+    //             {
+    //                 marcherPositionService.DeleteConfirmedPosition(marcher, currentSet, count);
+    //             }
+    //         }
 
-            // Reposition each marcher based on fallback
-            marcher.GetComponent<MarcherVisualStateController>()?.RepositionToDot(fallbackSet, fallbackCount);
-        }
+    //         // Reposition each marcher based on fallback
+    //         marcher.GetComponent<MarcherVisualStateController>()?.RepositionToDot(fallbackSet, fallbackCount);
+    //     }
 
-        UpdateInspectorSetProgress();
-        Debug.Log("✅ All marcher positions for current set deleted and reverted.");
-    }
+    //     UpdateInspectorSetProgress();
+    //     Debug.Log("✅ All marcher positions for current set deleted and reverted.");
+    // }
 
 
     public void UpdateInspectorSetProgress()
@@ -252,7 +254,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             ApplyProgressColor(marcher, setIndex);
         }
 
-        Debug.Log($"🎨 Colored {((subset == null) ? "ALL" : "some")} marchers for Set {setIndex}");
+        //Debug.Log($"🎨 Colored {((subset == null) ? "ALL" : "some")} marchers for Set {setIndex}");
     }
 
     private void ApplyProgressColor(MarcherPositionsManager marcher, int setIndex)
@@ -301,6 +303,14 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             visual.ApplyHoldColorIfEligible(setIndex, currentCount);
         }
     }
+    public int GetCountTotalForSet(int set)
+    {
+        if (sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(set, out var timing))
+            return timing.count;
+        return 0;
+    }
+
+    
 
     private int GetCurrentCountForSet(int setIndex)
     {

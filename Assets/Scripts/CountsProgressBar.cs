@@ -26,6 +26,7 @@ public class CountsProgressBar : MonoBehaviour
     public EnsembleDirector2 ensemble;
     private int currentSetNumber;
     [SerializeField] private TransformGizmoManager transformGizmoManager;
+    [SerializeField] private MarcherPositionHistory positionHistory;
 
     private void Awake()
     {
@@ -141,7 +142,6 @@ public class CountsProgressBar : MonoBehaviour
             buttonObj.GetComponent<Button>().onClick.AddListener(() =>
             {
                 OnCountButtonClicked(setNumber, countIndex + 1);
-                HighlightCount(countIndex);
             });
 
             countButtons.Add(new CountButtonWrapper
@@ -220,6 +220,8 @@ public class CountsProgressBar : MonoBehaviour
                     unit.SetSelector(hasConfirmedPosition, isHolding);
                 }
             }
+            HighlightCount(clickedCount-1);
+            positionHistory.SetActiveEditContext(setNumber, clickedCount);
             ensemble.selectedMarchers.ReCacheAnchorsForSelected();
         }        
     }

@@ -67,7 +67,7 @@ public class EnsemblePathRenderCoordinator : MonoBehaviour
             }
         }
 
-        Debug.Log($"🧩 RenderPathsForSet: Set {setIndex} with {(hasSelection ? "selected" : "all")} marchers");
+        //Debug.Log($"🧩 RenderPathsForSet: Set {setIndex} with {(hasSelection ? "selected" : "all")} marchers");
     }
 
     public void HideAllPaths()
