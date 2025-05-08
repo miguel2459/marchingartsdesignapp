@@ -7,6 +7,7 @@ public class TransformGizmoManager : MonoBehaviour
     public Camera cam;
     public SelectedMarchers selectedMarchers;
     public SnapToGridLines snapToGrid;
+    public MarcherPositionHistory history;
     public LayerMask gizmoLayer;
     public LayerMask marcherLayer;
     private GameObject activeGizmo;
@@ -128,6 +129,7 @@ public class TransformGizmoManager : MonoBehaviour
             newBehavior.snapToGrid = snapToGrid;
             newBehavior.SetMode(currentMode);
             newBehavior.gizmoManager = this;
+            newBehavior.positionHistory = history;
         }
 
         foreach (var marcher in selectedMarchers.selectedMarchers)

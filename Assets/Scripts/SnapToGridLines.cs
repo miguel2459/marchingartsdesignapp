@@ -103,7 +103,7 @@ public class SnapToGridLines : MonoBehaviour
             }
         }
 
-        Debug.Log($"SnapToGridLines: Snapping {current} to closest grid position {closest}");
+        //Debug.Log($"SnapToGridLines: Snapping {current} to closest grid position {closest}");
         return closest;
     }
 

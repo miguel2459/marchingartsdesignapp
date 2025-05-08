@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class UnifiedGizmoBehavior : MonoBehaviour
@@ -5,6 +6,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     public Camera cam;
     public SelectedMarchers selectedMarchers;
     public SnapToGridLines snapToGrid;
+    public MarcherPositionHistory positionHistory;
 
     public GameObject rotateVisualizer;
     public GameObject scaleVisualizer;
@@ -15,6 +17,8 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     private bool isDragging = false;
     public TransformGizmoManager gizmoManager;
     private string activeAxis = "center"; // center, x, z
+    private Dictionary<MarcherPositionsManager, Vector3> initialPositions = new Dictionary<MarcherPositionsManager, Vector3>();
+
     public bool IsDragging()
     {
         return isDragging;
@@ -38,6 +42,16 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     if (movePlane.Raycast(ray, out distance))
                     {
                         offset = ray.GetPoint(distance) - transform.position;
+                    }
+
+                    // Cache initial positions for undo tracking ✅
+                    initialPositions.Clear();
+                    foreach (var marcher in selectedMarchers.selectedMarchers)
+                    {
+                        if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
+                        {
+                            initialPositions[posManager] = marcher.transform.position;
+                        }
                     }
 
                     // Determine which axis handle is clicked
@@ -134,29 +148,26 @@ public class UnifiedGizmoBehavior : MonoBehaviour
         if (Input.GetMouseButtonUp(0) && isDragging)
         {
             isDragging = false;
-            activeAxis = "center"; // reset
-
-            if (mode == "rotate")
+            positionHistory.BeginBatch();
+            foreach (var marcher in selectedMarchers.selectedMarchers)
             {
-                // 🔓 Temporarily unparent marchers
-                foreach (var marcher in selectedMarchers.selectedMarchers)
+                if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
-                    marcher.transform.SetParent(null);
-                }
+                    Vector3 newPos = marcher.transform.position;
+                    Vector3 oldPos = posManager.transform.position;
 
-                // 🔄 Reset gizmo rotation
-                Vector3 currentRotation = transform.eulerAngles;
-                transform.eulerAngles = new Vector3(currentRotation.x, 0f, currentRotation.z);
-                Debug.Log("UnifiedGizmoBehavior: Rotation reset to Y = 0 after rotate interaction.");
+                    // Store oldPos from BEFORE the move — you'll need to capture this earlier
+                    // To do this cleanly, cache initial positions at OnMouseDown
 
-                // 🔗 Re-parent marchers back to the gizmo
-                foreach (var marcher in selectedMarchers.selectedMarchers)
-                {
-                    marcher.transform.SetParent(transform);
+                    if (initialPositions.TryGetValue(posManager, out Vector3 initial))
+                    {
+                        positionHistory.RecordRawMovement(posManager, initial, newPos);
+                    }
                 }
             }
+            positionHistory.EndBatch();
+            activeAxis = "center";
         }
-
     }
 
     public void SetMode(string newMode)

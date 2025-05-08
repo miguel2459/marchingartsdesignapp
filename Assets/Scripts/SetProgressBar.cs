@@ -25,6 +25,7 @@ public class SetProgressBar : MonoBehaviour
     private List<SetButtonWrapper> setButtonWrappers = new List<SetButtonWrapper>();
     private int totalSets = 1;
     private int lastSet = 1;
+    [SerializeField] private MarcherPositionHistory positionHistory;
     private void Awake()
     {
         if (director == null)
@@ -164,6 +165,28 @@ public class SetProgressBar : MonoBehaviour
 
         currentSetIndex = setNumber;
         director.SessionLoader.ShowState.LastSet = setNumber.ToString();
+        int fallbackSet = (setNumber == 1) ? 0 : setNumber - 1;
+        int fallbackCount = 0;
+
+        if (fallbackSet == 0)
+        {
+            fallbackCount = 0;
+        }
+        else
+        {
+            var timingMap = director.SessionLoader.RuntimeCache.SetTimingMap;
+            if (timingMap.TryGetValue(fallbackSet, out var rtiming))
+            {
+                fallbackCount = rtiming.count;
+            }
+            else
+            {
+                fallbackCount = 1;
+                Debug.LogWarning($"⚠️ No timing found for Set {fallbackSet}, defaulting count to 1");
+            }
+        }
+        positionHistory.SetActiveEditContext(fallbackSet, fallbackCount);
+
         currentSetText.text = setNumber.ToString();
 
         countsProgressBar?.ResetHighlight();

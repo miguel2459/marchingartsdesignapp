@@ -433,8 +433,8 @@ LineRenderer:
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 1, g: 1, b: 1, a: 1}
-      key1: {r: 1, g: 1, b: 1, a: 1}
+      key0: {r: 1, g: 0.92013705, b: 0, a: 1}
+      key1: {r: 1, g: 0.9318118, b: 0, a: 1}
       key2: {r: 0.9372549, g: 1, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
@@ -575,8 +575,8 @@ LineRenderer:
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 1, g: 0.9878479, b: 0, a: 1}
-      key1: {r: 1, g: 0.9882353, b: 0, a: 1}
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
       key2: {r: 0, g: 0, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
@@ -738,8 +738,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72fcdddcace163243aa3f8baa6e2198f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  marcherName: Marcher
-  marcherNumber: 1
+  identity:
+    section: 
+    abbr: 
+    number: 0
   nameLabel: {fileID: 2539842492948540281}
 --- !u!114 &2976084566100136744
 MonoBehaviour:

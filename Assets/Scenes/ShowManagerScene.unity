@@ -601,6 +601,7 @@ MonoBehaviour:
   cam: {fileID: 963194227}
   selectedMarchers: {fileID: 31250197}
   snapToGrid: {fileID: 1666209691}
+  history: {fileID: 2118709100}
   gizmoLayer:
     serializedVersion: 2
     m_Bits: 256
@@ -649,6 +650,7 @@ MonoBehaviour:
   countsProgressBar: {fileID: 1171218387}
   marcherPositionService: {fileID: 1219379210}
   dashedPathPreviewManager: {fileID: 1948889903}
+  positionHistory: {fileID: 2118709100}
 --- !u!4 &31250198
 Transform:
   m_ObjectHideFlags: 0
@@ -7235,7 +7237,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 2
+    m_Type: 0
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -11549,6 +11551,7 @@ MonoBehaviour:
   countsProgressBar: {fileID: 1171218387}
   selectedColor: {r: 0.7, g: 0.85, b: 1, a: 1}
   defaultColor: {r: 1, g: 1, b: 1, a: 1}
+  positionHistory: {fileID: 2118709100}
 --- !u!4 &1171218385
 Transform:
   m_ObjectHideFlags: 0
@@ -11609,6 +11612,7 @@ MonoBehaviour:
   directorObject: {fileID: 1219379203}
   ensemble: {fileID: 1219379203}
   transformGizmoManager: {fileID: 31250194}
+  positionHistory: {fileID: 2118709100}
 --- !u!21 &1177218479
 Material:
   serializedVersion: 6
@@ -12314,7 +12318,7 @@ MonoBehaviour:
   sessionLoader: {fileID: 1219379207}
   marcherManager: {fileID: 1219379208}
   pathRenderer: {fileID: 1219379209}
-  marcherPositionService: {fileID: 1219379210}
+  positionHistory: {fileID: 2118709100}
   fullProgressColor: {r: 1, g: 1, b: 1, a: 1}
   partialProgressColor: {r: 1, g: 0.92, b: 0.5, a: 1}
   noProgressColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
@@ -21122,7 +21126,7 @@ MonoBehaviour:
   defaultOrthoSize: 20
   minOrthoSize: 2
   maxOrthoSize: 30
-  zoomSpeed: 700
+  zoomSpeed: 1500
   panSpeed: 0.3
   yHeightMultiplier: 1.5
 --- !u!20 &2037875629
@@ -21821,6 +21825,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 399cd890000fccc4ebc2d8fe27698ea0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  marcherService: {fileID: 1219379210}
 --- !u!114 &2118709101
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21834,6 +21839,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   positionHistory: {fileID: 2118709100}
+  transformGizmoManager: {fileID: 31250194}
 --- !u!4 &2118709102
 Transform:
   m_ObjectHideFlags: 0
@@ -25633,7 +25639,7 @@ MonoBehaviour:
   moveSpeed: 20
   fastMoveSpeed: 50
   rotationSpeed: 3
-  zoomSpeed: 700
+  zoomSpeed: 2000
   panSpeed: 0.3
   pivotDistance: 5
   altZoomSpeed: 5

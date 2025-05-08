@@ -22,14 +22,15 @@ public class SelectedMarchers : MonoBehaviour
     public CountsProgressBar countsProgressBar;
     public MarcherPositionService marcherPositionService;
     public DashedPathPreviewManager dashedPathPreviewManager; // assign in inspector
+    public MarcherPositionHistory positionHistory;
 
     private void Update()
     {
         CheckForSpaceBarSetPosition(); // march
         CheckForDeleteConfirmedPosition(); // 🔥 delete confirmed count
 
-        if (Input.GetKeyDown(KeyCode.G)) SnapSelectedMarchersToGrid();
-        if (Input.GetKeyDown(KeyCode.B)) ArrangeSelectedInBox();
+        if (Input.GetKeyDown(KeyCode.G)) SnapToGridOnly();
+        if (Input.GetKeyDown(KeyCode.B)) SnapAndRespaceSmartReviewed();
         if (Input.GetKeyDown(KeyCode.A)) SelectAllMarchers();
 
         dashedPathPreviewManager?.UpdatePreviewCycle();
@@ -62,43 +63,126 @@ public class SelectedMarchers : MonoBehaviour
         Debug.Log($"SelectedMarchers: 🔢 Selected all {allMarchers.Length} marchers.");
     }
 
-    private void ArrangeSelectedInBox()
+    public void SnapAndRespaceSmartReviewed()
     {
-        if (selectedMarchers.Count == 0 || shapeMarchers == null)
-        {
-            Debug.LogWarning("Box shape failed: No marchers selected or ShapeMarchers not assigned.");
+        if (selectedMarchers.Count == 0 || shapeMarchers?.boxManager == null)
             return;
+
+        Vector3 center = GetFocalPoint();
+        var interval = shapeMarchers.intervalManager.EstimateIntervalType(selectedMarchers);
+        var targetPositions = shapeMarchers.boxManager.GetBoxPositionsPreviewRespectingShapeHybrid(selectedMarchers, interval, center);
+        
+        var assignments = new Dictionary<GameObject, Vector3>();
+        var marchersLeft = new List<GameObject>(selectedMarchers);
+        var positionsLeft = new List<Vector3>(targetPositions);
+
+        while (marchersLeft.Count > 0 && positionsLeft.Count > 0)
+        {
+            float bestDist = float.MaxValue;
+            GameObject bestMarcher = null;
+            Vector3 bestTarget = Vector3.zero;
+
+            foreach (var marcher in marchersLeft)
+            {
+                foreach (var pos in positionsLeft)
+                {
+                    float dist = Vector3.Distance(marcher.transform.position, pos);
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        bestMarcher = marcher;
+                        bestTarget = pos;
+                    }
+                }
+            }
+
+            assignments[bestMarcher] = bestTarget;
+            marchersLeft.Remove(bestMarcher);
+            positionsLeft.Remove(bestTarget);
         }
 
-        IntervalManager.IntervalType estimatedInterval = shapeMarchers.intervalManager.EstimateIntervalType(selectedMarchers);
-        ShapeGroup group = new ShapeGroup(ShapeMarchers.ShapeType.Box, estimatedInterval)
+        // 🔍 Check for path crossings
+        var crossings = DetectPathCrossings(assignments);
+        if (crossings.Count > 0)
         {
-            marchers = new List<GameObject>(selectedMarchers),
-            isFilled = true // Change to false if you want a hollow box
-        };
+            Debug.LogWarning("⚠️ Path crossing detected between:");
+            foreach (var pair in crossings)
+                Debug.Log($"    - {pair.Item1.name} ↔ {pair.Item2.name}");
 
-        Vector3 center = Vector3.zero;
-        foreach (var m in selectedMarchers)
-            center += m.transform.position;
-        center /= selectedMarchers.Count;
+            // [TODO] Optionally implement swap attempts here to resolve crossings
+        }
 
-        shapeMarchers.ArrangeFormation(group, center);
+        // 🧭 Apply results
+        foreach (var kvp in assignments)
+        {
+            GameObject marcher = kvp.Key;
+            Vector3 target = kvp.Value;
 
-        // Optional: Recenter gizmo after box is created
+            Vector3 snapped = transformGizmoManager.snapToGrid.GetSnappedGizmoPosition(target);
+            snapped.y = marcher.transform.position.y;
+            marcher.transform.position = snapped;
+        }
+
         if (transformGizmoManager.HasActiveGizmo && selectedMarchers.Count > 0)
-        {
             transformGizmoManager.ReanchorGizmoToMarcher(selectedMarchers[0]);
-        }
 
-        Debug.Log($"SelectedMarchers: 🧱 Box formation applied to {selectedMarchers.Count} marchers.");
+        Debug.Log($"SelectedMarchers: 🧠 Path-reviewed smart snap complete. Crossings: {crossings.Count}");
     }
 
-    private void SnapSelectedMarchersToGrid()
+    private List<(GameObject, GameObject)> DetectPathCrossings(Dictionary<GameObject, Vector3> assignments)
     {
-        if (selectedMarchers.Count == 0 || transformGizmoManager == null || transformGizmoManager.snapToGrid == null)
+        List<(GameObject, GameObject)> crossings = new List<(GameObject, GameObject)>();
+
+        var pairs = assignments.ToList();
+        for (int i = 0; i < pairs.Count; i++)
+        {
+            var aStart = pairs[i].Key.transform.position;
+            var aEnd = pairs[i].Value;
+
+            for (int j = i + 1; j < pairs.Count; j++)
+            {
+                var bStart = pairs[j].Key.transform.position;
+                var bEnd = pairs[j].Value;
+
+                if (SegmentsCross2D(aStart, aEnd, bStart, bEnd))
+                    crossings.Add((pairs[i].Key, pairs[j].Key));
+            }
+        }
+
+        return crossings;
+    }
+
+    private bool SegmentsCross2D(Vector3 a1, Vector3 a2, Vector3 b1, Vector3 b2)
+    {
+        Vector2 A1 = new Vector2(a1.x, a1.z);
+        Vector2 A2 = new Vector2(a2.x, a2.z);
+        Vector2 B1 = new Vector2(b1.x, b1.z);
+        Vector2 B2 = new Vector2(b2.x, b2.z);
+
+        return DoLinesIntersect(A1, A2, B1, B2);
+    }
+
+    // Standard 2D line segment intersection
+    private bool DoLinesIntersect(Vector2 p1, Vector2 p2, Vector2 q1, Vector2 q2)
+    {
+        float o1 = Orientation(p1, p2, q1);
+        float o2 = Orientation(p1, p2, q2);
+        float o3 = Orientation(q1, q2, p1);
+        float o4 = Orientation(q1, q2, p2);
+
+        return o1 != o2 && o3 != o4;
+    }
+
+    private float Orientation(Vector2 a, Vector2 b, Vector2 c)
+    {
+        return Mathf.Sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+    }
+
+    public void SnapToGridOnly()
+    {
+        if (selectedMarchers.Count == 0 || transformGizmoManager?.snapToGrid == null)
             return;
 
-        // Step 1: Snap current positions to nearest grid
         foreach (GameObject marcher in selectedMarchers)
         {
             Vector3 currentPos = marcher.transform.position;
@@ -111,32 +195,7 @@ public class SelectedMarchers : MonoBehaviour
             marcher.transform.position = snapped;
         }
 
-        Debug.Log($"SelectedMarchers: 🔲 Snapped {selectedMarchers.Count} marchers to grid.");
-
-        // Step 2: Equalize spacing into box formation using detected interval
-        IntervalManager.IntervalType interval = shapeMarchers.intervalManager.EstimateIntervalType(selectedMarchers);
-        Vector3 center = Vector3.zero;
-
-        foreach (var m in selectedMarchers)
-            center += m.transform.position;
-
-        center /= selectedMarchers.Count;
-
-        ShapeGroup group = new ShapeGroup(ShapeMarchers.ShapeType.Box, interval)
-        {
-            marchers = new List<GameObject>(selectedMarchers),
-            isFilled = true
-        };
-
-        shapeMarchers.ArrangeFormation(group, center);
-
-        Debug.Log($"SelectedMarchers: 🧮 Equalized spacing into box using {interval} around center {center}");
-
-        // Step 3: Reanchor gizmo (optional)
-        if (transformGizmoManager.HasActiveGizmo && selectedMarchers.Count > 0)
-        {
-            transformGizmoManager.ReanchorGizmoToMarcher(selectedMarchers[0]);
-        }
+        Debug.Log($"SelectedMarchers: 🧲 Snapped {selectedMarchers.Count} marchers to nearest grid points.");
     }
 
     public void CheckForSpaceBarSetPosition()
@@ -173,7 +232,7 @@ public class SelectedMarchers : MonoBehaviour
                     Debug.Log($"SelectedMarchers: ⏺️ Fallback to Set {setToUse}, Last Count {countToUse}");
                 }
             }
-
+            positionHistory.BeginBatch();
             foreach (GameObject marcher in selectedMarchers)
             {
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
@@ -184,6 +243,8 @@ public class SelectedMarchers : MonoBehaviour
                     unit.SetSelector(true, isHolding);
                 }
             }
+            positionHistory.EndBatch();
+
             countsProgressBar?.UpdateCountSubtextsForSet(setToUse);
             director.UpdateInspectorSetProgress();
             director.VisualizePathsForSet(setToUse);
@@ -231,7 +292,7 @@ public class SelectedMarchers : MonoBehaviour
             // Re-apply progress color if needed (optional, VisualizePathsForSet might handle this implicitly if no selection)
             director.ColorMarchersForSet(currentSetIndex, new[] { marcher.GetComponent<MarcherPositionsManager>() });
 
-            Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected. Path visualization updated for set {currentSetIndex}.");
+            //Debug.Log($"SelectedMarchers: ❎ {marcher.name} deselected. Path visualization updated for set {currentSetIndex}.");
         }
     }
 
@@ -338,30 +399,40 @@ public class SelectedMarchers : MonoBehaviour
             }
 
             int countToDelete = countIndex + 1; // because activeCountIndex is 0-based
-            int lastCount = SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(currentSet, out var timing)
-                ? timing.count : -1;
-
-            if (countToDelete == lastCount)
-            {
-                Debug.LogWarning($"❌ Cannot delete confirmed position at final count {countToDelete} of Set {currentSet}.");
-                return;
-            }
-
-            Debug.Log($"🗑 Attempting to delete confirmed position: Set {currentSet}, Count {countToDelete}");
+            bool anyDeleted = false;
+            bool anyHadNext = false;
 
             foreach (GameObject marcher in selectedMarchers)
             {
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
-                    marcherPositionService.DeleteConfirmedPosition(posManager, currentSet, countToDelete);
+                    if (marcherPositionService.DeleteConfirmedPosition(posManager, currentSet, countToDelete, out bool hadNext))
+                    {
+                        anyDeleted = true;
+                        if (hadNext) anyHadNext = true;
+                    }
                 }
             }
 
-            countsProgressBar?.UpdateCountSubtextsForSet(currentSet);
+            if (!anyDeleted)
+            {
+                Debug.Log("❌ No marcher confirmed positions were deleted.");
+                return;
+            }
+
+            // ✅ Only runs if at least one marcher had a confirmed position deleted
             director.UpdateInspectorSetProgress();
             director.VisualizePathsForSet(currentSet);
             ReCacheAnchorsForSelected();
+            
+            int updatedCountTotal = director.GetCountTotalForSet(currentSet); // <- make sure this exists
+            
+            countsProgressBar?.RenderCounts(currentSet, updatedCountTotal);
+            countsProgressBar?.UpdateCountSubtextsForSet(currentSet);            
             dashedPathPreviewManager?.DisableAllPreviews();
+
+            if (anyHadNext)
+                countsProgressBar.OnCountButtonClicked(currentSet, countToDelete);
         }
     }
 
