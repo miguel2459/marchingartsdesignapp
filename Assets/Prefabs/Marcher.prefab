@@ -695,6 +695,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   runtimeCacheSO: {fileID: 0}
   marcherPositionsManager: {fileID: 942577037629190339}
+  visualController: {fileID: 8304904134923514372}
 --- !u!114 &8304904134923514372
 MonoBehaviour:
   m_ObjectHideFlags: 0
