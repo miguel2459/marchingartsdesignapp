@@ -578,6 +578,7 @@ GameObject:
   - component: {fileID: 31250197}
   - component: {fileID: 31250196}
   - component: {fileID: 31250194}
+  - component: {fileID: 31250195}
   m_Layer: 0
   m_Name: Marchers Transform
   m_TagString: Untagged
@@ -609,6 +610,23 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   isMoving: 0
+--- !u!114 &31250195
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 31250193}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea401b88b1a6dd44fb5690a89f10b78d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  marcherFactory: {fileID: 1219379206}
+  positionService: {fileID: 1219379210}
+  director: {fileID: 1219379203}
+  positionHistory: {fileID: 2118709100}
+  cameraMode: {fileID: 218049296}
 --- !u!114 &31250196
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -650,7 +668,7 @@ MonoBehaviour:
   countsProgressBar: {fileID: 1171218387}
   marcherPositionService: {fileID: 1219379210}
   dashedPathPreviewManager: {fileID: 1948889903}
-  positionHistory: {fileID: 2118709100}
+  marcherLifecycleService: {fileID: 31250195}
 --- !u!4 &31250198
 Transform:
   m_ObjectHideFlags: 0
@@ -11585,6 +11603,8 @@ MonoBehaviour:
   endBpmInputField: {fileID: 488845533}
   intervalField: {fileID: 653809154}
   director: {fileID: 1219379203}
+  marcherManager: {fileID: 1219379208}
+  marcherLifecycleService: {fileID: 31250195}
   setsBar: {fileID: 1171218384}
   countsBar: {fileID: 1171218387}
   buttonPlaySet01: {fileID: 68751107}
@@ -12391,6 +12411,7 @@ MonoBehaviour:
   sessionLoader: {fileID: 1219379207}
   marcherFactory: {fileID: 1219379206}
   marcherPositionService: {fileID: 1219379210}
+  director: {fileID: 1219379203}
   shapeMarchers: {fileID: 583371126}
   intervalManager: {fileID: 583371133}
 --- !u!114 &1219379209
@@ -21869,7 +21890,7 @@ MonoBehaviour:
   selectedMarchers: {fileID: 31250197}
   countsProgressBar: {fileID: 1171218387}
   director: {fileID: 1219379203}
-  marcherPositionService: {fileID: 1219379210}
+  marcherLifecycleService: {fileID: 31250195}
   ghostPrefab: {fileID: 5783072409151532751, guid: 96f49b822d37185449f7647fd5716c84, type: 3}
 --- !u!1 &2120062610
 GameObject:
