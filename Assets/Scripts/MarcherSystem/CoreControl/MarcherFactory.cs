@@ -90,6 +90,11 @@ public class MarcherFactory : MonoBehaviour
 
         // Debug.Log($"➕ Spawned Marcher{nextIndex + 1} at {spawnPos}");
     }
+    public void RemoveMarcher(MarcherPositionsManager marcher)
+    {
+        if (marchers.Contains(marcher))
+            marchers.Remove(marcher);
+    }
 
     /// <summary>
     /// Removes the most recently added marcher from scene and list.

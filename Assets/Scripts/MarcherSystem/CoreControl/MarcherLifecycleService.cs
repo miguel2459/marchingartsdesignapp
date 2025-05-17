@@ -14,6 +14,7 @@ public class MarcherLifecycleService : MonoBehaviour
     [SerializeField] private MarcherPositionService positionService;
     [SerializeField] private EnsembleDirector2 director;
     [SerializeField] private MarcherPositionHistory positionHistory;
+    [SerializeField] private DashedPathPreviewManager dashedPathPreviewManager;
     [SerializeField] private CameraModeManager cameraMode;
 
     private Func<int, int> getMaxCountForSet;
@@ -131,6 +132,42 @@ public class MarcherLifecycleService : MonoBehaviour
     /// <summary>
     /// Updates core references and visuals after spawning new marchers.
     /// </summary>
+    
+    public void DeleteMarcher(MarcherPositionsManager marcher)
+    {
+        string name = marcher.name;
+
+        // 1. Remove from JSON cache
+        director.SessionLoader.RuntimeCache.ParsedCountPositions.Remove(name);
+        director.SessionLoader.RuntimeCache.ParsedIdentities.Remove(name);
+
+        // 2. Remove from active lists
+        marcherFactory.RemoveMarcher(marcher);
+        director.marchers.Remove(marcher);
+        director.marcherManager.SetMarchersList(marcherFactory.Marchers);
+
+        // 3. Destroy object
+        Destroy(marcher.gameObject);
+
+        // 4. Update state
+        director.numberOfMarchers--;
+        director.SessionLoader.ShowState.NumberOfMarchers = director.numberOfMarchers;
+        director.UIController.UpdateNumberOfMarchersUI(director.numberOfMarchers);
+
+        // 5. Refresh visuals
+        director.UpdateInspectorSetProgress();
+        director.UIController.InitializeCountsBar();
+
+        int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
+        director.VisualizePathsForSet(currentSet);
+        dashedPathPreviewManager?.RemoveFromPreview(marcher.gameObject);
+
+        cameraMode.ReapplyActiveCameraMode();
+
+        Debug.Log($"🗑 Deleted marcher {name} and cleaned up references.");
+    }
+
+
     private void RefreshAfterSpawner()
     {
         director.marchers = new List<MarcherPositionsManager>(marcherFactory.Marchers);

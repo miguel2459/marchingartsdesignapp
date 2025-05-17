@@ -1,0 +1,13 @@
+ID,Scenario,Action,Expected Result
+TC-001,New show loaded,"Open app, wait for load",Marchers spawn and arrange in square if no JSON data exists
+TC-002,Confirm initial dot,"Select marcher(s), press `Spacebar` at Set 1, Count 1","Dot is confirmed, path line appears, count subtext updates"
+TC-003,Confirm fallback dot,"At Set 0, Count 0 with no counts selected, press `Spacebar`","Set 1 counts appear, no count button highlighted, marcher dot confirmed"
+TC-004,Animate marcher,Press Play (metronome or timeline),Marchers interpolate smoothly using tempo/BPM data
+TC-005,Spawn new marcher,Call `SpawnNewMarchers(1)` from script/UI,"New marcher appears near back sideline and is auto-confirmed at Set 0, Count 0"
+TC-006,Delete marcher dot,"Confirm marcher at Set 2, Count 3, then press `Delete`","Dot is removed, paths and UI update"
+TC-007,Rebuild marchers,Call `EditorRebuild()`,All marchers are cleared and rebuilt from factory with restored or fallback positions
+TC-008,Animate with missing tempo,"Delete SetTiming entry for Set 3, press play","Warning logged, marcher does not animate, no crash"
+TC-009,Out-of-bounds prefab test,Inject bad prefab (missing components),Error is logged and prefab is skipped safely
+TC-010,Confirm dot with no count selected,"Select marcher, no count selected, press `Spacebar`","Dot is placed at Set (N-1), Count last, Set (N) counts are rendered"
+TC-011,Count button sync after confirm,Confirm dot at Count 5 in Set 4,"Count 5 button remains highlighted, subtext updates, no flicker"
+TC-012,Visual feedback refresh,After dot confirm or delete,"Paths re-render, selector rings update, progress UI refreshes"

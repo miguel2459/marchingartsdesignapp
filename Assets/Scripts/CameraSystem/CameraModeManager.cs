@@ -3,14 +3,14 @@ using System.Collections.Generic;
 
 public class CameraModeManager : MonoBehaviour
 {
-    
+
     public FlyingCameraController flyingCamera;
     public TopDownCameraController topDownCamera;
     [Header("Camera GameObjects")]
     public Camera flyingCamComponent;
     public Camera topDownCamComponent;
     private bool isTopDownActive = false;
-    private List<GameObject> selectedMarchers = new List<GameObject>();
+    private bool inputBlocked = false;
     [SerializeField] private SelectedMarchers selected;
     [SerializeField] private EnsembleDirector2 director;
 
@@ -87,5 +87,12 @@ public class CameraModeManager : MonoBehaviour
             ActivateFlyingMode();
         }
     }
+    
+    public void BlockInput(bool blocked)
+    {
+        inputBlocked = blocked;
+    }
+
+    public bool IsInputBlocked() => inputBlocked;
 
 }

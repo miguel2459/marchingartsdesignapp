@@ -123,7 +123,15 @@ public class MarcherPositionService : MonoBehaviour
 
         // ✅ Delete the confirmed entry
         PositionEntry oldEntry = marcher.countPositions[set][count];
-        positionHistory.RecordChange(marcher, set, count, oldEntry, new PositionEntry());
+        positionHistory.RecordChange(
+            marcher,
+            set,
+            count,
+            oldEntry,
+            new PositionEntry(),
+            MarcherPositionHistory.ChangeIntent.Reconfirm
+        );
+
         marcher.countPositions[set].Remove(count);
         Debug.Log($"✅ Removed confirmed position: Set {set}, Count {count} for {marcher.name}");
 

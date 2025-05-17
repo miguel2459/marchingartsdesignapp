@@ -23,12 +23,14 @@ public class SelectedMarchers : MonoBehaviour
     public MarcherPositionService marcherPositionService;
     public DashedPathPreviewManager dashedPathPreviewManager; // assign in inspector
     [SerializeField] private MarcherLifecycleService marcherLifecycleService;
+    [SerializeField] private MarcherDeleteConfirmationPanel deleteConfirmationPanel;
 
 
     private void Update()
     {
         CheckForSpaceBarSetPosition(); // march
         CheckForDeleteConfirmedPosition(); // 🔥 delete confirmed count
+        CheckForDeleteMarcher();
 
         if (Input.GetKeyDown(KeyCode.G)) SnapToGridOnly();
         if (Input.GetKeyDown(KeyCode.B)) SnapAndRespaceSmartReviewed();
@@ -235,9 +237,21 @@ public class SelectedMarchers : MonoBehaviour
                 }
             }
 
-            // ✅ No need to duplicate update logic here — it's now centralized
-            countsProgressBar?.UpdateCountProgressColors(setToUse);
-            countsProgressBar?.UpdateCountSubtextsForSet(setToUse);
+            // Determine which set's counts to render
+            int renderSet = (setToUse == 0) ? 1 : setToUse;
+            int countsInSet = SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(renderSet, out var timing)
+                ? timing.count : 0;
+
+            countsProgressBar?.RenderCounts(renderSet, countsInSet);
+            countsProgressBar?.UpdateCountProgressColors(renderSet);
+            countsProgressBar?.UpdateCountSubtextsForSet(renderSet);
+
+            // Re-highlight only if a count was actively selected
+            if (activeCountIndex >= 0)
+                countsProgressBar?.HighlightCount(activeCountIndex);
+            else
+                countsProgressBar?.ResetHighlight();
+
             dashedPathPreviewManager?.DisableAllPreviews();
         }
     }
@@ -376,7 +390,7 @@ public class SelectedMarchers : MonoBehaviour
 
     private void CheckForDeleteConfirmedPosition()
     {
-        if (Input.GetKeyDown(KeyCode.Delete) && selectedMarchers.Count > 0)
+        if (Input.GetKeyDown(KeyCode.Delete) && !Input.GetKey(KeyCode.LeftControl) && selectedMarchers.Count > 0)
         {
             int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
             int countIndex = countsProgressBar != null ? countsProgressBar.GetActiveCountIndex() : -1;
@@ -397,6 +411,36 @@ public class SelectedMarchers : MonoBehaviour
                 }
             }
         }
+    }
+
+    private void CheckForDeleteMarcher()
+    {
+        if (Input.GetKeyDown(KeyCode.Delete) && Input.GetKey(KeyCode.LeftControl))
+        {
+            if (selectedMarchers.Count == 0)
+            {
+                Debug.LogWarning("⚠️ No marchers selected for deletion.");
+                return;
+            }
+
+            // Show popup with selected marchers
+            deleteConfirmationPanel.Show(selectedMarchers, ConfirmDeleteMarcher);
+        }
+    }
+
+   private void ConfirmDeleteMarcher(List<GameObject> marchersToDelete)
+    {
+        foreach (GameObject m in marchersToDelete)
+        {
+            selectedMarchers.Remove(m); // ✅ Remove from selection FIRST
+
+            if (m.TryGetComponent(out MarcherPositionsManager posManager))
+            {
+                marcherLifecycleService.DeleteMarcher(posManager);
+            }
+        }
+
+        UpdateCameraFocus(); // Optional: recenters if any remain
     }
 
 
