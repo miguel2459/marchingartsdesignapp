@@ -155,7 +155,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             }
             else
             {
-                Debug.LogWarning($"{marcher.name} has no position for Set {targetSet}, Count {targetCount}");
+                //Debug.LogWarning($"{marcher.name} has no position for Set {targetSet}, Count {targetCount}");
             }
         }
     }

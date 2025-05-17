@@ -30,6 +30,8 @@ public class DashedPathPreviewManager : MonoBehaviour
         {
             foreach (var kvp in initialPositions)
             {
+                if (kvp.Key == null) continue; // ✅ prevent accessing destroyed GameObjects
+
                 if (Vector3.Distance(kvp.Key.transform.position, kvp.Value) > 0.01f)
                 {
                     StartPreview();
@@ -45,6 +47,15 @@ public class DashedPathPreviewManager : MonoBehaviour
             }
         }
     }
+
+    public void RemoveFromPreview(GameObject marcher)
+    {
+        initialPositions.Remove(marcher);
+
+        activeCoordinators.RemoveAll(coord =>
+            coord == null || coord.gameObject == null || coord.gameObject == marcher);
+    }
+
 
     public void DisableAllPreviews()
     {

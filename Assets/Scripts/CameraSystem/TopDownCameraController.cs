@@ -21,6 +21,7 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
     private Quaternion previousRotation;
     private float currentOrthoSize;
     private Camera cam;
+    [SerializeField] private CameraModeManager cameraModeManager;
 
     public void Enable()
     {
@@ -105,6 +106,8 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
 
     private void HandleZoom()
     {
+        if (cameraModeManager != null && cameraModeManager.IsInputBlocked()) return;
+        
         float scrollDelta = Input.GetAxis("Mouse ScrollWheel");
         currentOrthoSize -= scrollDelta * zoomSpeed * Time.deltaTime;
         currentOrthoSize = Mathf.Clamp(currentOrthoSize, minOrthoSize, maxOrthoSize);

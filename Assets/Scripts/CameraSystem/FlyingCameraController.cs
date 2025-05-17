@@ -26,6 +26,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     private bool isActive = true;
 
     public TransformGizmoManager gizmoManager;
+    [SerializeField] private CameraModeManager cameraModeManager;
 
     void Awake()
     {
@@ -88,6 +89,8 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
 
     void HandleZoom()
     {
+        if (cameraModeManager != null && cameraModeManager.IsInputBlocked()) return;
+
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         transform.position += transform.forward * scroll * zoomSpeed * Time.deltaTime;
     }

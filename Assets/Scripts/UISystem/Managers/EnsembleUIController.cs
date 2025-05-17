@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System;
-  
+
 public class EnsembleUIController : MonoBehaviour
 {
     [Header("Input Fields")]
@@ -16,7 +16,7 @@ public class EnsembleUIController : MonoBehaviour
     [SerializeField] private EnsembleDirector2 director;
     [SerializeField] private MarcherManager marcherManager;
     private EnsembleSessionLoader sessionLoader => director.SessionLoader;
-    private ISetProgressTracker setProgressTracker; 
+    private ISetProgressTracker setProgressTracker;
     [SerializeField] private MarcherLifecycleService marcherLifecycleService;
 
     [Header("Progress Bars")]
@@ -64,32 +64,32 @@ public class EnsembleUIController : MonoBehaviour
         int last = sessionLoader.LastSet;
 
         numberOfMarchersInputField.text = director.numberOfMarchers.ToString();
-        numberOfSetsInputField.text     = director.numberOfSets.ToString();
+        numberOfSetsInputField.text = director.numberOfSets.ToString();
 
-         if (sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(last, out var timing))
-         {
-             countsPerSetInputField.text = timing.count.ToString();
-             startBpmInputField.text          = timing.startBPM.ToString("F1");
-             endBpmInputField.text          = timing.endBPM.ToString("F1");
-         }
+        if (sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(last, out var timing))
+        {
+            countsPerSetInputField.text = timing.count.ToString();
+            startBpmInputField.text = timing.startBPM.ToString("F1");
+            endBpmInputField.text = timing.endBPM.ToString("F1");
+        }
 
-         // 3) (Re)build your Set‐bar & Count‐bar
-         setsBar.InitializeSetsBar();
- 
-         // 4) Force‐highlight + load timing inputs for the last set
-         setsBar.HighlightSet(last);
-         setsBar.UpdateTimingInputsForSet(last);
-         director.VisualizePathsForSet(last);
- 
-         // 5) Counts‐bar: ensure defaults, then fill in subtexts & colors
-         countsBar.EnsureSetTimingDefaults(director.numberOfSets);
+        // 3) (Re)build your Set‐bar & Count‐bar
+        setsBar.InitializeSetsBar();
+
+        // 4) Force‐highlight + load timing inputs for the last set
+        setsBar.HighlightSet(last);
+        setsBar.UpdateTimingInputsForSet(last);
+        director.VisualizePathsForSet(last);
+
+        // 5) Counts‐bar: ensure defaults, then fill in subtexts & colors
+        countsBar.EnsureSetTimingDefaults(director.numberOfSets);
     }
 
     public void InitializeCountsBar()
     {
-    int setIndex = sessionLoader.LastSet;
-    countsBar.UpdateCountSubtextsForSet(setIndex);
-    countsBar.UpdateCountProgressColors(setIndex);
+        int setIndex = sessionLoader.LastSet;
+        countsBar.UpdateCountSubtextsForSet(setIndex);
+        countsBar.UpdateCountProgressColors(setIndex);
     }
 
     private void AttachInputListeners()
@@ -155,7 +155,7 @@ public class EnsembleUIController : MonoBehaviour
         if (int.TryParse(value, out int parsed))
         {
             parsed = Mathf.Max(1, parsed);
-            director.numberOfSets           = parsed;
+            director.numberOfSets = parsed;
             sessionLoader.ShowState.NumberOfSets = parsed;
             setsBar.OnTotalSetsChanged(parsed);
             sessionLoader.ReloadSession();  // rebuild marchers & re‑call InitializeUI
@@ -176,4 +176,10 @@ public class EnsembleUIController : MonoBehaviour
         countsBar.UpdateCountSubtextsForSet(currentSet);
         countsBar.UpdateCountProgressColors(currentSet);
     }
+
+    public void UpdateNumberOfMarchersUI(int count)
+    {
+        numberOfMarchersInputField.text = count.ToString();
+    }
+
 }

@@ -1,0 +1,5 @@
+Script,Purpose,Responsibilities,Not Responsible For,Behavior Notes
+MarcherFactory.cs,"Instantiates marcher prefabs, applies IDs/identities, and manages active list.","Spawn prefabs, assign names, inject dependencies, manage list","Animation, position storage, JSON loading",Fallback injection from SessionManager; supports spawnPos override
+MarcherManager.cs,Bootstraps marchers on show load from JSON or fallback.,"Build from factory, restore JSON, arrange fallback, signal ready","Movement, animation, UI interaction",Safe to rerun; finds last confirmed position
+MarcherController.cs,Animates marcher using tempo-aware interpolation during playback.,"Lerp between positions, compute BPM steps, animate in Update()","Position data storage, timing logic, prefab instantiation",Explicit marching control; reusable interpolation pipeline
+MarcherLifecycleService.cs,"Manages confirming, deleting, spawning marchers, with UI/visual sync.","Confirm/Delete dots, spawn marchers, refresh UI/paths","Direct input handling, data storage (delegated)",Central refresh methods; Set 0 always confirmed for new spawn

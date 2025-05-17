@@ -40,6 +40,7 @@ public class MarcherForwardDashedVisualizer : MonoBehaviour
 
     public void Hide()
     {
+        if (lineRenderer == null) return; // ✅ Guard against destroyed component
         lineRenderer.enabled = false;
         lineRenderer.positionCount = 0;
     }

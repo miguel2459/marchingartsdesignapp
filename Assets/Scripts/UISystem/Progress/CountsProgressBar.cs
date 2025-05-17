@@ -25,6 +25,7 @@ public class CountsProgressBar : MonoBehaviour
     private IMarcherProvider director;           // cached cast
     public EnsembleDirector2 ensemble;
     private int currentSetNumber;
+    private int renderedSetNumber = -1;
     [SerializeField] private TransformGizmoManager transformGizmoManager;
     [SerializeField] private MarcherPositionHistory positionHistory;
 
@@ -71,9 +72,18 @@ public class CountsProgressBar : MonoBehaviour
     /// </summary>
     public void RenderCounts(int setNumber, int countTotal)
     {
+        if (setNumber == renderedSetNumber && countButtons.Count == countTotal)
+        {
+            // Already rendered — just update progress and subtexts
+            UpdateCountProgressColors(setNumber);
+            UpdateCountSubtextsForSet(setNumber);
+            return;
+        }
+
+        renderedSetNumber = setNumber;
         currentSetNumber = setNumber;
 
-        ClearCounts();
+        ClearCounts(); // only if not already rendered
 
         float spacing = 10f;
         float viewportWidth = contentArea.parent.GetComponent<RectTransform>().rect.width;
@@ -83,24 +93,13 @@ public class CountsProgressBar : MonoBehaviour
         float buttonWidth;
 
         if (countTotal <= visibleCountLimit)
-        {
             buttonWidth = availableWidth / countTotal;
-            //Debug.Log($"🧮 Using full width: Button width = {buttonWidth:F2}");
-        }
         else
-        {
-            float maxVisibleWidth = viewportWidth - ((visibleCountLimit - 1) * spacing);
-            buttonWidth = maxVisibleWidth / visibleCountLimit;
-            //Debug.Log($"🧮 Using limited width: Button width = {buttonWidth:F2}");
-        }
+            buttonWidth = (viewportWidth - ((visibleCountLimit - 1) * spacing)) / visibleCountLimit;
 
-        // Update layout spacing
         HorizontalLayoutGroup layout = contentArea.GetComponent<HorizontalLayoutGroup>();
         if (layout != null)
-        {
             layout.spacing = spacing;
-            //Debug.Log($"📏 Horizontal spacing set to {spacing}");
-        }
 
         for (int i = 0; i < countTotal; i++)
         {
@@ -116,26 +115,15 @@ public class CountsProgressBar : MonoBehaviour
                 else if (label.name.Contains("Sub Text")) sub = label;
             }
 
-            if (main != null)
-                main.text = (i + 1).ToString();
-
+            if (main != null) main.text = (i + 1).ToString();
             if (sub != null)
             {
-                sub.text = ""; // Start blank
-                sub.gameObject.SetActive(true); // Turn on so we can update
+                sub.text = "";
+                sub.gameObject.SetActive(true);
             }
 
-            RectTransform rt = buttonObj.GetComponent<RectTransform>();
-            if (rt != null)
-            {
-                rt.sizeDelta = new Vector2(buttonWidth, rt.sizeDelta.y);
-            }
-
-            Image bg = buttonObj.GetComponent<Image>();
-            if (bg != null)
-            {
-                bg.color = defaultColor;
-            }
+            buttonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(buttonWidth, buttonObj.GetComponent<RectTransform>().sizeDelta.y);
+            buttonObj.GetComponent<Image>().color = defaultColor;
 
             int countIndex = i;
 
@@ -149,12 +137,14 @@ public class CountsProgressBar : MonoBehaviour
                 buttonObj = buttonObj,
                 mainText = main,
                 subText = sub,
-                countIndex = countIndex + 1 // store as 1-based
+                countIndex = countIndex + 1
             });
         }
+
         UpdateCountProgressColors(setNumber);
-        //Debug.Log($"✅ Rendered {countButtons.Count} count buttons for Set {setNumber}");
+        UpdateCountSubtextsForSet(setNumber);
     }
+
 
     public void UpdateCountProgressColors(int setNumber)
     {
