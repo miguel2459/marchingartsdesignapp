@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
+
 
 /// <summary>
 /// Tracks a history of position changes for undo/redo operations.
@@ -10,6 +12,7 @@ public class MarcherPositionHistory : MonoBehaviour
     private Stack<List<PositionChange>> redoStack = new Stack<List<PositionChange>>();
     private List<PositionChange> currentBatch = null;
     public MarcherPositionService marcherService;
+    [SerializeField] MarcherLifecycleService marcherLifecycle;
 
     private int activeSet = -1;
     private int activeCount = -1;
@@ -38,7 +41,9 @@ public class MarcherPositionHistory : MonoBehaviour
         if (currentBatch != null && currentBatch.Count > 0)
         {
             undoStack.Push(currentBatch);
+            DebugUndo.Insert(0, new List<PositionChange>(currentBatch)); // newest on top
             redoStack.Clear();
+            DebugRedo.Clear();
         }
         currentBatch = null;
     }
@@ -49,7 +54,7 @@ public class MarcherPositionHistory : MonoBehaviour
     {
         if (set != activeSet || count != activeCount)
         {
-            //Debug.LogWarning($"⚠️ Skipped change — outside current edit context (Set {set}, Count {count})");
+            Debug.LogWarning($"⚠️ Skipped change — outside current edit context (Set {set}, Count {count})");
             return;
         }
 
@@ -80,20 +85,27 @@ public class MarcherPositionHistory : MonoBehaviour
     {
         if (!CanUndo) return;
         var changeSet = undoStack.Pop();
+        redoStack.Push(changeSet);
+
+        DebugUndo.RemoveAt(0);
+        DebugRedo.Insert(0, changeSet);
+
         foreach (var change in changeSet)
             ApplyEntry(change.marcher, change.set, change.count, change.before, change.intent);
-        redoStack.Push(changeSet);
     }
 
     public void Redo()
     {
         if (!CanRedo) return;
         var changeSet = redoStack.Pop();
+        undoStack.Push(changeSet);
+
+        DebugRedo.RemoveAt(0);
+        DebugUndo.Insert(0, changeSet);
+
         foreach (var change in changeSet)
             ApplyEntry(change.marcher, change.set, change.count, change.after, change.intent);
-        undoStack.Push(changeSet);
     }
-
 
     private void ApplyEntry(MarcherPositionsManager marcher, int set, int count, PositionEntry entry, ChangeIntent intent)
     {
@@ -101,115 +113,97 @@ public class MarcherPositionHistory : MonoBehaviour
 
         switch (intent)
         {
-            case ChangeIntent.RawMoveOnConfirmed:
-                marcher.transform.position = entry.pos;
-                Debug.Log($"↩️ Raw transform-only undo: moved {marcher.name} to {entry.pos} at Set {set}, Count {count}");
-                break;
-
             case ChangeIntent.ConfirmedMove:
             case ChangeIntent.Reconfirm:
-                if (entry.IsConfirmed)
-                {
-                    Debug.Log($"✅ Reapplying confirmed entry at Set {set}, Count {count} | Type: {entry.type}");
-
-                    marcher.countPositions[set][count] = entry;
-                    marcher.transform.position = entry.pos;
-
-                    Debug.Log("🔄 Calling ReinterpolateAround() after confirmed reentry...");
-                    ReinterpolateAround(marcher, set, count);
-                    if (marcher.TryGetComponent(out Unit unit))
-                    {
-                        bool isHolding = entry.type == "hold";
-                        unit.SetSelector(true, isHolding);
-                    }
-                }
-                else
-                {
-                    Debug.Log($"❌ Entry is no longer confirmed, removing and recalculating inferred positions at Set {set}, Count {count}");
-
-                    if (marcher.countPositions.ContainsKey(set))
-                    {
-                        marcher.countPositions[set].Remove(count);
-                        Debug.Log("🗑️ Removed unconfirmed dot from countPositions");
-                    }
-
-                    Debug.Log("🔁 Calling HandlePostConfirmedUndo()...");
-                    HandlePostConfirmedUndo(marcher, set, count);
-                }
-
-                Debug.Log("📦 Syncing inspector list after position update...");
-                marcher.SyncInspectorList();
-
-                Debug.Log("📡 Raising global OnAnyMarcherPositionUpdated event...");
-                MarcherPositionsManager.RaisePositionUpdatedEvent();
+                ApplyConfirmedPosition(marcher, set, count, entry);
                 break;
 
             case ChangeIntent.ConfirmedDelete:
-                if (marcherService != null)
-                {
-                    Debug.Log($"🗑️ ConfirmedDelete — attempting to delete {marcher.name} at Set {set}, Count {count}");
+                ApplyConfirmedDeletion(marcher, set, count);
+                break;
 
-                    bool hadNext;
-                    bool success = marcherService.DeleteConfirmedPosition(marcher, set, count, out hadNext);
-
-                    Debug.Log($"🧹 Result of DeleteConfirmedPosition → Success: {success}, Had Next Dot: {hadNext}");
-                }
+            case ChangeIntent.RawMoveOnConfirmed:
+                ApplyRawMove(marcher, set, count, entry);
                 break;
 
             default:
-                Debug.LogWarning($"❓ Unknown ChangeIntent '{intent}' — falling back to raw application.");
-                marcher.countPositions[set][count] = entry;
-                marcher.transform.position = entry.pos;
-
-                marcher.SyncInspectorList();
-                MarcherPositionsManager.RaisePositionUpdatedEvent();
+                ApplyFallbackRaw(marcher, set, count, entry);
                 break;
         }
-        // 🔕 Disable any dashed previews before state re-application
-        if (marcher.TryGetComponent(out MarcherDashedPathCoordinator coord))
-        {
-            coord.StopDashedPreview();
-            //coord.DisableDashedPreview();
-        }
+
+        Debug.Log("📦 Syncing inspector list after position update...");
+        marcher.SyncInspectorList();
+
+        Debug.Log("📡 Raising global OnAnyMarcherPositionUpdated event...");
+        MarcherPositionsManager.RaisePositionUpdatedEvent();
     }
 
 
-    private void HandlePostConfirmedUndo(MarcherPositionsManager marcher, int set, int count)
+    private void ApplyConfirmedPosition(MarcherPositionsManager marcher, int set, int count, PositionEntry entry)
     {
-        var interpolator = new MarcherInterpolator(marcher, marcherService.GetMaxCountForSet);
-
-        bool hasPrev = interpolator.TryFindLastConfirmedPosition(set, count, out int prevSet, out int prevCount, out Vector3 prevPos);
-        bool hasNext = interpolator.TryFindNextConfirmedPosition(set, count, out int nextSet, out int nextCount, out Vector3 nextPos);
-
-        if (hasPrev && hasNext)
+        if (!entry.IsConfirmed)
         {
-            var steps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, nextSet, nextCount - 1);
-            interpolator.ApplyInterpolatedPositions(prevPos, nextPos, steps);
-            Debug.Log($"🔁 Reinterpolated after undo for Set {set}, Count {count} between {prevSet}:{prevCount} and {nextSet}:{nextCount}");
-
-            if (marcher.HasPositionAtCount(set, count))
-                marcher.transform.position = marcher.GetPositionAtCount(set, count);
-        }
-        else if (hasPrev && !hasNext)
-        {
-            // ✅ No next — just clean interpolated values between this and previous
-            var steps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, set, count - 1);
-            foreach (var (s, c) in steps)
+            Debug.Log($"❌ Entry is no longer confirmed, removing and recalculating inferred positions at Set {set}, Count {count}");
+            if (marcher.countPositions.ContainsKey(set))
             {
-                if (marcher.countPositions.TryGetValue(s, out var map) && map.TryGetValue(c, out var entry) && entry.IsInferred)
-                {
-                    map.Remove(c);
-                    Debug.Log($"❌ Removed inferred after undo — Set {s}, Count {c}");
-                }
+                marcher.countPositions[set].Remove(count);
+                Debug.Log("🗑️ Removed unconfirmed dot from countPositions");
             }
 
-            marcher.transform.position = prevPos;
+            // Optional: call a post-deletion handler if you want
+            return;
+        }
+
+        EnsureSetExists(marcher, set);
+        marcher.countPositions[set][count] = entry;
+        marcher.transform.position = entry.pos;
+
+        Debug.Log($"✅ Reapplying confirmed entry at Set {set}, Count {count} | Type: {entry.type}");
+
+        ReinterpolateAround(marcher, set, count);
+
+        if (marcher.TryGetComponent(out Unit unit))
+        {
+            bool isHolding = entry.type == "hold";
+            unit.SetSelector(true, isHolding);
+        }
+    }
+
+    private void ApplyConfirmedDeletion(MarcherPositionsManager marcher, int set, int count)
+    {
+        if (marcherLifecycle != null)
+        {
+            Debug.Log($"🗑️ ConfirmedDelete — attempting to delete {marcher.name} at Set {set}, Count {count}");
+            marcherLifecycle.DeleteDot(marcher, set, count);
         }
         else
         {
-            Debug.Log("🛑 No previous or next confirmed position. Leaving marcher where they are.");
+            Debug.LogWarning("❗ marcherLifecycle is not assigned. Cannot proceed with ConfirmedDelete.");
         }
     }
+
+    private void ApplyRawMove(MarcherPositionsManager marcher, int set, int count, PositionEntry entry)
+    {
+        marcher.transform.position = entry.pos;
+        Debug.Log($"↩️ Raw transform-only undo: moved {marcher.name} to {entry.pos} at Set {set}, Count {count}");
+    }
+
+    private void ApplyFallbackRaw(MarcherPositionsManager marcher, int set, int count, PositionEntry entry)
+    {
+        Debug.LogWarning($"❓ Unknown ChangeIntent fallback — applying raw transform and data");
+
+        EnsureSetExists(marcher, set);
+        marcher.countPositions[set][count] = entry;
+        marcher.transform.position = entry.pos;
+    }
+
+    private void EnsureSetExists(MarcherPositionsManager marcher, int set)
+    {
+        if (!marcher.countPositions.ContainsKey(set))
+            marcher.countPositions[set] = new Dictionary<int, PositionEntry>();
+    }
+
+
 
     private void ReinterpolateAround(MarcherPositionsManager marcher, int set, int count)
     {
@@ -265,7 +259,15 @@ public class MarcherPositionHistory : MonoBehaviour
         Unknown
     }
 
-    private struct PositionChange
+    //[SerializeField]
+    public List<List<PositionChange>> DebugUndo = new List<List<PositionChange>>();
+
+    //[SerializeField]
+
+    public List<List<PositionChange>> DebugRedo = new List<List<PositionChange>>();
+
+    [System.Serializable]
+    public struct PositionChange
     {
         public MarcherPositionsManager marcher;
         public int set;

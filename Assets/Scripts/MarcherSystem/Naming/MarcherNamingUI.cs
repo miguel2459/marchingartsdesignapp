@@ -26,12 +26,12 @@ public class MarcherNamingUI : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.N) && selectedMarchers.selectedMarchers.Count > 0)
+        if (Input.GetKeyDown(KeyCode.N) && selectedMarchers.SelectedCount > 0)
         {
             TogglePanel();
         }
 
-        if (namingPanel.activeSelf && selectedMarchers.selectedMarchers.Count == 0)
+        if (namingPanel.activeSelf && selectedMarchers.SelectedCount == 0)
         {
             namingPanel.SetActive(false);
         }
@@ -45,7 +45,7 @@ public class MarcherNamingUI : MonoBehaviour
             PopulateDropdownIfNeeded();
             customNameInput.text = "";
 
-            int count = selectedMarchers.selectedMarchers.Count;
+            int count =selectedMarchers.SelectedCount;
             marcherCountText.text = $"Selected {count} Marcher{(count == 1 ? "" : "s")}";
         }
     }
@@ -64,13 +64,13 @@ public class MarcherNamingUI : MonoBehaviour
         string customName = customNameInput.text.Trim();
         bool useCustom = !string.IsNullOrEmpty(customName);
 
-        if (selectedMarchers.selectedMarchers.Count == 0)
+        if (selectedMarchers.SelectedCount == 0)
         {
             Debug.LogWarning("Naming UI: No marchers selected.");
             return;
         }
 
-        foreach (GameObject marcher in selectedMarchers.selectedMarchers)
+        foreach (GameObject marcher in selectedMarchers.GetSelectionCopy())
         {
             if (marcher.TryGetComponent(out MarcherIdentityManager identity))
             {

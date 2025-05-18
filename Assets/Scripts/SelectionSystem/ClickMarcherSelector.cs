@@ -165,7 +165,8 @@ public class ClickMarcherSelector : MonoBehaviour
                     {
                         if (hit.collider?.gameObject?.GetComponent<Unit>() != null)
                         {
-                            selectedMarchers.DeselectMarcher(hit.collider.gameObject);
+                            selectedMarchers.Deselect(hit.collider.gameObject);
+
                             //selectedMarchers.UpdateCameraFocus();
                             // Reset drag state just in case
                             isDragging = false;
@@ -202,10 +203,10 @@ public class ClickMarcherSelector : MonoBehaviour
                     else if (hit.collider != null && selectedMarchers.marcherLayer == (selectedMarchers.marcherLayer | (1 << hit.collider.gameObject.layer)))
                     {
                         GameObject clickedMarcher = hit.collider.gameObject;
-                        if (Input.GetKey(KeyCode.LeftShift) && selectedMarchers.selectedMarchers.Contains(clickedMarcher))
+                        if (Input.GetKey(KeyCode.LeftShift) && selectedMarchers.IsSelected(clickedMarcher))
                         {
                             Debug.Log("MarcherSelector: Reanchoring gizmo to selected marcher.");
-                            selectedMarchers.ReanchorToExisting(clickedMarcher);
+                            transformGizmoManager.ReanchorGizmoToMarcher(clickedMarcher);
                             // Reset drag state just in case
                             isDragging = false;
                             ResetSelectionBox();
@@ -226,16 +227,16 @@ public class ClickMarcherSelector : MonoBehaviour
                         {
                             if (Input.GetKey(KeyCode.LeftShift)) // Additive selection
                             {
-                                if (!selectedMarchers.selectedMarchers.Contains(clicked))
+                                if (!selectedMarchers.IsSelected(clicked))
                                 {
-                                    selectedMarchers.SelectMarcher(clicked);
+                                    selectedMarchers.Select(clicked);
                                 }
                             }
                             else // Regular click - select only this one
                             {
                                 Debug.Log($"MarcherSelector: Selecting marcher {clicked.name}.");
                                 selectedMarchers.ClearSelection(); // Clear first
-                                selectedMarchers.SelectMarcher(clicked);
+                                selectedMarchers.Select(clicked);
                             }
                             //selectedMarchers.UpdateCameraFocus();
                         }
@@ -297,18 +298,18 @@ public class ClickMarcherSelector : MonoBehaviour
             if (screenPos.z > 0 && selectionRect.Contains(screenPos)) // Use screenPos directly
             {
                 // Use the main selectedMarchers reference
-                if (!selectedMarchers.selectedMarchers.Contains(marcherGO)) // Select if not already selected
+                if (!selectedMarchers.IsSelected(marcherGO)) // Select if not already selected
                 {
-                    selectedMarchers.SelectMarcher(marcherGO);
+                    selectedMarchers.Select(marcherGO);
                      Debug.Log($"{marcherGO.name} selected via drag.");
                 }
             }
             else // If not in the current drag box
             {
                  // If NOT additive selection, deselect marchers outside the box
-                 if (!isAdditive && selectedMarchers.selectedMarchers.Contains(marcherGO))
+                 if (!isAdditive && selectedMarchers.IsSelected(marcherGO))
                  {
-                      selectedMarchers.DeselectMarcher(marcherGO);
+                      selectedMarchers.Deselect(marcherGO);
                       Debug.Log($"{marcherGO.name} deselected (outside drag area).");
                  }
             }
@@ -335,7 +336,7 @@ public class ClickMarcherSelector : MonoBehaviour
         {
              GameObject marcherGO = marcherManager.gameObject; // Get the GameObject
              // Use the main selectedMarchers reference to check if it's currently selected
-             if (selectedMarchers.selectedMarchers.Contains(marcherGO))
+             if (selectedMarchers.IsSelected(marcherGO))
              {
                  Vector3 screenPos = currentCam.WorldToScreenPoint(marcherGO.transform.position);
                  // Check if marcher is in front of camera and within the logical rect
@@ -349,7 +350,7 @@ public class ClickMarcherSelector : MonoBehaviour
         // Deselect the identified marchers
         foreach(GameObject marcherToDeselect in marchersToDeselect)
         {
-             selectedMarchers.DeselectMarcher(marcherToDeselect);
+             selectedMarchers.Deselect(marcherToDeselect);
              Debug.Log($"Marcher {marcherToDeselect.name} deselected via Ctrl+drag.");
         }
     }

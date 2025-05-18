@@ -88,7 +88,6 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
 
         // 📦 Pass anchors to visualizer (previous, next, current)
         CacheAnchors(previous, next, active);
-        StartPreview();
     }
 
     public void CacheAnchors(Vector3 previousPos, Vector3? nextPos = null, Vector3? activeConfirmedPos = null)

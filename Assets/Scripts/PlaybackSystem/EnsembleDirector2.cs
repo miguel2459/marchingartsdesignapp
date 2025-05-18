@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Collections;
+using System.Linq;
 
 [ExecuteInEditMode]
 public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTracker
@@ -89,6 +89,10 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         UIController.InitializeCountsBar();
         VisualizePathsForSet(lastSet); // Show current set's paths on load
     }
+
+    public List<GameObject> MarcherObjects =>
+    new List<GameObject>(Marchers.Select(m => m.gameObject));
+
 
     public void PreviewCountPosition(int setNumber, int clickedCount)
     {
@@ -243,7 +247,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         }
 
         // ✅ Skip if marcher is currently selected
-        if (selectedMarchers != null && selectedMarchers.selectedMarchers.Contains(marcher.gameObject))
+        if (selectedMarchers != null && selectedMarchers.IsSelected(marcher.gameObject))
             return;
 
         Renderer renderer = marcher.GetComponent<Renderer>();
@@ -269,6 +273,34 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             visual.ApplyHoldColorIfEligible(setIndex, currentCount);
         }
     }
+
+    public void RenderDefaultPathsForAll()
+    {
+        int currentSet = int.Parse(SessionManager.instance.showStateSO.LastSet);
+
+        if (!SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(currentSet, out var timing))
+            return;
+
+        int totalCounts = timing.count;
+        int fallbackSet = (currentSet == 1) ? 0 : currentSet - 1;
+        int fallbackCount = 0;
+
+        if (currentSet > 1 &&
+            SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(fallbackSet, out var prevTiming))
+        {
+            fallbackCount = prevTiming.count;
+        }
+
+        foreach (var marcher in Marchers)
+        {
+            Vector3 start = marcher.GetPositionAtCount(fallbackSet, fallbackCount);
+            Vector3[] path = marcher.GetInterpolatedPath(currentSet, totalCounts, start);
+            marcher.ShowPath(path);
+
+            marcher.pathVisualizer?.SetColor(new Color(1f, 1f, 1f, 0.8f));
+        }
+    }
+
     public int GetCountTotalForSet(int set)
     {
         if (sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(set, out var timing))
@@ -287,7 +319,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
 
     public bool IsMarcherSelected(GameObject marcher)
     {
-        return selectedMarchers != null && selectedMarchers.selectedMarchers.Contains(marcher);
+        return selectedMarchers != null && selectedMarchers.IsSelected(marcher);
     }
 
     public float GetSetProgress(int setIndex)

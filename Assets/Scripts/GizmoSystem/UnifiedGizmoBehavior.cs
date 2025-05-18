@@ -46,13 +46,13 @@ public class UnifiedGizmoBehavior : MonoBehaviour
 
                     // Cache initial positions for undo tracking ✅
                     initialPositions.Clear();
-                    foreach (var marcher in selectedMarchers.selectedMarchers)
+                    selectedMarchers.ForEachSelected(marcher =>
                     {
                         if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                         {
                             initialPositions[posManager] = marcher.transform.position;
-                        }
-                    }
+                        }                    
+                    });
 
                     // Determine which axis handle is clicked
                     string hitName = hit.collider.gameObject.name.ToLower();
@@ -89,13 +89,13 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     transform.position = newPos;
 
                     // Clamp each marcher to field bounds (post-move)
-                    foreach (GameObject marcher in selectedMarchers.selectedMarchers)
+                    selectedMarchers.ForEachSelected(marcher =>
                     {
                         Vector3 pos = marcher.transform.position;
                         pos.x = Mathf.Clamp(pos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
                         pos.z = Mathf.Clamp(pos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
-                        marcher.transform.position = pos;
-                    }
+                        marcher.transform.position = pos;               
+                    });
                 }
 
                 else if ((mode == "rotate" || mode == "scale") && gizmoManager != null && !gizmoManager.IsFreeDraggingGizmo)
@@ -106,13 +106,13 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     {
                         transform.Rotate(Vector3.up, mouseDelta * 5f);
 
-                        foreach (GameObject marcher in selectedMarchers.selectedMarchers)
+                        selectedMarchers.ForEachSelected(marcher =>
                         {
                             Vector3 pos = marcher.transform.position;
                             pos.x = Mathf.Clamp(pos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
                             pos.z = Mathf.Clamp(pos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
                             marcher.transform.position = pos;
-                        }
+                        });
                     }
                     else if (mode == "scale")
                     {
@@ -120,8 +120,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                         scaleFactor = Mathf.Clamp(scaleFactor, 0.5f, 2f);
 
                         Vector3 gizmoPos = transform.position;
-
-                        foreach (GameObject marcher in selectedMarchers.selectedMarchers)
+                        selectedMarchers.ForEachSelected(marcher =>
                         {
                             Vector3 direction = marcher.transform.position - gizmoPos;
                             direction.y = 0;
@@ -139,7 +138,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                             newPos.z = Mathf.Clamp(newPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
 
                             marcher.transform.position = newPos;
-                        }
+                        });
                     }
                 }
             }
@@ -149,7 +148,8 @@ public class UnifiedGizmoBehavior : MonoBehaviour
         {
             isDragging = false;
             positionHistory.BeginBatch();
-            foreach (var marcher in selectedMarchers.selectedMarchers)
+            
+            selectedMarchers.ForEachSelected(marcher =>
             {
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
@@ -163,8 +163,8 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     {
                         positionHistory.RecordRawMovement(posManager, initial, newPos);
                     }
-                }
-            }
+                }          
+            });
             positionHistory.EndBatch();
             activeAxis = "center";
         }

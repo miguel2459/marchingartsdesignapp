@@ -35,7 +35,7 @@ public class MarcherClipboardManager : MonoBehaviour
 
         DestroyActiveGhosts(); // Clean up any existing ghosts
 
-        foreach (GameObject marcherObj in selectedMarchers.selectedMarchers)
+        foreach (GameObject marcherObj in selectedMarchers.GetSelectionCopy())
         {
             if (marcherObj.TryGetComponent(out MarcherPositionsManager posManager))
             {
@@ -70,7 +70,7 @@ public class MarcherClipboardManager : MonoBehaviour
         int set, count;
         GetTargetSetAndCount(out set, out count);
 
-        foreach (GameObject marcherObj in selectedMarchers.selectedMarchers)
+        foreach (GameObject marcherObj in selectedMarchers.GetSelectionCopy())
         {
             if (marcherObj.TryGetComponent(out MarcherPositionsManager posManager) &&
                 copiedPositions.TryGetValue(posManager, out Vector3 copiedPos))

@@ -53,6 +53,18 @@ public class MarcherPositionsManager : MonoBehaviour
         return countPositions.ContainsKey(setIndex) && countPositions[setIndex].ContainsKey(countIndex)
             && !countPositions[setIndex][countIndex].IsUnset;
     }
+    public bool HasConfirmedOrInferredAtSet(int set)
+    {
+        if (!countPositions.TryGetValue(set, out var map)) return false;
+
+        foreach (var entry in map.Values)
+        {
+            if (entry.IsConfirmed || entry.IsInferred)
+                return true;
+        }
+
+        return false;
+    }
 
     public Vector3[] GetInterpolatedPath(int setIndex, int totalCounts, Vector3 fromPosition)
     {
