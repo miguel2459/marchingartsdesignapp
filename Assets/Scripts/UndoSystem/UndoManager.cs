@@ -1,4 +1,6 @@
 using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// Centralized manager for global undo/redo hotkeys using MarcherPositionHistory.
@@ -8,7 +10,7 @@ public class UndoManager : MonoBehaviour
 {
     [SerializeField] private MarcherPositionHistory positionHistory;
     [SerializeField] private TransformGizmoManager transformGizmoManager;
-
+    [SerializeField] private SelectedMarchers selectedMarchers;
 
     private void Update()
     {
@@ -16,13 +18,34 @@ public class UndoManager : MonoBehaviour
         {
             if (positionHistory.CanUndo)
             {
+                // 🧠 1. Cache current selection
+                List<GameObject> cachedSelection = selectedMarchers?.GetSelectionCopy();
+
+                // 🧹 2. Clear selection to prevent dashed line redraw
+                selectedMarchers?.ClearSelection();
+
                 Debug.Log("↩️ Undoing last position change");
                 positionHistory.Undo();
-            }
-            if (transformGizmoManager.IsGizmoActive())
-            {
-                transformGizmoManager.HideTransformGizmo();
-                Debug.Log("🔧 Gizmo hidden after undo.");
+
+                // 🔁 3. Re-select previous marchers after undo
+                if (cachedSelection != null)
+                {
+                    foreach (var m in cachedSelection)
+                    {
+                        selectedMarchers.Select(m);
+                    }
+                    Debug.Log("✅ Re-selected cached marchers after undo.");
+
+                    // 🔁 Fix dashed lines after undo
+                    selectedMarchers.ReCacheAnchorsForSelected();
+                }
+
+                // 🛠️ 4. Optionally hide gizmo (if you're keeping this behavior)
+                if (transformGizmoManager.IsGizmoActive())
+                {
+                    transformGizmoManager.HideTransformGizmo();
+                    Debug.Log("🔧 Gizmo hidden after undo.");
+                }
             }
         }
 

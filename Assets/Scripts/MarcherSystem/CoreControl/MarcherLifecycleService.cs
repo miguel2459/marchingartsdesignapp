@@ -51,7 +51,7 @@ public class MarcherLifecycleService : MonoBehaviour
 
         if (!success)
         {
-            Debug.LogWarning($"⚠️ Deletion failed for {marcher.name} at Set {set}, Count {count}");
+            Debug.LogWarning($"⚠️ No confirmed position to delete for {marcher.name} at Set {set}, Count {count}");
             return;
         }
 
@@ -60,7 +60,7 @@ public class MarcherLifecycleService : MonoBehaviour
         if (hadNext)
             director.counts?.OnCountButtonClicked(set, count);
 
-        Debug.Log($"✅ Deleted position for {marcher.name} at Set {set}, Count {count}");
+        Debug.Log($"✅ Completed: Deleted position for {marcher.name} at Set {set}, Count {count}");
     }
 
     /// <summary>

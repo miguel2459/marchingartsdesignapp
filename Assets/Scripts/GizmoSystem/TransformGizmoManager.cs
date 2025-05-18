@@ -28,7 +28,7 @@ public class TransformGizmoManager : MonoBehaviour
 
     void Update()
     {
-        if (selectedMarchers.selectedMarchers.Count == 0)
+        if (selectedMarchers.SelectedCount == 0)
         {
             if (activeGizmo)
             {
@@ -55,7 +55,7 @@ public class TransformGizmoManager : MonoBehaviour
                 {
                     Debug.Log("TransformGizmoManager: Shift+Clicked gizmo - initiating freeform drag.");
                     isFreeDraggingGizmo = true;
-                    isMoving = true;
+
                     movePlane = new Plane(Vector3.up, hit.point);
 
                     if (movePlane.Raycast(ray, out distance))
@@ -63,16 +63,18 @@ public class TransformGizmoManager : MonoBehaviour
                         offset = ray.GetPoint(distance) - activeGizmo.transform.position;
                     }
 
-                    foreach (var marcher in selectedMarchers.selectedMarchers)
-                    {
-                        marcher.transform.SetParent(null);
-                    }
+                    selectedMarchers.ForEachSelected(m => m.transform.SetParent(null));
                     return;
+                }
+                if (!Input.GetKey(KeyCode.LeftShift))
+                {
+                    Debug.Log("TransformGizmoManager: Regular gizmo click - initiating standard drag.");
+                    isMoving = true;
                 }
             }
         }
 
-        if (isMoving && activeGizmo != null && selectedMarchers.selectedMarchers.Count > 0)
+        if (isMoving && activeGizmo != null && selectedMarchers.SelectedCount > 0)
         {
             MoveGizmo();
         }
@@ -83,10 +85,7 @@ public class TransformGizmoManager : MonoBehaviour
             if (isFreeDraggingGizmo)
             {
                 isFreeDraggingGizmo = false;
-                foreach (var marcher in selectedMarchers.selectedMarchers)
-                {
-                    marcher.transform.SetParent(activeGizmo.transform);
-                }
+                selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
             }
         }
     }
@@ -116,9 +115,14 @@ public class TransformGizmoManager : MonoBehaviour
 
         // === If no gizmo exists, create it at center of selected marchers ===
         Vector3 center = Vector3.zero;
-        foreach (var m in selectedMarchers.selectedMarchers)
+        int count = 0;
+        selectedMarchers.ForEachSelected(m =>
+        {
             center += m.transform.position;
-        center /= selectedMarchers.selectedMarchers.Count;
+            count++;
+        });
+        center /= Mathf.Max(1, count); // Avoid divide by zero
+
 
         activeGizmo = Instantiate(unifiedGizmoPrefab, center, Quaternion.identity, transform);
         var newBehavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
@@ -132,26 +136,20 @@ public class TransformGizmoManager : MonoBehaviour
             newBehavior.positionHistory = history;
         }
 
-        foreach (var marcher in selectedMarchers.selectedMarchers)
-            marcher.transform.SetParent(activeGizmo.transform);
+        selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
+        selectedMarchers.ReCacheAnchorsForSelected(); // ensures anchor state is up-to-date
     }
 
     public void ReanchorGizmoToMarcher(GameObject marcher)
     {
         if (!activeGizmo || !marcher) return;
 
-        foreach (var selected in selectedMarchers.selectedMarchers)
-        {
-            selected.transform.SetParent(null);
-        }
+        selectedMarchers.ForEachSelected(m => m.transform.SetParent(null));
 
         activeGizmo.transform.position = marcher.transform.position;
         Debug.Log($"TransformGizmoManager: Gizmo reanchored to {marcher.name} at {marcher.transform.position}");
 
-        foreach (var selected in selectedMarchers.selectedMarchers)
-        {
-            selected.transform.SetParent(activeGizmo.transform);
-        }
+        selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
     }
 
     public void HideTransformGizmo()
@@ -160,11 +158,10 @@ public class TransformGizmoManager : MonoBehaviour
         {
             Transform ensembleParent = selectedMarchers.director.transform; // 👈 Get reference to EnsembleDirector2
 
-            foreach (var marcher in selectedMarchers.selectedMarchers)
+            selectedMarchers.ForEachSelected(m =>
             {
-                if (marcher != null)
-                    marcher.transform.SetParent(ensembleParent); // ✅ Reparent to EnsembleDirector2
-            }
+                if (m != null) m.transform.SetParent(ensembleParent);
+            });
 
             Destroy(activeGizmo);
             activeGizmo = null;

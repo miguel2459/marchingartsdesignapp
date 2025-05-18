@@ -40,7 +40,7 @@ public class EnsemblePathRenderCoordinator : MonoBehaviour
             fallbackCount = prevTiming.count;
         }
 
-        var selected = selectedMarchers.selectedMarchers;
+        var selected = selectedMarchers.GetSelectionCopy();
         bool hasSelection = selected.Count > 0;
 
         foreach (var marcher in director.Marchers)

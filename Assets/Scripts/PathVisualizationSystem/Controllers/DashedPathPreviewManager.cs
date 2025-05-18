@@ -26,14 +26,23 @@ public class DashedPathPreviewManager : MonoBehaviour
 
     public void UpdatePreviewCycle()
     {
+        if (initialPositions.Count == 0)
+        {
+            //Debug.LogWarning("[DashedPreview] Skipping update — no initial positions registered.");
+            return;
+        }
+
         if (!previewStarted)
         {
+            Debug.Log($"[DashedPreview] Running UpdatePreviewCycle | previewStarted={previewStarted}");
             foreach (var kvp in initialPositions)
             {
-                if (kvp.Key == null) continue; // ✅ prevent accessing destroyed GameObjects
+                float dist = Vector3.Distance(kvp.Key.transform.position, kvp.Value);
+                Debug.Log($"[DashedPreview] {kvp.Key.name} moved by {dist:F4}");
 
-                if (Vector3.Distance(kvp.Key.transform.position, kvp.Value) > 0.01f)
+                if (dist > 0.01f)
                 {
+                    Debug.Log($"[DashedPreview] Movement detected — starting preview for {kvp.Key.name}");
                     StartPreview();
                     break;
                 }
@@ -74,8 +83,10 @@ public class DashedPathPreviewManager : MonoBehaviour
 
         bool metronomeRunning = EnsembleDirector2.instance.metronome.IsRunning();
 
+        Debug.Log("[DashedPreview] StartPreview called — applying preview to active coordinators");
         foreach (var coord in activeCoordinators)
         {
+            Debug.Log($"    ↳ {coord.name}: IsSelected={EnsembleDirector2.instance.IsMarcherSelected(coord.gameObject)} | MetronomeRunning={EnsembleDirector2.instance.metronome.IsRunning()}");
             bool shouldAllowPreview =
                 !metronomeRunning || // metronome is NOT running
                 !EnsembleDirector2.instance.IsMarcherSelected(coord.gameObject); // OR marcher is NOT selected

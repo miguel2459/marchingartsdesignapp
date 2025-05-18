@@ -43,7 +43,7 @@ public class CameraModeManager : MonoBehaviour
         flyingCamera.Disable();
         topDownCamera.Enable();
         isTopDownActive = true;
-        selected.SetActiveCamera(topDownCamComponent);
+        SetActiveCamera(topDownCamComponent);
         selected.cameraFocusHandler = topDownCamera;
 
     }
@@ -58,7 +58,7 @@ public class CameraModeManager : MonoBehaviour
         flyingCamera.Enable();
         isTopDownActive = false;
 
-        selected.SetActiveCamera(flyingCamComponent);
+        SetActiveCamera(flyingCamComponent);
         selected.cameraFocusHandler = flyingCamera;
 
         //Debug.Log($"[CameraModeManager] 🔵 ActivateFlyingMode — Position: {transform.position}, Rotation: {transform.rotation}");
@@ -68,6 +68,20 @@ public class CameraModeManager : MonoBehaviour
         );
         director.GetComponent<MarcherManager>().OnMarchersReady -= ActivateFlyingMode;
     }
+
+    public void UpdateCameraFocus()
+    {
+        if (selected.SelectedCount == 0) return;
+
+        Vector3 center = SmartReshapeService.GetFocalPoint(selected.GetSelectionCopy());
+        List<GameObject> selectedList = selected.GetSelectionCopy();
+
+        selected.cameraFocusHandler?.SetSelectedMarchers(selectedList);
+        selected.cameraFocusHandler?.FocusOnSelection(center);
+
+        Debug.Log("CameraModeManager: Camera focus updated to selection.");
+    }
+
 
     public void ReapplyActiveCameraMode()
     {
@@ -86,6 +100,24 @@ public class CameraModeManager : MonoBehaviour
             Debug.LogWarning("❓ No known active camera. Defaulting to FlyingMode.");
             ActivateFlyingMode();
         }
+    }
+
+    public void SetActiveCamera(Camera activeCam)
+    {
+        bool isTopDown = (activeCam.orthographic == true);
+
+        foreach (var marcher in director.Marchers)
+        {
+            var billboard = marcher.GetComponentInChildren<MarcherLabelBillboard>();
+            if (billboard != null)
+            {
+                billboard.SetCamera(activeCam);
+                billboard.SetMode(isTopDown);
+            }
+        }
+
+        selected.cam = activeCam;
+        selected.transformGizmoManager?.SetActiveCamera(activeCam);
     }
     
     public void BlockInput(bool blocked)
