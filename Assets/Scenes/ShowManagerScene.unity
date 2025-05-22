@@ -869,17 +869,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47c5b3789ac918b4d9fde6527159cd62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  marcherLayer:
-    serializedVersion: 2
-    m_Bits: 64
   director: {fileID: 1219379203}
-  cam: {fileID: 963194227}
-  cameraModeManager: {fileID: 218049296}
   transformGizmoManager: {fileID: 31250194}
   shapeMarchers: {fileID: 583371126}
   dashedPathPreviewManager: {fileID: 1948889903}
+  cameraModeManager: {fileID: 218049296}
   marcherEditActions: {fileID: 31250199}
   inputGestureManager: {fileID: 939114980}
+  cam: {fileID: 963194227}
+  marcherLayer:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!4 &31250198
 Transform:
   m_ObjectHideFlags: 0
@@ -5499,6 +5499,36 @@ Material:
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
+--- !u!1 &500366606
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 500366607}
+  m_Layer: 0
+  m_Name: Unit Ring  Handler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &500366607
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500366606}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1219379204}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!21 &505866911
 Material:
   serializedVersion: 6
@@ -14367,6 +14397,8 @@ MonoBehaviour:
   marcherManager: {fileID: 1219379208}
   pathRenderer: {fileID: 1219379209}
   positionHistory: {fileID: 2118709100}
+  marcherService: {fileID: 1219379210}
+  dashedPreview: {fileID: 1948889903}
   fullProgressColor: {r: 1, g: 1, b: 1, a: 1}
   partialProgressColor: {r: 1, g: 0.92, b: 0.5, a: 1}
   noProgressColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
@@ -14380,7 +14412,8 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_Children:
+  - {fileID: 500366607}
   m_Father: {fileID: 0}
   m_RootOrder: 12
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -14410,6 +14443,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   marcherPrefab: {fileID: 5783072409151532751, guid: e83101474d56e344681880919710f662, type: 3}
   runtimeCache: {fileID: 0}
+  ensembleUnitHandler: {fileID: 500366606}
 --- !u!114 &1219379207
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25125,7 +25159,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   marcherService: {fileID: 1219379210}
-  marcherLifecycle: {fileID: 0}
 --- !u!114 &2118709101
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25140,7 +25173,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   positionHistory: {fileID: 2118709100}
   transformGizmoManager: {fileID: 31250194}
-  selectedMarchers: {fileID: 0}
+  selectedMarchers: {fileID: 31250197}
+  director: {fileID: 1219379203}
 --- !u!4 &2118709102
 Transform:
   m_ObjectHideFlags: 0

@@ -11,40 +11,46 @@ public class UndoManager : MonoBehaviour
     [SerializeField] private MarcherPositionHistory positionHistory;
     [SerializeField] private TransformGizmoManager transformGizmoManager;
     [SerializeField] private SelectedMarchers selectedMarchers;
+    [SerializeField] private EnsembleDirector2 director;
 
     private void Update()
     {
-        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.U))
+        if (Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.U))
         {
             if (positionHistory.CanUndo)
             {
-                // 🧠 1. Cache current selection
+                Debug.Log("↩️ Undoing last position change");
+
+                // 🧠 Cache current selection
                 List<GameObject> cachedSelection = selectedMarchers?.GetSelectionCopy();
 
-                // 🧹 2. Clear selection to prevent dashed line redraw
+                // 🧹 Clear selection and gizmo BEFORE undo
                 selectedMarchers?.ClearSelection();
+                if (transformGizmoManager.IsGizmoActive())
+                {
+                    transformGizmoManager.HideTransformGizmo();
+                    Debug.Log("🔧 Gizmo hidden after undo.");
+                }
 
-                Debug.Log("↩️ Undoing last position change");
+                // 🔄 Perform Undo
                 positionHistory.Undo();
 
-                // 🔁 3. Re-select previous marchers after undo
+                // ✅ Restore selection AFTER undo
                 if (cachedSelection != null)
                 {
                     foreach (var m in cachedSelection)
                     {
                         selectedMarchers.Select(m);
+
+                        // ✅ Register selection as baseline for dashed preview
+                        selectedMarchers?.dashedPathPreviewManager?.RegisterSelectedMarchers(cachedSelection);
+
+                        selectedMarchers.ReCacheAnchorsForSelected();
+                        director?.RefreshDashedPreviewForSelected();
                     }
-                    Debug.Log("✅ Re-selected cached marchers after undo.");
 
-                    // 🔁 Fix dashed lines after undo
-                    selectedMarchers.ReCacheAnchorsForSelected();
-                }
-
-                // 🛠️ 4. Optionally hide gizmo (if you're keeping this behavior)
-                if (transformGizmoManager.IsGizmoActive())
-                {
-                    transformGizmoManager.HideTransformGizmo();
-                    Debug.Log("🔧 Gizmo hidden after undo.");
+                    // 🔁 Delay anchors + dashed paths until next frame
+                    EnsembleDirector2.instance.StartCoroutine(DelayedRefreshDashedPreview());
                 }
             }
         }
@@ -56,7 +62,7 @@ public class UndoManager : MonoBehaviour
                 Debug.Log("↪️ Redoing last undone position change");
                 positionHistory.Redo();
             }
-            
+
             if (transformGizmoManager.IsGizmoActive())
             {
                 transformGizmoManager.HideTransformGizmo();
@@ -64,5 +70,12 @@ public class UndoManager : MonoBehaviour
             }
         }
 
+    }
+    
+    private System.Collections.IEnumerator DelayedRefreshDashedPreview()
+    {
+        yield return null; // Wait one frame
+        selectedMarchers.ReCacheAnchorsForSelected();
+        selectedMarchers.dashedPathPreviewManager?.UpdatePreviewCycle();
     }
 }

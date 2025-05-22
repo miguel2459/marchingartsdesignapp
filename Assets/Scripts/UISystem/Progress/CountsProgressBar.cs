@@ -205,7 +205,15 @@ public class CountsProgressBar : MonoBehaviour
                     marcher.GetComponent<MarcherVisualStateController>()?.ApplyHoldColorIfEligible(setNumber, clickedCount);
                     
                     bool isHolding = marcher.IsHoldingAtCount(setNumber, clickedCount);
-                    unit.SetSelector(hasConfirmedPosition, isHolding);
+                    if (hasConfirmedPosition)
+                    {
+                        Vector3 pos = marcher.GetPositionAtCount(setNumber, clickedCount);
+                        unit.AttachSelectorToConfirmedPosition(pos, isHolding);
+                    }
+                    else
+                    {
+                        unit.SetSelector(false);
+                    }
                 }
             }
             HighlightCount(clickedCount-1);

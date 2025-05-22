@@ -210,7 +210,15 @@ public class SetProgressBar : MonoBehaviour
 
                 bool isHolding = marcher.IsHoldingAtCount(currentSet, currentCount);
 
-                unit.SetSelector(hasConfirmedPosition, isHolding); // not selected
+                if (hasConfirmedPosition)
+                {
+                    Vector3 pos = marcher.GetPositionAtCount(currentSet, currentCount);
+                    unit.AttachSelectorToConfirmedPosition(pos, isHolding);
+                }
+                else
+                {
+                    unit.SetSelector(false);
+                }
             }
         }
 

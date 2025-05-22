@@ -5,11 +5,51 @@ using System.Collections.Generic;
 [CustomEditor(typeof(MarcherPositionHistory))]
 public class MarcherPositionHistoryEditor : Editor
 {
+    private MarcherPositionHistory history;
+    private int lastUndoCount;
+    private int lastRedoCount;
+
+    private void OnEnable()
+    {
+        history = (MarcherPositionHistory)target;
+        lastUndoCount = history.GetUndoCount();
+        lastRedoCount = history.GetRedoCount();
+        EditorApplication.update += OnEditorUpdate;
+
+        MarcherPositionHistory.OnHistoryContextChanged += ForceRepaint; // ✅ subscribe
+    }
+
+    private void OnDisable()
+    {
+        EditorApplication.update -= OnEditorUpdate;
+        MarcherPositionHistory.OnHistoryContextChanged -= ForceRepaint; // ✅ unsubscribe
+    }
+
+    private void ForceRepaint()
+    {
+        Debug.Log("🌀 [Editor] ForceRepaint triggered via OnHistoryContextChanged");
+        lastUndoCount = -1;
+        lastRedoCount = -1;
+        Repaint();
+    }
+    
+    private void OnEditorUpdate()
+    {
+        if (history == null || history != target)
+            return;
+
+
+        if (history.GetUndoCount() != lastUndoCount || history.GetRedoCount() != lastRedoCount)
+        {
+            lastUndoCount = history.GetUndoCount();
+            lastRedoCount = history.GetRedoCount();
+            Repaint();
+        }
+    }
+
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
-
-        var history = (MarcherPositionHistory)target;
 
         GUILayout.Space(10);
         GUILayout.Label("🧠 Undo Stack (Preview)", EditorStyles.boldLabel);
@@ -43,6 +83,11 @@ public class MarcherPositionHistoryEditor : Editor
                     GUILayout.Label($"• {change.marcher?.name} | Set {change.set}, Count {change.count} | Intent: {change.intent}");
                 }
             }
+        }
+
+        if (GUILayout.Button("🔄 Manual Repaint"))
+        {
+            Repaint();
         }
     }
 }
