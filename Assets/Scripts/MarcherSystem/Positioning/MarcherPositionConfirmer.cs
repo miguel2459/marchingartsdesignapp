@@ -7,6 +7,8 @@ public class MarcherPositionConfirmer
     private readonly EnsembleDirector2 director;
     private readonly MarcherPositionHistory positionHistory;
     private readonly Func<int, int> getMaxCountForSet;
+    public bool isUndoContext = false;
+
 
     public MarcherPositionConfirmer(EnsembleDirector2 director, MarcherPositionHistory positionHistory, Func<int, int> getMaxCountForSet)
     {
@@ -19,16 +21,14 @@ public class MarcherPositionConfirmer
     {
         EnsureSetExists(marcher, set);
 
-        bool alreadyConfirmed = marcher.HasPositionAtCount(set, count) && marcher.countPositions[set][count].IsConfirmed;
-        PositionEntry oldEntry = alreadyConfirmed ? marcher.countPositions[set][count] : new PositionEntry();
-
-        Dictionary<(int, int), PositionEntry> beforeSnapshot = GetSnapshot(marcher, set, count);
-
-        marcher.countPositions[set][count] = new PositionEntry(finalPos, "march");
-
-        InterpolateAround(marcher, set, count, finalPos);
-
-        RecordChanges(marcher, set, count, beforeSnapshot);
+        if (!isUndoContext)
+        {
+            TrackUndoForConfirm(marcher, set, count, finalPos);
+        }
+        else
+        {
+            UndoDeleteToReconfirm(marcher, set, count, finalPos);
+        }
 
         marcher.SyncInspectorList();
 
@@ -36,59 +36,35 @@ public class MarcherPositionConfirmer
         director?.VisualizePathsForSet(visualizeSet);
     }
 
-    private void InterpolateAround(MarcherPositionsManager marcher, int set, int count, Vector3 finalPos)
+    private void TrackUndoForConfirm(MarcherPositionsManager marcher, int set, int count, Vector3 finalPos)
     {
-        var interpolator = new MarcherInterpolator(marcher, getMaxCountForSet, () => marcher.transform.position);
+        var beforeEntry = MarcherSnapshotUtility.CaptureBeforePositionType(marcher, set, count, getMaxCountForSet);
 
-        if (interpolator.TryFindLastConfirmedPosition(set, count, out int prevSet, out int prevCount, out Vector3 prevPos))
-        {
-            var backSteps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, set, count - 1);
-            interpolator.ApplyInterpolatedPositions(prevPos, finalPos, backSteps);
-        }
+        marcher.countPositions[set][count] = new PositionEntry(finalPos, "march");
 
-        if (interpolator.TryFindNextConfirmedPosition(set, count, out int nextSet, out int nextCount, out Vector3 nextPos))
-        {
-            var forwardSteps = interpolator.GetInterpolationSteps(set, count + 1, nextSet, nextCount - 1);
-            interpolator.ApplyInterpolatedPositions(finalPos, nextPos, forwardSteps);
-        }
+        MarcherInterpolator.ReinterpolateAroundDot(marcher, set, count, finalPos, getMaxCountForSet);
+
+        RecordChanges(marcher, set, count, beforeEntry);
     }
 
-    private Dictionary<(int, int), PositionEntry> GetSnapshot(MarcherPositionsManager marcher, int set, int count)
+    private void UndoDeleteToReconfirm(MarcherPositionsManager marcher, int set, int count, Vector3 finalPos)
     {
-        var snapshot = new Dictionary<(int, int), PositionEntry>();
-        var interpolator = new MarcherInterpolator(marcher, getMaxCountForSet, () => marcher.transform.position);
+        marcher.countPositions[set][count] = new PositionEntry(finalPos, "march");
 
-        if (interpolator.TryFindLastConfirmedPosition(set, count, out int prevSet, out int prevCount, out _) &&
-            interpolator.TryFindNextConfirmedPosition(set, count, out int nextSet, out int nextCount, out _))
-        {
-            var steps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, nextSet, nextCount - 1);
-            foreach (var (s, c) in steps)
-            {
-                if (marcher.countPositions.TryGetValue(s, out var counts) &&
-                    counts.TryGetValue(c, out var entry))
-                {
-                    snapshot[(s, c)] = new PositionEntry(entry.pos, entry.type);
-                }
-            }
-        }
-
-        return snapshot;
+        MarcherInterpolator.ReinterpolateAroundDot(marcher, set, count, finalPos, getMaxCountForSet);
     }
 
-    private void RecordChanges(MarcherPositionsManager marcher, int set, int count, Dictionary<(int, int), PositionEntry> before)
+
+    private void RecordChanges(MarcherPositionsManager marcher, int set, int count, PositionEntry beforeEntry)
     {
-        var after = GetSnapshot(marcher, set, count);
+        var afterEntry = MarcherSnapshotUtility.CaptureAfterPositionType(marcher, set, count, getMaxCountForSet);
 
-        foreach (var kvp in before)
-        {
-            var (s, c) = kvp.Key;
-            if (s == set && c == count) continue;
+        Debug.Log($"🧪 Comparing CONFIRM: BEFORE = {beforeEntry.type}, AFTER = {afterEntry.type}");
 
-            var beforeEntry = kvp.Value;
-            var afterEntry = after.ContainsKey((s, c)) ? after[(s, c)] : new PositionEntry();
+        var livePosition = marcher.transform.position;
+        var intent = MarcherSnapshotUtility.DetermineConfirmedIntentWithLivePosition(livePosition, beforeEntry);
 
-            positionHistory.RecordChange(marcher, s, c, beforeEntry, afterEntry, MarcherPositionHistory.ChangeIntent.ConfirmedDelete);
-        }
+        positionHistory.RecordChange(marcher, set, count, beforeEntry, afterEntry, intent);
     }
 
     private void EnsureSetExists(MarcherPositionsManager marcher, int set)

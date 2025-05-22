@@ -154,11 +154,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                 if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
                 {
                     Vector3 newPos = marcher.transform.position;
-                    Vector3 oldPos = posManager.transform.position;
-
-                    // Store oldPos from BEFORE the move — you'll need to capture this earlier
-                    // To do this cleanly, cache initial positions at OnMouseDown
-
+                    
                     if (initialPositions.TryGetValue(posManager, out Vector3 initial))
                     {
                         positionHistory.RecordRawMovement(posManager, initial, newPos);

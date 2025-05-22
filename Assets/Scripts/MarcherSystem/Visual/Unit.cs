@@ -4,18 +4,20 @@ using UnityEngine;
 
 public class Unit : MonoBehaviour
 {
-    public GameObject selector;
+    [SerializeField] private GameObject selector;
+    private Transform originalParent;
+    private Transform ensembleDetachedParent;
 
-    // Start is called before the first frame update
-    void Start()
+
+    void Awake()
     {
         SetSelector(false);
+        if (selector != null)
+            originalParent = selector.transform.parent;
     }
-
-    // Update is called once per frame
-    void Update()
+    public void SetDetachedParent(Transform newParent)
     {
-        
+        ensembleDetachedParent = newParent;
     }
 
     public void SetSelector(bool toggle, bool isHolding = false)
@@ -38,5 +40,32 @@ public class Unit : MonoBehaviour
             rend.material.color = color;
     }
 
+    public void AttachSelectorToMarcher()
+    {
+        if (selector == null) return;
+        selector.transform.SetParent(originalParent);
+        Vector3 currentLocalPos = selector.transform.localPosition;
+        selector.transform.localPosition = new Vector3(0f, currentLocalPos.y, 0f);
+    }
 
+    public void DetachSelectorAt(Vector3 worldPos)
+    {
+        if (selector == null) return;
+        selector.transform.SetParent(ensembleDetachedParent);
+        selector.transform.position = new Vector3(worldPos.x, selector.transform.position.y, worldPos.z);
+    }
+
+    public void AttachSelectorToConfirmedPosition(Vector3 confirmedWorldPosition, bool isHolding)
+    {
+        if (selector == null) return;
+
+        selector.transform.SetParent(originalParent); // back to marcher
+        selector.transform.localPosition = new Vector3(0f, selector.transform.localPosition.y, 0f); // center xz
+
+        selector.SetActive(true);
+        SetSelectorColor(isHolding
+            ? new Color(0.8f, 0.6f, 1f, 1f) // purple
+            : new Color(0f, 0.81f, 1f, 1f) // blue
+        );
+    }
 }

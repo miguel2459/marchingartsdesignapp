@@ -110,7 +110,7 @@ public class MarcherInterpolator
         for (int s = fromSet; s <= toSet; s++)
         {
             int startC = (s == fromSet) ? fromCount : 1;
-            int endC   = (s == toSet)   ? toCount   : getMaxCountForSet(s);
+            int endC = (s == toSet) ? toCount : getMaxCountForSet(s);
 
             if (s == 0 || endC < startC) continue;
 
@@ -174,5 +174,60 @@ public class MarcherInterpolator
         // 4. Final fallback
         return getFallbackPosition();
     }
+    
+    public static void ReinterpolateAroundDot(MarcherPositionsManager marcher, int set, int count, Vector3 dotPosition, Func<int, int> getMaxCountForSet)
+    {
+        var interpolator = new MarcherInterpolator(marcher, getMaxCountForSet, () => marcher.transform.position);
 
+        // 🔙 Backward interpolation
+        if (interpolator.TryFindLastConfirmedPosition(set, count, out int prevSet, out int prevCount, out Vector3 prevPos))
+        {
+            var backSteps = interpolator.GetInterpolationSteps(prevSet, prevCount + 1, set, count - 1);
+            interpolator.ApplyInterpolatedPositions(prevPos, dotPosition, backSteps);
+        }
+
+        // 🔜 Forward interpolation
+        if (interpolator.TryFindNextConfirmedPosition(set, count, out int nextSet, out int nextCount, out Vector3 nextPos))
+        {
+            var forwardSteps = interpolator.GetInterpolationSteps(set, count + 1, nextSet, nextCount - 1);
+            interpolator.ApplyInterpolatedPositions(dotPosition, nextPos, forwardSteps);
+        }
+    }
+
+    public static void ReinterpolateBetweenDots(
+    MarcherPositionsManager marcher,
+    int midpointSet,
+    int midpointCount,
+    Vector3 fromPos,
+    Vector3 toPos,
+    int fromSet,
+    int fromCount,
+    int toSet,
+    int toCount,
+    Func<int, int> getMaxCountForSet)
+    {
+        Debug.Log($"🧮 Reinterpolating between confirmed dots — from Set {fromSet}, Count {fromCount} → to Set {toSet}, Count {toCount}");
+
+        var interpolator = new MarcherInterpolator(marcher, getMaxCountForSet, () => marcher.transform.position);
+
+        List<(int set, int count)> steps = interpolator.GetInterpolationSteps(fromSet, fromCount + 1, toSet, toCount - 1);
+
+        if (steps.Count == 0)
+        {
+            Debug.LogWarning($"⚠️ No interpolation steps found between Set {fromSet}, Count {fromCount} and Set {toSet}, Count {toCount}");
+            return;
+        }
+
+        interpolator.ApplyInterpolatedPositions(fromPos, toPos, steps);
+
+        if (marcher.HasPositionAtCount(midpointSet, midpointCount))
+        {
+            var post = marcher.countPositions[midpointSet][midpointCount];
+            Debug.Log($"✅ Midpoint dot at Set {midpointSet}, Count {midpointCount} now inferred: {post.pos}");
+        }
+        else
+        {
+            Debug.LogWarning($"❌ Midpoint at Set {midpointSet}, Count {midpointCount} was not generated.");
+        }
+    }
 }

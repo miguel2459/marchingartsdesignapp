@@ -4,67 +4,51 @@ using UnityEngine;
 public class DashedPathPreviewManager : MonoBehaviour
 {
     private readonly List<MarcherDashedPathCoordinator> activeCoordinators = new List<MarcherDashedPathCoordinator>();
-    private readonly Dictionary<GameObject, Vector3> initialPositions = new Dictionary<GameObject, Vector3>();
 
     private bool previewStarted = false;
 
     public void RegisterSelectedMarchers(List<GameObject> selected)
     {
         activeCoordinators.Clear();
-        initialPositions.Clear();
         previewStarted = false;
+
+        int set = int.Parse(SessionManager.instance.showStateSO.LastSet);
+        int countIndex = EnsembleDirector2.instance.counts?.GetActiveCountIndex() ?? -1;
+        int count = (countIndex >= 0) ? countIndex + 1 : 1;
 
         foreach (var marcher in selected)
         {
             if (marcher.TryGetComponent(out MarcherDashedPathCoordinator coord))
             {
                 activeCoordinators.Add(coord);
-                initialPositions[marcher] = marcher.transform.position;
+                coord.SetInitialPosition(marcher.transform.position);
+                coord.SetAnchorContext(set, count); // Optionally inject set/count context again here if needed
+                coord.EnableDashedPreview(); // ✅ KEY LINE
+                coord.StartPreview();        // ✅ Show anchor + lines immediately
             }
         }
     }
 
     public void UpdatePreviewCycle()
     {
-        if (initialPositions.Count == 0)
+        if (activeCoordinators.Count == 0)
         {
-            //Debug.LogWarning("[DashedPreview] Skipping update — no initial positions registered.");
+            Debug.LogWarning("[DashedPreview] Skipping update — no active coordinators.");
             return;
         }
 
-        if (!previewStarted)
+        foreach (var coord in activeCoordinators)
         {
-            Debug.Log($"[DashedPreview] Running UpdatePreviewCycle | previewStarted={previewStarted}");
-            foreach (var kvp in initialPositions)
-            {
-                float dist = Vector3.Distance(kvp.Key.transform.position, kvp.Value);
-                Debug.Log($"[DashedPreview] {kvp.Key.name} moved by {dist:F4}");
-
-                if (dist > 0.01f)
-                {
-                    Debug.Log($"[DashedPreview] Movement detected — starting preview for {kvp.Key.name}");
-                    StartPreview();
-                    break;
-                }
-            }
-        }
-        else
-        {
-            foreach (var coord in activeCoordinators)
-            {
-                coord.UpdateDashedPreview(coord.transform.position);
-            }
+            coord.UpdateDashedPreview(coord.transform.position);
         }
     }
+
 
     public void RemoveFromPreview(GameObject marcher)
     {
-        initialPositions.Remove(marcher);
-
         activeCoordinators.RemoveAll(coord =>
             coord == null || coord.gameObject == null || coord.gameObject == marcher);
     }
-
 
     public void DisableAllPreviews()
     {
@@ -77,40 +61,15 @@ public class DashedPathPreviewManager : MonoBehaviour
         previewStarted = false;
     }
 
-    private void StartPreview()
-    {
-        previewStarted = true;
-
-        bool metronomeRunning = EnsembleDirector2.instance.metronome.IsRunning();
-
-        Debug.Log("[DashedPreview] StartPreview called — applying preview to active coordinators");
-        foreach (var coord in activeCoordinators)
-        {
-            Debug.Log($"    ↳ {coord.name}: IsSelected={EnsembleDirector2.instance.IsMarcherSelected(coord.gameObject)} | MetronomeRunning={EnsembleDirector2.instance.metronome.IsRunning()}");
-            bool shouldAllowPreview =
-                !metronomeRunning || // metronome is NOT running
-                !EnsembleDirector2.instance.IsMarcherSelected(coord.gameObject); // OR marcher is NOT selected
-
-            if (shouldAllowPreview)
-            {
-                coord.EnableDashedPreview();
-                coord.StartPreview();
-            }
-            else
-            {
-                coord.DisableDashedPreview();
-                coord.StopDashedPreview(); // make sure visuals are hidden
-            }
-        }
-    }
-
     public void StopAllPreviews()
     {
         foreach (var coord in activeCoordinators)
+        {
             coord.StopDashedPreview();
+            coord.SetInitialPosition(coord.transform.position); // optional reset to current position
+        }
 
         activeCoordinators.Clear();
-        initialPositions.Clear();
         previewStarted = false;
     }
 }

@@ -26,13 +26,32 @@ public class MarcherPositionService : MonoBehaviour
     /// </summary>
     public void ConfirmMarcherPosition(MarcherPositionsManager marcher, int set, int count, Vector3 finalPos)
     {
+        confirmer.isUndoContext = false;
         confirmer.Confirm(marcher, set, count, finalPos);
+        OnAnyMarcherPositionUpdated?.Invoke();
+    }
+
+    public void ConfirmFromUndo(MarcherPositionsManager marcher, int set, int count, Vector3 finalPos)
+    {
+        confirmer.isUndoContext = true;
+        confirmer.Confirm(marcher, set, count, finalPos);
+        confirmer.isUndoContext = false;
         OnAnyMarcherPositionUpdated?.Invoke();
     }
 
     public bool DeleteConfirmedPosition(MarcherPositionsManager marcher, int set, int count, out bool hadNext)
     {
+        deleter.isUndoContext = false;
         bool result = deleter.Delete(marcher, set, count, out hadNext);
+        OnAnyMarcherPositionUpdated?.Invoke();
+        return result;
+    }
+
+    public bool DeleteFromUndo(MarcherPositionsManager marcher, int set, int count, out bool hadNextConfirmed)
+    {
+        deleter.isUndoContext = true;
+        bool result = deleter.Delete(marcher, set, count, out hadNextConfirmed);
+        deleter.isUndoContext = false;
         OnAnyMarcherPositionUpdated?.Invoke();
         return result;
     }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Net.Sockets;
 using UnityEngine;
 
 /// <summary>
@@ -15,6 +16,7 @@ public class MarcherFactory : MonoBehaviour
 
     private readonly List<MarcherPositionsManager> marchers = new List<MarcherPositionsManager>();
     public IReadOnlyList<MarcherPositionsManager> Marchers => marchers;
+    [SerializeField] private GameObject ensembleUnitHandler;
 
     private void Awake()
     {
@@ -69,6 +71,18 @@ public class MarcherFactory : MonoBehaviour
         // Fetch marcher components
         var marcherMgr  = go.GetComponent<MarcherPositionsManager>();
         var marcherCtrl = go.GetComponent<MarcherController>();
+        if (go.TryGetComponent(out Unit unit))
+        {
+            GameObject handlerGO = ensembleUnitHandler;
+            if (handlerGO != null)
+            {
+                unit.SetDetachedParent(handlerGO.transform);
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ EnsembleUnitHandler not found in scene — selector rings may float loose.");
+            }
+        }
 
         if (marcherMgr == null || marcherCtrl == null)
         {
@@ -77,7 +91,7 @@ public class MarcherFactory : MonoBehaviour
             return;
         }
 
-        marcherMgr.InitializeSetCount(totalSets);
+        //marcherMgr.InitializeSetCount(totalSets);
         marcherCtrl.InitializeMarcher(runtimeCache, marcherMgr);
 
         // Optional: Apply display identity

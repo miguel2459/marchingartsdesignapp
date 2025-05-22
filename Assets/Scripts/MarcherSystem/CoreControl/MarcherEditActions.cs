@@ -48,9 +48,14 @@ public class MarcherEditActions : MonoBehaviour
                 marcherLifecycleService.ConfirmDot(posManager, setToUse, countToUse, marcher.transform.position);
 
                 bool isHolding = posManager.IsHoldingAtCount(setToUse, countToUse);
-                marcher.GetComponent<Unit>()?.SetSelector(true, isHolding);
+
+                if (marcher.TryGetComponent(out Unit unit))
+                {
+                    unit.AttachSelectorToConfirmedPosition(marcher.transform.position, isHolding);
+                }
             }
         });
+
 
         int renderSet = (setToUse == 0) ? 1 : setToUse;
         int countsInSet = SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(renderSet, out var timing)

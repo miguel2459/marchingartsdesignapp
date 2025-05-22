@@ -46,7 +46,7 @@ public class MarcherLifecycleService : MonoBehaviour
     public void DeleteDot(MarcherPositionsManager marcher, int set, int count)
     {
         Debug.Log($"🗑 LifecycleService: Deleting Set {set}, Count {count} for {marcher.name}");
-
+        positionHistory.BeginBatch();
         bool success = positionService.DeleteConfirmedPosition(marcher, set, count, out bool hadNext);
 
         if (!success)
@@ -54,7 +54,8 @@ public class MarcherLifecycleService : MonoBehaviour
             Debug.LogWarning($"⚠️ No confirmed position to delete for {marcher.name} at Set {set}, Count {count}");
             return;
         }
-
+        
+        positionHistory.EndBatch();
         RefreshAfterChange(set);
 
         if (hadNext)
@@ -103,7 +104,7 @@ public class MarcherLifecycleService : MonoBehaviour
             marcherFactory.Spawn(index, totalSets, spawnPos);
             var newMarcher = marcherFactory.Marchers[marcherFactory.Marchers.Count - 1];
 
-            newMarcher.InitializeSetCount(totalSets);
+            //newMarcher.InitializeSetCount(totalSets);
             newMarcher.transform.position = spawnPos;
 
             // Always confirm Set 0, Count 0 for JSON integrity
@@ -132,7 +133,7 @@ public class MarcherLifecycleService : MonoBehaviour
     /// <summary>
     /// Updates core references and visuals after spawning new marchers.
     /// </summary>
-    
+
     public void DeleteMarcher(MarcherPositionsManager marcher)
     {
         string name = marcher.name;
@@ -166,7 +167,6 @@ public class MarcherLifecycleService : MonoBehaviour
 
         Debug.Log($"🗑 Deleted marcher {name} and cleaned up references.");
     }
-
 
     private void RefreshAfterSpawner()
     {

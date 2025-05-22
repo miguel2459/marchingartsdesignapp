@@ -26,7 +26,13 @@ public class MarcherSelectionManager
         if (marcher.TryGetComponent(out MarcherVisualStateController visual))
             visual.SetSelected(true);
 
-        marcher.GetComponent<MarcherDashedPathCoordinator>()?.CacheAnchorsFromSceneContext();
+        if (marcher.TryGetComponent(out MarcherDashedPathCoordinator coord))
+        {
+            int set = int.Parse(SessionManager.instance.showStateSO.LastSet);
+            int countIndex = EnsembleDirector2.instance.counts?.GetActiveCountIndex() ?? -1;
+            int count = (countIndex >= 0) ? countIndex + 1 : 1;
+            coord.SetAnchorContext(set, count);
+        }
 
         int currentSetIndex = int.Parse(SessionManager.instance.showStateSO.LastSet);
         director.VisualizePathsForSet(currentSetIndex);
@@ -131,7 +137,13 @@ public class MarcherSelectionManager
             if (marcher == null) continue;
 
             var coordinator = marcher.GetComponent<MarcherDashedPathCoordinator>();
-            coordinator?.CacheAnchorsFromSceneContext();
+            if (coordinator != null)
+            {
+                int set = int.Parse(SessionManager.instance.showStateSO.LastSet);
+                int countIndex = EnsembleDirector2.instance.counts?.GetActiveCountIndex() ?? -1;
+                int count = (countIndex >= 0) ? countIndex + 1 : 1;
+                coordinator.SetAnchorContext(set, count);
+            }
         }
 
         pathPreviewManager?.RegisterSelectedMarchers(GetSelectionCopy());

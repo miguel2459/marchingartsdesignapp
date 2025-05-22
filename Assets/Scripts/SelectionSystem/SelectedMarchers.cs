@@ -57,7 +57,7 @@ public class SelectedMarchers : MonoBehaviour
         // }
         if (SelectedCount > 0 && transformGizmoManager != null && transformGizmoManager.isMoving)
         {
-            Debug.Log($"[Update] SelectedCount={SelectedCount}, IsMoving={transformGizmoManager?.isMoving}");
+            //Debug.Log($"[Update] SelectedCount={SelectedCount}, IsMoving={transformGizmoManager?.isMoving}");
             dashedPathPreviewManager?.UpdatePreviewCycle();
         }        
     }
@@ -117,5 +117,4 @@ public class SelectedMarchers : MonoBehaviour
             center
         );
     }
-
 }

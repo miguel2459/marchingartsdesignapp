@@ -9,7 +9,7 @@ public class MarcherVisualStateController : MonoBehaviour
     public Color selectedColor = new Color(0f, 0.81f, 1f, 1f); // Blue
     public Color holdColor = new Color(0.8f, 0.6f, 1f, 1f);     // Purple
     public Color defaultColor = Color.white;
-    
+
 
     private void Awake()
     {
@@ -102,6 +102,44 @@ public class MarcherVisualStateController : MonoBehaviour
         else
         {
             SetMaterialColor(Color.white); // reset to progress-state, can be overridden
+        }
+    }
+
+    public void UpdateSelectorAnchor(int setIndex, int countIndex)
+    {
+        if (!positionManager.TryGetConfirmedPosition(setIndex, countIndex, out Vector3 confirmedPos))
+        {
+            unit?.AttachSelectorToMarcher();  // fallback to default parenting
+            unit?.SetSelector(false);         // hide if no confirmed dot
+            return;
+        }
+
+        float dist = Vector3.Distance(transform.position, confirmedPos);
+        if (dist < 0.01f)
+        {
+            unit?.AttachSelectorToMarcher();     // close enough to stay attached
+            unit?.SetSelector(true, positionManager.IsHoldingAtCount(setIndex, countIndex));
+        }
+        else
+        {
+            unit?.DetachSelectorAt(confirmedPos);  // detach and leave at dot
+            unit?.SetSelector(true, positionManager.IsHoldingAtCount(setIndex, countIndex));
+        }
+    }
+    
+    public void UpdateSelectorAttachment(Vector3 currentPosition, Vector3? confirmedAnchor)
+    {
+        if (!TryGetComponent(out Unit unit)) return;
+        if (!confirmedAnchor.HasValue) return;
+
+        float dist = Vector3.Distance(currentPosition, confirmedAnchor.Value);
+        if (dist > 0.05f)
+        {
+            unit.DetachSelectorAt(confirmedAnchor.Value);
+        }
+        else
+        {
+            unit.AttachSelectorToMarcher();
         }
     }
 }

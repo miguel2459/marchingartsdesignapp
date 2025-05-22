@@ -39,6 +39,8 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
     [SerializeField] public MarcherManager marcherManager;
     [SerializeField] private EnsemblePathRenderCoordinator pathRenderer;
     [SerializeField] private MarcherPositionHistory positionHistory;
+    [SerializeField] private MarcherPositionService marcherService;
+    [SerializeField] private DashedPathPreviewManager dashedPreview;
 
     [Header("Marcher Progress Colors")]
     public Color fullProgressColor = Color.white;
@@ -88,6 +90,8 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         UpdateInspectorSetProgress();
         UIController.InitializeCountsBar();
         VisualizePathsForSet(lastSet); // Show current set's paths on load
+        UndoPositionCaseHandlers.Initialize(marcherService, this);
+        RedoPositionCaseHandlers.Initialize(marcherService, this);
     }
 
     public List<GameObject> MarcherObjects =>
@@ -116,7 +120,13 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             {
                 Vector3 previewPos = entry.pos;
                 marcher.transform.position = previewPos;
-
+                UpdateSelectorAnchorsForSelectedMarchers();
+                if (marcher.TryGetComponent(out MarcherPositionsManager posManager) &&
+                    marcher.TryGetComponent(out Unit unit))
+                {
+                    bool isHolding = posManager.IsHoldingAtCount(setNumber, clickedCount);
+                    unit.AttachSelectorToConfirmedPosition(previewPos, isHolding);
+                }
                 //Debug.Log($"🔍 {marcher.name} previewed at Set {setNumber}, Count {clickedCount} → {previewPos}");
             }
             else
@@ -125,6 +135,27 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
             }
 
         }
+    }
+
+    public void UpdateSelectorAnchorsForSelectedMarchers()
+    {
+        int set = int.TryParse(SessionManager.instance.showStateSO.LastSet, out var parsedSet) ? parsedSet : 1;
+        int countIndex = counts?.GetActiveCountIndex() ?? -1;
+        int count = (countIndex >= 0) ? countIndex + 1 : 1;
+
+        selectedMarchers?.ForEachSelected(m =>
+        {
+            if (m != null && m.TryGetComponent(out MarcherVisualStateController visual))
+            {
+                visual.UpdateSelectorAnchor(set, count);
+            }
+        });
+    }
+
+    public void RefreshDashedPreviewForSelected()
+    {
+        selectedMarchers?.ReCacheAnchorsForSelected();
+        dashedPreview?.UpdatePreviewCycle();
     }
 
     public void VisualizePathsForSet(int setNumber)

@@ -79,7 +79,7 @@ public class MarcherManager : MonoBehaviour
 
         foreach (var m in Marchers)
         {
-            m.InitializeSetCount(sessionLoader.NumberOfSets);
+            //m.InitializeSetCount(sessionLoader.NumberOfSets);
 
             // Try restoring position data
             if (sessionLoader.RuntimeCache.ParsedCountPositions.TryGetValue(m.name, out var restored))
