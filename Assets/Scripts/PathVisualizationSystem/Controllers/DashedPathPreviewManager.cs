@@ -22,7 +22,7 @@ public class DashedPathPreviewManager : MonoBehaviour
             {
                 activeCoordinators.Add(coord);
                 coord.SetInitialPosition(marcher.transform.position);
-                coord.SetAnchorContext(set, count); // Optionally inject set/count context again here if needed
+                //coord.SetAnchorContext(set, count); // Optionally inject set/count context again here if needed
                 coord.EnableDashedPreview(); // ✅ KEY LINE
                 coord.StartPreview();        // ✅ Show anchor + lines immediately
             }
