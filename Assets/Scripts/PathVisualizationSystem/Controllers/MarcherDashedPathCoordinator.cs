@@ -39,6 +39,30 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
             return;
         }
 
+        Debug.Log($"🧭 [SetAnchorContext] Initial input → Set: {set}, Count: {count}");
+
+        // 🧠 Fallback to previous set’s last count if no count is selected
+        if (count <= 0)
+        {
+            Debug.Log("🔁 No active count detected — remapping to previous set's last count...");
+
+            if (set == 1)
+            {
+                set = 0;
+                count = 0;
+                Debug.Log("🔂 Edge case: Set 1 clicked → using Set 0:Count 0");
+            }
+            else
+            {
+                set -= 1;
+                bool found = SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(set, out var timing);
+                count = found ? timing.count : 8;
+                Debug.Log($"🔂 Fallback to Set {set}:Count {count} (Found timing: {found})");
+            }
+        }
+
+        Debug.Log($"🔧 [SetAnchorContext] Resolved context → Set: {set}, Count: {count}");
+
         // 🔄 Create interpolator helper to search for confirmed dots
         MarcherInterpolator interpolator = new MarcherInterpolator(
             marcherPosManager,
@@ -46,35 +70,63 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
             () => transform.position
         );
 
-        // 🔙 Get previous confirmed dot (if available), otherwise use current position
+        // 🔙 Get previous confirmed dot
         Vector3 previous = transform.position;
-        if (interpolator.TryFindLastConfirmedPosition(set, count, out _, out _, out Vector3 prevPos))
+        if (interpolator.TryFindLastConfirmedPosition(set, count, out var lastSet, out var lastCount, out Vector3 prevPos))
+        {
             previous = prevPos;
+            Debug.Log($"📍 Found previous confirmed → Set {lastSet}, Count {lastCount} @ {prevPos}");
+        }
+        else
+        {
+            Debug.Log("⚠️ No previous confirmed position found — using current transform.position");
+        }
 
-        // 🔜 Get next confirmed dot (if available)
+        // 🔜 Get next confirmed dot
         Vector3? next = null;
-        if (interpolator.TryFindNextConfirmedPosition(set, count, out _, out _, out Vector3 nextPos))
+        if (interpolator.TryFindNextConfirmedPosition(set, count, out var nextSet, out var nextCount, out Vector3 nextPos))
+        {
             next = nextPos;
+            Debug.Log($"📍 Found next confirmed → Set {nextSet}, Count {nextCount} @ {nextPos}");
+        }
+        else
+        {
+            Debug.Log("⚠️ No next confirmed position found");
+        }
 
-        // 🧷 Only anchor if the current dot is confirmed
+        // 🧷 Determine anchor dot
         Vector3? active = null;
 
         if (set == 0 && count == 0 && marcherPosManager.HasPositionAtCount(0, 0))
         {
             active = marcherPosManager.GetPositionAtCount(0, 0);
-            Debug.Log($"📍 [Coordinator:{gameObject.name}] Anchor set using Set 0:Count 0 → {active.Value}");
+            Debug.Log($"✅ Anchor confirmed at Set 0:Count 0 → {active.Value}");
         }
         else if (marcherPosManager.HasPositionAtCount(set, count))
         {
             string tag = marcherPosManager.GetTagForCount(set, count);
+            Debug.Log($"🧾 Dot at Set {set}, Count {count} has tag '{tag}'");
+
             if (tag == "march" || tag == "inferred")
             {
                 active = marcherPosManager.GetPositionAtCount(set, count);
+                Debug.Log($"✅ Anchor confirmed at Set {set}:Count {count} → {active.Value}");
+            }
+            else
+            {
+                Debug.Log("⚠️ Dot exists but is not a confirmed or inferred dot — no anchor set");
             }
         }
+        else
+        {
+            Debug.Log("⚠️ No dot found at resolved set/count for anchor");
+        }
+
+        Debug.Log($"📦 [SetAnchorContext] Final cache → Prev: {previous}, Next: {next?.ToString() ?? "null"}, Anchor: {active?.ToString() ?? "null"}");
 
         CacheAnchors(previous, next, active);
     }
+
 
     public void CacheAnchors(Vector3 previousPos, Vector3? nextPos = null, Vector3? activeConfirmedPos = null)
     {
