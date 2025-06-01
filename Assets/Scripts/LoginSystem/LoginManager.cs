@@ -1,110 +1,63 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Networking;
 using TMPro;
-using System.Collections;
-
-public class LoginManager : MonoBehaviour
+namespace LoginSystem
 {
-    public TMP_InputField emailField;
-    public TMP_InputField passwordField;
-    public TextMeshProUGUI errorMessage;
-    public LoginPanelsManager panelsManager;
-    public Button loginButton;
-
-    private string backendURL => SessionManager.backendURL;
-
-    private void Start()
+    public class LoginManager : MonoBehaviour
     {
-        errorMessage.gameObject.SetActive(false);
-    }
+        public TMP_InputField emailField;
+        public TMP_InputField passwordField;
+        public TextMeshProUGUI errorMessage;
+        public LoginPanelsManager panelsManager;
+        public Button loginButton;
 
-    public void OnLoginButtonPressed()
-    {
-        string email = emailField.text.Trim();
-        string password = passwordField.text.Trim();
+        private IAuthService backendAuth;
 
-        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        private void Awake()
         {
-            ShowError("Email and password cannot be empty.");
-            return;
+            ServiceLocator.Initialize(this, useMock: false); // or true for testing
+            backendAuth = ServiceLocator.AuthService;
         }
 
-        panelsManager.ShowLoading(true);
-        StartCoroutine(ValidateLogin(email, password));
-    }
+        public void HideError() => errorMessage.gameObject.SetActive(false);
 
-    private IEnumerator ValidateLogin(string email, string password)
-    {
-        string url = backendURL + "?action=login&email=" + UnityWebRequest.EscapeURL(email) + "&password=" + UnityWebRequest.EscapeURL(password);
-        
-        Debug.Log("📡 Request URL: " + url);
-
-        UnityWebRequest request = UnityWebRequest.Get(url);
-        request.SetRequestHeader("User-Agent", "UnityWebRequest");
-
-        yield return request.SendWebRequest();
-
-        if (request.result != UnityWebRequest.Result.Success)
+        public void OnLoginButtonPressed()
         {
-            Debug.LogError("❌ Network error: " + request.error);
-            panelsManager.HideLoading(true);
-            ShowError("Network error. Please try again.");
-            yield break;
-        }
+            string email = emailField.text.Trim();
+            string password = passwordField.text.Trim();
 
-        string rawResponse = request.downloadHandler.text;
-        Debug.Log("📥 Response from server:\n" + rawResponse);
-
-        try
-        {
-            LoginResponse response = JsonUtility.FromJson<LoginResponse>(rawResponse);
-
-            if (response.status == "success")
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                Debug.Log($"✅ Login Successful! User: {response.userName} | ID: {response.userId} | SheetID: {response.userSheetID}");
-
-                // 🔹 Store login state for auto-login
-                PlayerPrefs.SetInt("IsLoggedIn", 1);
-                PlayerPrefs.SetString("UserID", response.userId);
-                PlayerPrefs.SetString("UserEmail", email);
-                PlayerPrefs.SetString("FolderID", response.folderId);
-                PlayerPrefs.SetString("UserName", response.userName);
-                PlayerPrefs.SetString("AccountSheetID", response.userSheetID);
-                PlayerPrefs.Save();
-
-                // 🔹 Initialize session
-                StartCoroutine(SceneController.instance.WaitForSessionInitialization());
-                SessionManager.instance.userSession.InitializeUser(response.userId, email, response.userName, response.userSheetID, response.folderId);
+                ShowError("Email and password cannot be empty.");
+                return;
             }
-            else
+
+            panelsManager.ShowLoading(true);
+            backendAuth.Login(email, password, result =>
             {
                 panelsManager.HideLoading(true);
-                ShowError(response.status == "incorrect_password" ? "Incorrect password." : "Account not found.");
-            }
+
+                if (result.Success)
+                {
+                    Debug.Log($"✅ Login Successful: {result.UserName} ({result.UserId})");
+                    SessionManager.instance.userSession.SaveSession(
+                        new UserData(result.UserId, email, result.UserName, result.UserSheetID, result.FolderId)
+                    );
+
+                    StartCoroutine(SceneController.instance.WaitForSessionInitialization());
+                }
+                else
+                {
+                    string friendlyMessage = BackendErrorMapper.GetFriendlyMessage(result.ErrorMessage);
+                    ShowError(friendlyMessage);
+                }
+            });
         }
-        catch (System.Exception e)
+
+        private void ShowError(string message)
         {
-            Debug.LogError("🚨 JSON Parse Error: " + e.Message);
-            Debug.LogError("📝 Raw Response:\n" + rawResponse);
-            ShowError("Error parsing response.");
-            panelsManager.HideLoading(true);
+            errorMessage.text = message;
+            errorMessage.gameObject.SetActive(true);
         }
-    }
-
-    private void ShowError(string message)
-    {
-        errorMessage.text = message;
-        errorMessage.gameObject.SetActive(true);
-    }
-
-    [System.Serializable]
-    private class LoginResponse
-    {
-        public string status;
-        public string userId;
-        public string userName;
-        public string userSheetID;
-        public string folderId;
     }
 }

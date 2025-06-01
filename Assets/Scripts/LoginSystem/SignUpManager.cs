@@ -1,114 +1,63 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Networking;
 using TMPro;
-using System.Collections;
-
-public class SignUpManager : MonoBehaviour
+namespace LoginSystem
 {
-    public TMP_InputField nameField;
-    public TMP_InputField emailField;
-    public TMP_InputField passwordField;
-    public TextMeshProUGUI errorMessage;
-    public LoginPanelsManager panelsManager;
-    public Button createAccountButton;
-
-    private string backendURL => SessionManager.backendURL; // Update with latest deployed URL
-
-    private void Start()
+    public class SignUpManager : MonoBehaviour
     {
-        errorMessage.gameObject.SetActive(false);
-    }
+        public TMP_InputField nameField;
+        public TMP_InputField emailField;
+        public TMP_InputField passwordField;
+        public TextMeshProUGUI errorMessage;
+        public LoginPanelsManager panelsManager;
+        public Button createAccountButton;
 
-    public void OnCreateAccountButtonPressed()
-    {
-        string name = nameField.text.Trim();
-        string email = emailField.text.Trim();
-        string password = passwordField.text.Trim();
-
-        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        private IAuthService backendAuth;
+        private void Awake()
         {
-            ShowError("All fields must be filled.");
-            return;
+            ServiceLocator.Initialize(this, useMock: false); // or true for testing
+            backendAuth = ServiceLocator.AuthService;
         }
 
-        panelsManager.ShowLoading(false);
-        StartCoroutine(CreateNewAccount(name, email, password));
-    }
+        public void HideError() => errorMessage.gameObject.SetActive(false);
 
-    private IEnumerator CreateNewAccount(string name, string email, string password)
-    {
-        string url = backendURL + "?action=signup&name=" + UnityWebRequest.EscapeURL(name) + "&email=" + UnityWebRequest.EscapeURL(email) + "&password=" + UnityWebRequest.EscapeURL(password);
-        
-        Debug.Log("📡 Sending Sign-Up Request to: " + url); // ✅ Debug URL
-
-        UnityWebRequest request = UnityWebRequest.Get(url);
-        request.SetRequestHeader("User-Agent", "UnityWebRequest"); // ✅ Prevent Google from blocking Unity
-
-        yield return request.SendWebRequest();
-
-        // ✅ Handle Network Errors
-        if (request.result != UnityWebRequest.Result.Success)
+        public void OnCreateAccountButtonPressed()
         {
-            Debug.LogError("❌ Network error: " + request.error);
-            panelsManager.HideLoading(false);
-            ShowError("Network error. Please try again.");
-            yield break; // Stop execution here
-        }
+            string name = nameField.text.Trim();
+            string email = emailField.text.Trim();
+            string password = passwordField.text.Trim();
 
-        string rawResponse = request.downloadHandler.text;
-        Debug.Log("📥 Response from server:\n" + rawResponse); // ✅ Log full response
-
-        // ✅ Detect if the response is HTML instead of JSON
-        if (rawResponse.TrimStart().StartsWith("<!DOCTYPE html") || rawResponse.TrimStart().StartsWith("<html"))
-        {
-            Debug.LogError("🚨 ERROR: Received an HTML page instead of JSON! Possible redirect or server error.");
-            ShowError("Unexpected response from server.");
-            yield break;
-        }
-
-        try
-        {
-            SignUpResponse response = JsonUtility.FromJson<SignUpResponse>(rawResponse);
-
-            if (response.status == "success")
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                Debug.Log("✅ Account Created! User ID: " + response.userId);
-
-                // 🔹 Initialize session after account creation
-                SessionManager.instance.userSession.InitializeUser(response.userId, email, name, response.userSheetID, response.folderId);
+                ShowError("All fields must be filled.");
+                return;
             }
-            else if (response.status == "email_exists")
+
+            panelsManager.ShowLoading(false);
+            backendAuth.SignUp(name, email, password, result =>
             {
                 panelsManager.HideLoading(false);
-                ShowError("Email already in use.");
-            }
-            else
-            {
-                panelsManager.HideLoading(false);
-                ShowError("Error creating account.");
-            }
+
+                if (result.Success)
+                {
+                    Debug.Log($"✅ Account Created: {result.UserId}");
+                    SessionManager.instance.userSession.SaveSession(
+                        new UserData(result.UserId, email, name, result.UserSheetID, result.FolderId)
+                    );
+                    StartCoroutine(SceneController.instance.WaitForSessionInitialization());
+                }
+                else
+                {
+                    string friendlyMessage = BackendErrorMapper.GetFriendlyMessage(result.ErrorMessage);
+                    ShowError(friendlyMessage);
+                }
+            });
         }
-        catch (System.Exception e)
+
+        private void ShowError(string message)
         {
-            Debug.LogError("🚨 JSON Parse Error: " + e.Message);
-            Debug.LogError("📝 Raw Response:\n" + rawResponse);
-            ShowError("Error parsing response.");
+            errorMessage.text = message;
+            errorMessage.gameObject.SetActive(true);
         }
-    }
-
-    private void ShowError(string message)
-    {
-        errorMessage.text = message;
-        errorMessage.gameObject.SetActive(true);
-    }
-
-    [System.Serializable]
-    private class SignUpResponse
-    {
-        public string status;
-        public string userId;
-        public string userSheetID;
-        public string folderId;
     }
 }
