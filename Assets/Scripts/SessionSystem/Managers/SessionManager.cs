@@ -1,6 +1,7 @@
 using System; // Added for Exception handling
 using System.IO;
 using UnityEngine;
+using UnityEngine.Networking;
 using System.Collections;
 using System.Collections.Generic;
 using SimpleJSON;
@@ -38,27 +39,28 @@ public class SessionManager : MonoBehaviour
     //================================================================================
     private void Awake()
     {
-        // Standard Singleton pattern implementation
         if (instance == null)
         {
             instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // --- Initialize State and Services ---
             InitializeSessionState();
-            LoadConfiguration(); // Load API key and backend URL first
 
-            // Ensure config loaded before initializing services that need them
+#if UNITY_WEBGL && !UNITY_EDITOR
+            StartCoroutine(LoadConfigurationWebGL_ThenInitialize());
+#else
+            LoadConfigurationLocal();
+#endif
+
             if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
             {
                 Debug.LogError("SessionManager Awake: API Key or Backend URL not loaded. Aborting service initialization.");
-                // Consider disabling functionality or showing an error state
                 return;
             }
 
-            userSession.InjectUserState(userStateSO); // Inject state into UserSessionManager
+            userSession.InjectUserState(userStateSO);
         }
-        else if (instance != this) // Ensure it's not the same instance checking itself
+        else if (instance != this)
         {
             Debug.LogWarning("Duplicate SessionManager instance detected. Destroying self.");
             Destroy(gameObject);
@@ -85,7 +87,7 @@ public class SessionManager : MonoBehaviour
     /// <summary>
     /// Loads configuration values (API Key, Backend URL) from config.json in StreamingAssets.
     /// </summary>
-    private void LoadConfiguration()
+    private void LoadConfigurationLocal()
     {
         string configPath = Path.Combine(Application.streamingAssetsPath, "config.json");
         if (File.Exists(configPath))
@@ -93,22 +95,13 @@ public class SessionManager : MonoBehaviour
             try
             {
                 string configContent = File.ReadAllText(configPath);
-                var configJson = JSON.Parse(configContent);
-                apiKey = configJson["googleApiKey"];
-                backendURL = configJson["backendURL"]; // Assign static variable
-
-                if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
-                {
-                     Debug.LogError("❌ config.json is missing 'googleApiKey' or 'backendURL'.");
-                } else {
-                     Debug.Log("✅ API key and Backend URL loaded successfully.");
-                }
+                ParseConfig(configContent);
             }
             catch (Exception e)
             {
-                 Debug.LogError($"❌ Error reading or parsing config.json: {e.Message}");
-                 apiKey = null;
-                 backendURL = null;
+                Debug.LogError($"❌ Error reading or parsing config.json: {e.Message}");
+                apiKey = null;
+                backendURL = null;
             }
         }
         else
@@ -116,6 +109,58 @@ public class SessionManager : MonoBehaviour
             Debug.LogError($"❌ config.json not found at path: {configPath}. API Key and Backend URL will be unavailable.");
             apiKey = null;
             backendURL = null;
+        }
+    }
+
+    private IEnumerator LoadConfigurationWebGL_ThenInitialize()
+    {
+        yield return LoadConfigurationWebGL();
+        FinalizeInitialization();
+    }
+
+    private IEnumerator LoadConfigurationWebGL()
+    {
+        string configPath = Application.streamingAssetsPath + "/config.json";
+        using (UnityWebRequest request = UnityWebRequest.Get(configPath))
+        {
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                ParseConfig(request.downloadHandler.text);
+            }
+            else
+            {
+                Debug.LogError($"❌ WebGL failed to load config.json: {request.error}");
+                apiKey = null;
+                backendURL = null;
+            }
+        }
+    }
+    private void FinalizeInitialization()
+    {
+        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
+        {
+            Debug.LogError("SessionManager: API Key or Backend URL not loaded. Aborting service initialization.");
+            return;
+        }
+
+        userSession.InjectUserState(userStateSO);
+    }
+
+    private void ParseConfig(string configContent)
+    {
+        var configJson = JSON.Parse(configContent);
+        apiKey = configJson["googleApiKey"];
+        backendURL = configJson["backendURL"];
+
+        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
+        {
+            Debug.LogError("❌ config.json is missing 'googleApiKey' or 'backendURL'.");
+        }
+        else
+        {
+            Debug.Log("✅ API key and Backend URL loaded successfully.");
         }
     }
 
