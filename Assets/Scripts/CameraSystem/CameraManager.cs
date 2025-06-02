@@ -1,8 +1,8 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
-
 public class CameraManager : MonoBehaviour
 {
     // List to store the created cameras
@@ -160,3 +160,4 @@ public class CameraManager : MonoBehaviour
         Debug.Log($"Camera rendered and saved as: {filePath}");
     }
 }
+#endif
