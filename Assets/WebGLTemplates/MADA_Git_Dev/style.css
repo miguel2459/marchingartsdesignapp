@@ -1,0 +1,14 @@
+﻿body {
+    margin: 0;
+    padding: 0;
+    background-color: #111;
+    font-family: system-ui, sans-serif;
+    color: #fff;
+    text-align: center;
+}
+
+canvas {
+    background-color: #231F20;
+    border: none;
+    outline: none;
+}

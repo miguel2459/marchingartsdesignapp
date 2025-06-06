@@ -1,15 +1,23 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en-us">
-  <head>
+<head>
+    <!-- Build Timestamp: 2025-06-02T14:30:00Z --> //⏲ Tip: Use https://www.timeanddate.com/worldclock/converter.html to get UTC time quickly, or use: powershell -Command "Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'"
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | MADA_MarchingArtsDesignApp</title>
-  </head>
-  <body style="text-align: center; padding: 0; border: 0; margin: 0;">
-    <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
-    <script src="Build/c682e45bff283fe4a978c52eba68f68f.loader.js"></script>
-    <script>
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="MADA" />
+    <title>MADA | Marching Arts Design App</title>
+</head>
+<body style="text-align: center; padding: 0; border: 0; margin: 0;">
+<canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
+<script src="Build/c682e45bff283fe4a978c52eba68f68f.loader.js"></script>
+<script>
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         // Mobile device style: fill the whole browser client area with the game canvas:
         var meta = document.createElement('meta');
         meta.name = 'viewport';
@@ -23,9 +31,9 @@
 
         document.body.style.textAlign = "left";
 
-      }
+    }
 
-      createUnityInstance(document.querySelector("#unity-canvas"), {
+    createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
         dataUrl: "Build/570b9498a2484421d55cdf708775e4cb.data",
         frameworkUrl: "Build/a11a9db354cab075021ca429de7f9e6f.framework.js",
@@ -36,10 +44,10 @@
         productVersion: "0.1",
         // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
         // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
-      }).then((unityInstance) => {
-      }).catch((message) => {
+    }).then((unityInstance) => {
+    }).catch((message) => {
         alert(message);
-      });
-    </script>
-  </body>
+    });
+</script>
+</body>
 </html>
