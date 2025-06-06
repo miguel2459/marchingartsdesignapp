@@ -14,10 +14,21 @@ $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 # Update .js/.wasm/.data file references with version string
 $html = Get-Content $indexPath -Raw
 
+# Detect actual filenames
+$dataFile = Get-ChildItem "$buildDir/Build" -Filter *.data | Select-Object -First 1
+$frameworkFile = Get-ChildItem "$buildDir/Build" -Filter *.framework.js | Select-Object -First 1
+$wasmFile = Get-ChildItem "$buildDir/Build" -Filter *.wasm | Select-Object -First 1
+
+if (!$dataFile -or !$frameworkFile -or !$wasmFile) {
+    Write-Host "❌ Missing one or more build files."
+    exit 1
+}
+
 $html = $html `
-    -replace 'dataUrl:\s*"Build/(.*?\.data)"', "dataUrl: `"Build/`$1?v=$timestamp`"" `
-    -replace 'frameworkUrl:\s*"Build/(.*?\.framework\.js)"', "frameworkUrl: `"Build/`$1?v=$timestamp`"" `
-    -replace 'codeUrl:\s*"Build/(.*?\.wasm)"', "codeUrl: `"Build/`$1?v=$timestamp`""
+    -replace 'dataUrl:\s*".*?"', "dataUrl: `"Build/$($dataFile.Name)?v=$timestamp`"" `
+    -replace 'frameworkUrl:\s*".*?"', "frameworkUrl: `"Build/$($frameworkFile.Name)?v=$timestamp`"" `
+    -replace 'codeUrl:\s*".*?"', "codeUrl: `"Build/$($wasmFile.Name)?v=$timestamp`""
+
 
 # Inject footer
 $footerHtml = @"
