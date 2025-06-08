@@ -54,7 +54,7 @@ public class SessionManager : MonoBehaviour
 
             if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
             {
-                Debug.LogError("SessionManager Awake: API Key or Backend URL not loaded. Aborting service initialization.");
+                Debug.LogWarning("SessionManager Awake: API Key or Backend URL not loaded. Aborting service initialization.");
                 return;
             }
 

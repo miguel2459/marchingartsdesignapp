@@ -27,6 +27,18 @@ public static class PostBuildWebGLProcessor
         CopyDirectory(buildOutputDir, docsDir);
         UnityEngine.Debug.Log("📦 Copied WebGL build to docs folder.");
 
+        // === Step 5: Write CNAME file for GitHub Pages domain ===
+        try
+        {
+            string cnamePath = Path.Combine(docsDir, "CNAME");
+            File.WriteAllText(cnamePath, "mada.mprstudios.com");
+            UnityEngine.Debug.Log("✅ CNAME file successfully written to: " + cnamePath);
+        }
+        catch (System.Exception e)
+        {
+            UnityEngine.Debug.LogError("❌ Failed to write CNAME file: " + e.Message);
+        }
+
         // Step 3: Run metadata injection script
         string scriptPath = Path.Combine(projectRoot, "BuildTools", "injectBuildMetadata.ps1");
 
