@@ -16,7 +16,7 @@ public class ShowPanelUI : MonoBehaviour
     {
         showData = data;
         showTitleText.text = data.showTitle;
-        modifiedDateText.text = "Last Modified: " + data.lastModified;
+        modifiedDateText.text = "Last Saved: " + data.lastModified;
         groupText.text = "Group: " + data.group;
 
         showButton.onClick.AddListener(() => onShowSelected?.Invoke(showData));

@@ -63,6 +63,7 @@ namespace LoginSystem
 
             try
             {
+                Debug.LogError("🚨 Raw login response: " + request.downloadHandler.text);
                 var response = JsonUtility.FromJson<LoginResponse>(request.downloadHandler.text);
                 if (response.status == "success")
                     onComplete?.Invoke(new LoginResult(true, null, response.userId, response.userName, response.folderId, response.userSheetID));

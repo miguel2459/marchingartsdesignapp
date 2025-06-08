@@ -100,19 +100,24 @@ public class JsonBackendService
         Debug.Log($"📥 Downloading {jsonType} JSON from: {url}");
 
         UnityWebRequest request = UnityWebRequest.Get(url);
+
+        // ✅ Ensure mobile/WebGL compatibility
+        request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("User-Agent", "UnityWebRequest");
 
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
         {
-            string resultJson = request.downloadHandler.text;
+            string resultJson = request.downloadHandler?.text ?? "";
             Debug.Log($"✅ Downloaded {jsonType} JSON.");
             onComplete?.Invoke(resultJson);
         }
         else
         {
-            Debug.LogError($"❌ Failed to download {jsonType} JSON: {request.error}, {request.downloadHandler.text}");
+            string rawResponse = request.downloadHandler?.text ?? "(no body)";
+            Debug.LogError($"❌ Failed to download {jsonType} JSON: {request.error}");
+            Debug.LogError($"🔍 Raw server response: {rawResponse}");
             onComplete?.Invoke(null);
         }
 
