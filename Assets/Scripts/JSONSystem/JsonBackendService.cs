@@ -79,9 +79,9 @@ public class JsonBackendService
         bool success = request.result == UnityWebRequest.Result.Success;
 
         if (success)
-            Debug.Log($"✅ Upload successful for {jsonType}. Server response: {request.downloadHandler.text}");
+            Debug.Log($"✅ Upload successful for {jsonType} for {showId}. Server response: {request.downloadHandler.text}");
         else
-            Debug.LogError($"❌ Upload failed for {jsonType}: {request.error}, {request.downloadHandler.text}");
+            Debug.LogError($"❌ Upload failed for {jsonType} for {showId}: {request.error}, {request.downloadHandler.text}");
 
         onComplete?.Invoke(success);
         request.Dispose();
@@ -95,13 +95,20 @@ public class JsonBackendService
     private IEnumerator DownloadJsonCoroutine(string showId, string jsonType, Action<string> onComplete)
     {
         string action = jsonType == MARCHER_TYPE ? "getMarcherJson" : "getTimingJson";
-        string url = $"{backendURL}?action={action}&showId={UnityWebRequest.EscapeURL(showId)}&accountSheetId={UnityWebRequest.EscapeURL(accountSheetId)}";
+        string baseUrl = backendURL; // e.g., https://us-central1-mada-backend.cloudfunctions.net/appsScriptProxy
 
-        Debug.Log($"📥 Downloading {jsonType} JSON from: {url}");
+        // ✅ Properly build and encode the full query string
+        var uriBuilder = new System.UriBuilder(baseUrl);
+        var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        query["action"] = action;
+        query["showId"] = showId;
+        query["accountSheetId"] = accountSheetId;
+        uriBuilder.Query = query.ToString();
 
-        UnityWebRequest request = UnityWebRequest.Get(url);
+        string finalUrl = uriBuilder.ToString();
+        Debug.Log($"📥 Downloading {jsonType} JSON for {showId}, from: {finalUrl}");
 
-        // ✅ Ensure mobile/WebGL compatibility
+        UnityWebRequest request = UnityWebRequest.Get(finalUrl);
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("User-Agent", "UnityWebRequest");
 
@@ -110,14 +117,14 @@ public class JsonBackendService
         if (request.result == UnityWebRequest.Result.Success)
         {
             string resultJson = request.downloadHandler?.text ?? "";
-            Debug.Log($"✅ Downloaded {jsonType} JSON.");
+            Debug.Log($"✅ Downloaded {jsonType} JSON for {showId}.");
             onComplete?.Invoke(resultJson);
         }
         else
         {
             string rawResponse = request.downloadHandler?.text ?? "(no body)";
-            Debug.LogError($"❌ Failed to download {jsonType} JSON: {request.error}");
-            Debug.LogError($"🔍 Raw server response: {rawResponse}");
+            Debug.LogError($"❌ Failed to download {jsonType} JSON for {showId}: {request.error}");
+            Debug.LogError($"🔍 {jsonType} JSON for {showId}: Raw server response: {rawResponse}");
             onComplete?.Invoke(null);
         }
 

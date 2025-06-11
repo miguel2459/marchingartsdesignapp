@@ -1,5 +1,5 @@
 {
     "googleApiKey": "AIzaSyB8JFOJIcmlM1v4RSHXw6iNMiS8OlkuHx8",
-    "backendURL": "https://script.google.com/macros/s/AKfycbx1YCuofEo1G6WaUVbEMZ3uesKAclNgOdw1dYrCN8_vTp-pFjWiZ622KF1bKJBNZR80Eg/exec"
+    "backendURL": "https://us-central1-mada-backend.cloudfunctions.net/appsScriptProxy"
   }
   

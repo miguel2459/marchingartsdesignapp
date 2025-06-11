@@ -40,12 +40,12 @@ public class JsonCacheService
         try
         {
             File.WriteAllText(path, jsonContent);
-            Debug.Log($"💾 JsonCacheService: Saved {jsonType} JSON to {path}");
+            Debug.Log($"💾 JsonCacheService: Saved {jsonType} JSON for {showId}, to {path}");
             return true;
         }
         catch (Exception e)
         {
-            Debug.LogError($"❌ JsonCacheService: Failed to save {jsonType} JSON to {path}: {e.Message}");
+            Debug.LogError($"❌ JsonCacheService: Failed to save {jsonType} JSON for {showId}, to {path}: {e.Message}");
             return false;
         }
     }
@@ -55,19 +55,19 @@ public class JsonCacheService
         string path = GetLocalCachePath(showId, jsonType);
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
-            Debug.LogWarning($"JsonCacheService: Cache miss for {jsonType} JSON at {path}");
+            Debug.LogWarning($"JsonCacheService: Cache miss for {jsonType} JSON for {showId}, at {path}");
             return null;
         }
 
         try
         {
             string content = File.ReadAllText(path);
-            Debug.Log($"📂 JsonCacheService: Loaded {jsonType} JSON from cache: {path}");
+            Debug.Log($"📂 JsonCacheService: Loaded {jsonType} JSON for {showId}, from cache: {path}");
             return content;
         }
         catch (Exception e)
         {
-            Debug.LogError($"❌ JsonCacheService: Failed to load {jsonType} JSON from {path}: {e.Message}");
+            Debug.LogError($"❌ JsonCacheService: Failed to load {jsonType} JSON for {showId}, from {path}: {e.Message}");
             return null;
         }
     }

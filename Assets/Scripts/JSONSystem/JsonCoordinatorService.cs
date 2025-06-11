@@ -33,18 +33,18 @@ public class JsonCoordinatorService
 
         if (!string.IsNullOrEmpty(cached))
         {
-            Debug.Log($"JsonCoordinatorService: ✅ Loaded {jsonType} JSON from local cache.");
+            Debug.Log($"JsonCoordinatorService: ✅ Loaded {jsonType} JSON from local cache for {showId}.");
             onResult?.Invoke(cached);
         }
         else
         {
-            Debug.Log($"JsonCoordinatorService: ❌ Cache miss for {jsonType}. Downloading from backend...");
+            Debug.Log($"JsonCoordinatorService: ❌  For {showId}: Cache miss for {jsonType}. Downloading from backend");
             backendService.RequestDownloadJson(showId, jsonType, downloaded =>
             {
                 if (!string.IsNullOrEmpty(downloaded))
                 {
                     cacheService.SaveJsonToLocalCache(showId, jsonType, downloaded);
-                    Debug.Log($"JsonCoordinatorService: ✅ Downloaded and cached {jsonType} JSON.");
+                    Debug.Log($"JsonCoordinatorService: ✅ Downloaded and cached {jsonType} JSON for {showId}");
                 }
                 onResult?.Invoke(downloaded);
             });
@@ -59,7 +59,7 @@ public class JsonCoordinatorService
         cacheService.SaveJsonToLocalCache(showId, jsonType, jsonContent);
         backendService.RequestUploadJson(showId, jsonType, jsonContent, success =>
         {
-            Debug.Log($"JsonCoordinatorService: {jsonType} JSON upload status = {success}");
+            Debug.Log($"JsonCoordinatorService: {jsonType} JSON for {showId}, upload status = {success}");
             onComplete?.Invoke(success);
         });
     }
