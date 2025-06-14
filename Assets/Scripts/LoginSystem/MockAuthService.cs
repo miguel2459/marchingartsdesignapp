@@ -15,5 +15,19 @@ namespace LoginSystem
             Debug.Log($"[Mock] Simulating signup for {email}");
             onComplete?.Invoke(new SignUpResult(true, null, "MockUserID", "MockFolderID", "MockSheetID"));
         }
+
+        public void RequestPasswordReset(string email, System.Action<bool, string> onComplete)
+        {
+            Debug.Log($"[Mock] Simulating password reset for {email}");
+            bool fakeSuccess = email.Contains("@"); // Simulate basic check
+            if (fakeSuccess)
+            {
+                onComplete?.Invoke(true, "password_reset_email_sent");
+            }
+            else
+            {
+                onComplete?.Invoke(false, "account_not_found");
+            }
+        }
     }
 }

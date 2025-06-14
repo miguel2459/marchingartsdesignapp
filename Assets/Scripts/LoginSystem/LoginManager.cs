@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 namespace LoginSystem
 {
@@ -7,8 +8,8 @@ namespace LoginSystem
     {
         public TMP_InputField emailField;
         public TMP_InputField passwordField;
-        public TextMeshProUGUI errorMessage;
         public LoginPanelsManager panelsManager;
+        public Button signupButton;
         public Button loginButton;
 
         private IAuthService backendAuth;
@@ -18,8 +19,37 @@ namespace LoginSystem
             ServiceLocator.Initialize(this, useMock: false); // or true for testing
             backendAuth = ServiceLocator.AuthService;
         }
+        
+        void Update()
+        {
+            // Only process input if the login panel is active and not in a loading state
+            if (panelsManager != null && panelsManager.loginPanel.activeInHierarchy && !panelsManager.loading.activeInHierarchy)
+            {
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                {
+                    GameObject currentSelection = EventSystem.current.currentSelectedGameObject;
+                    Selectable currentSelectable = currentSelection?.GetComponent<Selectable>(); // Get the Selectable component
 
-        public void HideError() => errorMessage.gameObject.SetActive(false);
+                    Debug.Log($"[LoginManager] Enter key pressed. Current selected: {currentSelection?.name ?? "None"}");
+
+                    // MODIFIED: Only call OnLoginButtonPressed if an InputField is currently selected
+                    if (currentSelectable != null && currentSelectable is TMP_InputField)
+                    {
+                        Debug.Log("[LoginManager] Calling OnLoginButtonPressed() as an input field is selected.");
+                        OnLoginButtonPressed();
+                    }
+                    else
+                    {
+                        Debug.Log("[LoginManager] Skipping OnLoginButtonPressed() as a non-input field (e.g., button) is selected.");
+                    }
+                }
+
+                if (Input.GetKeyDown(KeyCode.Tab))
+                {
+                    SelectNextField();
+                }
+            }
+        }
 
         public void OnLoginButtonPressed()
         {
@@ -28,14 +58,22 @@ namespace LoginSystem
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                ShowError("Email and password cannot be empty.");
+                panelsManager.ShowError("Email and password cannot be empty.");
                 return;
             }
-
+            
+            if (!IsValidEmail(email))
+            {
+                panelsManager.ShowError("Please enter a valid email address.");
+                return;
+            }
+            
+            loginButton.interactable = false;
             panelsManager.ShowLoading(true);
             backendAuth.Login(email, password, result =>
             {
                 panelsManager.HideLoading(true);
+                loginButton.interactable = true;
 
                 if (result.Success)
                 {
@@ -49,15 +87,47 @@ namespace LoginSystem
                 else
                 {
                     string friendlyMessage = BackendErrorMapper.GetFriendlyMessage(result.ErrorMessage);
-                    ShowError(friendlyMessage);
+                    panelsManager.ShowError(friendlyMessage);
                 }
             });
         }
-
-        private void ShowError(string message)
+        
+        // Inside LoginManager.cs
+        private bool IsValidEmail(string email)
         {
-            errorMessage.text = message;
-            errorMessage.gameObject.SetActive(true);
+            // Simple regex for basic email format validation.
+            // This isn't exhaustive but catches most common typos client-side.
+            // For stricter validation, use a more complex regex or MailAddress if available.
+            return System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+        }
+        private void SelectNextField()
+        {
+            GameObject currentSelection = EventSystem.current.currentSelectedGameObject;
+
+            if (currentSelection == emailField.gameObject)
+            {
+                passwordField.Select();
+                passwordField.ActivateInputField();
+            }
+            else if (currentSelection == passwordField.gameObject)
+            {
+                signupButton.Select();
+            }
+            else if (currentSelection == signupButton.gameObject)
+            {
+                loginButton.Select(); // Move to the sign-up button
+            }
+            else if (currentSelection == loginButton.gameObject)
+            {
+                emailField.Select(); // Loop back to the first field
+                emailField.ActivateInputField();
+            }
+            else
+            {
+                // If nothing is selected, or an unexpected element, select the first field
+                emailField.Select();
+                emailField.ActivateInputField();
+            }
         }
     }
 }
