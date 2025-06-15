@@ -405,7 +405,7 @@ GameObject:
   - component: {fileID: 1175888063}
   - component: {fileID: 1175888062}
   m_Layer: 0
-  m_Name: BrowserFocusManager
+  m_Name: AppFocusManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

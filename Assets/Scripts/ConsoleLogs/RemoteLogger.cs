@@ -22,7 +22,11 @@ public class RemoteLogger : MonoBehaviour
     {
         DontDestroyOnLoad(this.gameObject);
 
-        sessionID = SystemInfo.deviceUniqueIdentifier.Substring(0, 6) + "_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+        string devicePart = !string.IsNullOrEmpty(SystemInfo.deviceUniqueIdentifier) && SystemInfo.deviceUniqueIdentifier.Length >= 6
+            ? SystemInfo.deviceUniqueIdentifier.Substring(0, 6)
+            : Guid.NewGuid().ToString("N").Substring(0, 6);
+
+        sessionID = devicePart + "_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         deviceInfo = SystemInfo.deviceModel + " | " + SystemInfo.operatingSystem;
 
         Application.logMessageReceived += HandleLog;
@@ -38,7 +42,6 @@ public class RemoteLogger : MonoBehaviour
 
         queuedLogs.Add(new LogEntry { log = logString, type = type.ToString() });
 
-        // Optional immediate flush if large spike of logs
         if (queuedLogs.Count >= batchSize && !isSending)
         {
             StartCoroutine(SendLogs());
@@ -62,7 +65,6 @@ public class RemoteLogger : MonoBehaviour
     {
         isSending = true;
 
-        // Shallow copy logs
         var logsToSend = new List<LogEntry>(queuedLogs);
         queuedLogs.Clear();
 
@@ -87,7 +89,6 @@ public class RemoteLogger : MonoBehaviour
             if (request.result != UnityWebRequest.Result.Success)
             {
                 Debug.LogWarning("📡 RemoteLogger retrying failed batch...");
-                // Requeue the logs
                 queuedLogs.InsertRange(0, logsToSend);
             }
         }
