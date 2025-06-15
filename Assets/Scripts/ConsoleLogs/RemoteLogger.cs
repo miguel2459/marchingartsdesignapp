@@ -72,7 +72,8 @@ public class RemoteLogger : MonoBehaviour
         {
             session = sessionID,
             device = deviceInfo,
-            logs = logsToSend
+            logs = logsToSend,
+            action = "remoteLogger"
         };
 
         string json = JsonUtility.ToJson(payload, true);
@@ -109,5 +110,6 @@ public class RemoteLogger : MonoBehaviour
         public string session;
         public string device;
         public List<LogEntry> logs;
+        public string action; 
     }
 }

@@ -205,7 +205,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1260be0716ca36d48b71b448ce532515, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scriptURL: https://script.google.com/macros/s/AKfycbxtbiD8TdP_-ypgzucLt2J-H57KYGaC80nT38E8wwAFpyuwRn1RORg7Ok4jAUEBQ4zt/exec
+  scriptURL: https://us-central1-mada-backend.cloudfunctions.net/appsScriptProxy
 --- !u!4 &351310417
 Transform:
   m_ObjectHideFlags: 0

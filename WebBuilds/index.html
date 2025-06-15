@@ -19,6 +19,9 @@
 <script src="Build/c682e45bff283fe4a978c52eba68f68f.loader.js"></script>
 
 <script>
+    // Define version from build timestamp
+    const buildTimestamp = "2025.06.14"; // Update this automatically in your build pipeline if needed
+
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
@@ -76,6 +79,11 @@
         productVersion: "0.1"
     }).then((unityInstance) => {
         unityInstanceRef = unityInstance;
+
+        // ✅ Inject version into Unity
+        if (buildTimestamp) {
+            unityInstance.SendMessage("BuildInfoManager", "SetBuildVersion", buildTimestamp);
+        }
     }).catch((message) => {
         alert(message);
     });

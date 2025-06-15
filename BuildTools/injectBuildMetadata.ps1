@@ -46,6 +46,11 @@ $footerHtml = @"
 
 $html = $html -replace "</body>", "$footerHtml`n</body>"
 
+# Inject or replace JavaScript build timestamp constant
+if ($html -match 'const buildTimestamp = ".*?";') {
+    $html = $html -replace 'const buildTimestamp = ".*?";', "const buildTimestamp = `"$timestamp`";"
+}
+
 # Write updated HTML
 Set-Content -Path $indexPath -Value $html
 
