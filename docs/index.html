@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20250614-140456 -->
+    <!-- Build Timestamp: 20250614-194832 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,10 +15,12 @@
 </head>
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
 <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
-<script src="Build/821e8d1c617c8088674aa54660b1c100.loader.js?v=20250614-140456"></script>
+
+<script src="Build/4b50e31309d9b7bdc4f063b3aaa18fe2.loader.js?v=20250614-194832"></script>
+
 <script>
+    // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -30,28 +32,57 @@
         canvas.style.position = "fixed";
 
         document.body.style.textAlign = "left";
-
     }
 
+    // Store reference to Unity instance
+    let unityInstanceRef = null;
+
+    function sendToUnity(message) {
+        if (unityInstanceRef && unityInstanceRef.SendMessage) {
+            unityInstanceRef.SendMessage("AppFocusManager", "OnBrowserFocusChange", message);
+        }
+    }
+
+    // Focus/visibility detection
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            console.log("?? Tab hidden");
+            sendToUnity("PAUSE");
+        } else {
+            console.log("?? Tab visible");
+            sendToUnity("RESUME");
+        }
+    });
+
+    window.addEventListener("blur", () => {
+        console.log("?? Window blurred");
+        sendToUnity("PAUSE");
+    });
+
+    window.addEventListener("focus", () => {
+        console.log("?? Window focused");
+        sendToUnity("RESUME");
+    });
+
+    // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/0ccb21f04e8e03c2df413c7cd0fe9427.data?v=20250614-140456",
-        frameworkUrl: "Build/e5da54ccc701b38db25d0663a7713da9.framework.js?v=20250614-140456",
-        codeUrl: "Build/ab8f1efc5b4ab7dcad712aa786123895.wasm?v=20250614-140456",
+        dataUrl: "Build/46796c3641105a8d2b8c5a33124b3165.data?v=20250614-194832",
+        frameworkUrl: "Build/8c835c4955eb4a81cee34080cd6638c4.framework.js?v=20250614-194832",
+        codeUrl: "Build/da12e919999a3842f83944aa49b7921d.wasm?v=20250614-194832",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
-        productVersion: "0.1",
-        // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
-        // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
+        productVersion: "0.1"
     }).then((unityInstance) => {
+        unityInstanceRef = unityInstance;
     }).catch((message) => {
         alert(message);
     });
 </script>
-    <div style='position:fixed; bottom: 10px; right: 10px; font-size:12px; color:#aaa; z-index:9999'>
-        Build Timestamp: 20250614-140456
-    </div>
+<div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
+    Build Timestamp: 20250614-194832
+</div>
 </body>
 </html>
 

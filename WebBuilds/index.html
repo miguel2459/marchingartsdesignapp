@@ -15,10 +15,12 @@
 </head>
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
 <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
+
 <script src="Build/c682e45bff283fe4a978c52eba68f68f.loader.js"></script>
+
 <script>
+    // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -30,9 +32,39 @@
         canvas.style.position = "fixed";
 
         document.body.style.textAlign = "left";
-
     }
 
+    // Store reference to Unity instance
+    let unityInstanceRef = null;
+
+    function sendToUnity(message) {
+        if (unityInstanceRef && unityInstanceRef.SendMessage) {
+            unityInstanceRef.SendMessage("AppFocusManager", "OnBrowserFocusChange", message);
+        }
+    }
+
+    // Focus/visibility detection
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            console.log("👋 Tab hidden");
+            sendToUnity("PAUSE");
+        } else {
+            console.log("👀 Tab visible");
+            sendToUnity("RESUME");
+        }
+    });
+
+    window.addEventListener("blur", () => {
+        console.log("🔕 Window blurred");
+        sendToUnity("PAUSE");
+    });
+
+    window.addEventListener("focus", () => {
+        console.log("🔔 Window focused");
+        sendToUnity("RESUME");
+    });
+
+    // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
         dataUrl: "Build/570b9498a2484421d55cdf708775e4cb.data",
@@ -41,10 +73,9 @@
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
-        productVersion: "0.1",
-        // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
-        // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
+        productVersion: "0.1"
     }).then((unityInstance) => {
+        unityInstanceRef = unityInstance;
     }).catch((message) => {
         alert(message);
     });

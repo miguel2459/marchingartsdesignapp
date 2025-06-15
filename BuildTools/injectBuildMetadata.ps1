@@ -39,9 +39,9 @@ $html = $html -replace '<!-- Build Timestamp: .*?-->', "<!-- Build Timestamp: $t
 
 # Inject footer
 $footerHtml = @"
-    <div style='position:fixed; bottom: 10px; right: 10px; font-size:12px; color:#aaa; z-index:9999'>
-        Build Timestamp: $timestamp
-    </div>
+<div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
+    Build Timestamp: $timestamp
+</div>
 "@
 
 $html = $html -replace "</body>", "$footerHtml`n</body>"
