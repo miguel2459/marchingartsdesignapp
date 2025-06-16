@@ -1,10 +1,18 @@
 using UnityEngine;
+using System.Collections;
 
 public class SessionStateValidator : MonoBehaviour
 {
-    void Awake()
+    private IEnumerator Start()
     {
-        Debug.Log("🧪 SessionStateValidator.Awake called.");
+        Debug.Log("🧪 SessionStateValidator.Start coroutine called.");
+
+        // Wait until BuildVersion is initialized
+        while (BuildInfoManager.BuildVersion == "unknown")
+        {
+            Debug.Log("⏳ Waiting for BuildInfoManager.BuildVersion...");
+            yield return null;
+        }
 
         string runtimeVersion = BuildInfoManager.BuildVersion;
         string cachedVersion = PlayerPrefs.GetString("AppVersion");
@@ -32,6 +40,7 @@ public class SessionStateValidator : MonoBehaviour
             Debug.Log("✅ Session is valid.");
         }
     }
+
 
     private bool IsSessionValid()
     {
