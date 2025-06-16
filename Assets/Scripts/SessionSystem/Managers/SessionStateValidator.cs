@@ -2,52 +2,57 @@ using UnityEngine;
 
 public class SessionStateValidator : MonoBehaviour
 {
-    [Header("Expected App Version")]
-    public string currentVersion = "2025.06.14";
-
     void Awake()
     {
-        string runtimeVersion = BuildInfo.BuildVersion;
-        if (PlayerPrefs.GetString("AppVersion") != runtimeVersion)
+        Debug.Log("🧪 SessionStateValidator.Awake called.");
+
+        string runtimeVersion = BuildInfoManager.BuildVersion;
+        string cachedVersion = PlayerPrefs.GetString("AppVersion");
+
+        Debug.Log($"📦 Build version check: Cached = {cachedVersion}, Runtime = {runtimeVersion}");
+
+        if (cachedVersion != runtimeVersion)
         {
             PlayerPrefs.DeleteAll();
             Debug.Log($"🚨 Cache invalidated. New build version: {runtimeVersion}");
             PlayerPrefs.SetString("AppVersion", runtimeVersion);
         }
+        else
+        {
+            Debug.Log("✅ Version is current. No cache clearing needed.");
+        }
 
         if (!IsSessionValid())
         {
-            Debug.LogError("❌ Invalid session. Redirecting to login.");
+            Debug.LogWarning("⚠️ Session validation failed.");
             ForceLogoutAndRedirect();
+        }
+        else
+        {
+            Debug.Log("✅ Session is valid.");
         }
     }
 
-
     private bool IsSessionValid()
     {
-        return !string.IsNullOrEmpty(PlayerPrefs.GetString("AccountSheetID"))
-               && !string.IsNullOrEmpty(PlayerPrefs.GetString("UserInfoRef"));
+        string sheetID = PlayerPrefs.GetString("AccountSheetID");
+        string userRef = PlayerPrefs.GetString("UserInfoRef");
+
+        Debug.Log($"🔍 Checking PlayerPrefs: AccountSheetID = '{sheetID}', UserInfoRef = '{userRef}'");
+
+        return !string.IsNullOrEmpty(sheetID) && !string.IsNullOrEmpty(userRef);
     }
 
     private void ForceLogoutAndRedirect()
     {
+        Debug.Log("🧹 Clearing session-related PlayerPrefs...");
         PlayerPrefs.DeleteKey("AccountSheetID");
         PlayerPrefs.DeleteKey("UserInfoRef");
 
         // Optional: clear session cache object if you have one
-        // SessionState.Clear();
+        //SessionState.Clear();
 
-        UnityEngine.SceneManagement.SceneManager.LoadScene("LoginScene");
-    }
-}
-
-public static class BuildInfo
-{
-    public static string BuildVersion = "unknown";
-
-    public static void SetBuildVersion(string version)
-    {
-        BuildVersion = version;
-        Debug.Log($"🛠️ Build version set from JS: {version}");
+        Debug.Log("🔁 Restarting to login scene...");
+        //SceneController.Instance.SwitchScene("LoginScene");
     }
 }
