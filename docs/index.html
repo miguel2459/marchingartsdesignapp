@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20250615-180807 -->
+    <!-- Build Timestamp: 20250615-183009 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,11 +16,11 @@
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
 <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
 
-<script src="Build/566b6f1cc097fd0678143c6932ff0f1a.loader.js?v=20250615-180807"></script>
+<script src="Build/566b6f1cc097fd0678143c6932ff0f1a.loader.js?v=20250615-183009"></script>
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "20250615-180807"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "20250615-183009"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -70,9 +70,9 @@
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/ecf2468f810500f4c1661a503f9f887b.data?v=20250615-180807",
-        frameworkUrl: "Build/40abd3cb7015d833dc508cea523707c5.framework.js?v=20250615-180807",
-        codeUrl: "Build/478ce686c31c165899379f8d7be764e8.wasm?v=20250615-180807",
+        dataUrl: "Build/ecf2468f810500f4c1661a503f9f887b.data?v=20250615-183009",
+        frameworkUrl: "Build/40abd3cb7015d833dc508cea523707c5.framework.js?v=20250615-183009",
+        codeUrl: "Build/478ce686c31c165899379f8d7be764e8.wasm?v=20250615-183009",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
@@ -88,8 +88,35 @@
         alert(message);
     });
 </script>
+<script>
+(function patchUnityLoaderRetry() {
+    const originalFetch = window.fetch;
+
+    window.fetch = async function(url, options) {
+        // Retry only for .data file requests
+        if (url.includes(".data")) {
+            const maxRetries = 3;
+
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await originalFetch(url, options);
+                    if (!response.ok) throw new Error("Status " + response.status);
+                    return response; // ? Success
+                } catch (err) {
+                    console.warn(`?? .data fetch failed [${attempt}/${maxRetries}]: ${err.message}`);
+                    if (attempt === maxRetries) throw err; // ? Give up
+                    await new Promise(res => setTimeout(res, 1000 * attempt)); // ?? Exponential backoff
+                }
+            }
+        }
+
+        // Non-.data file: default behavior
+        return originalFetch(url, options);
+    };
+})();
+</script>
 <div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20250615-180807
+    Build Timestamp: 20250615-183009
 </div>
 </body>
 </html>

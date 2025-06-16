@@ -15,10 +15,30 @@ $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $html = Get-Content $indexPath -Raw
 
 # Detect actual filenames
-$dataFile = Get-ChildItem "$buildDir/Build" -Filter *.data | Select-Object -First 1
-$frameworkFile = Get-ChildItem "$buildDir/Build" -Filter *.framework.js | Select-Object -First 1
-$wasmFile = Get-ChildItem "$buildDir/Build" -Filter *.wasm | Select-Object -First 1
-$loaderFile = Get-ChildItem "$buildDir/Build" -Filter *.loader.js | Select-Object -First 1
+$maxRetries = 10
+$retryDelay = 1
+$buildPath = "$buildDir/Build"
+
+Write-Host "⏳ Waiting for Unity build files to finalize..."
+
+for ($i = 0; $i -lt $maxRetries; $i++) {
+    $dataFile = Get-ChildItem $buildPath -Filter *.data | Select-Object -First 1
+    $frameworkFile = Get-ChildItem $buildPath -Filter *.framework.js | Select-Object -First 1
+    $wasmFile = Get-ChildItem $buildPath -Filter *.wasm | Select-Object -First 1
+    $loaderFile = Get-ChildItem $buildPath -Filter *.loader.js | Select-Object -First 1
+
+    $ready = $dataFile -and $frameworkFile -and $wasmFile -and $loaderFile
+    if ($ready) { break }
+
+    Write-Host "  🔄 Not ready yet... retry $($i + 1)/$maxRetries"
+    Start-Sleep -Seconds $retryDelay
+}
+
+if (-not $ready) {
+    Write-Host "❌ Timeout waiting for Unity build files. Aborting injection."
+    exit 1
+}
+
 
 if (!$dataFile -or !$frameworkFile -or !$wasmFile -or !$loaderFile) {
     Write-Host "❌ Missing one or more build files."
