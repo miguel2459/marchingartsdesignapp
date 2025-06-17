@@ -14,10 +14,11 @@ public class CameraInputRouter : MonoBehaviour
 
     private Vector2 lastTouch0Pos;
     private Vector2 lastTouch1Pos;
-    private Vector2 gestureStartTouch0;
-    private Vector2 gestureStartTouch1;
+    private Vector2 gestureStartTouch0; // Initial touch positions when 2 fingers first touch
+    private Vector2 gestureStartTouch1; // Used for calculating cumulative movement against start
     private int gestureStartFrame = -1;
     private bool gestureInitialized = false;
+    private bool gestureLockedThisFrame = false; // New flag to delay first execution
 
     [Header("Touch Gesture Settings")]
     [Tooltip("Number of frames to ignore initial touch movement to prevent false triggers.")]
@@ -25,11 +26,11 @@ public class CameraInputRouter : MonoBehaviour
     [Tooltip("Minimum pixel movement to consider a single finger input as a drag for selection.")]
     public float singleFingerDragThreshold = 10f; // For single finger selection (not camera movement)
     [Tooltip("Minimum pixel movement for two fingers to consider it a camera gesture (pan/zoom/rotate).")]
-    public float twoFingerMovementThreshold = 8f;
-    [Tooltip("Minimum change in pinch distance to detect a zoom gesture.")]
-    public float zoomPinchThreshold = 2f;
-    [Tooltip("Minimum difference in individual finger movement magnitudes to detect a rotate gesture.")]
-    public float rotateMagnitudeDiffThreshold = 4f;
+    public float twoFingerMovementThreshold = 8f; // Tune this to prevent camera from activating on tiny movements
+    [Tooltip("Minimum change in pinch distance (pixels) to detect a zoom gesture.")]
+    public float zoomPinchThreshold = 2f; // Tune this: higher value makes it harder to accidentally zoom
+    [Tooltip("Minimum difference in individual finger movement magnitudes (pixels) to detect a rotate gesture.")]
+    public float rotateMagnitudeDiffThreshold = 4f; // Tune this: higher value makes it harder to accidentally rotate
 
     void Awake()
     {
@@ -57,10 +58,11 @@ public class CameraInputRouter : MonoBehaviour
     private void HandleTouchInput()
     {
         int touchCount = Input.touchCount;
+        gestureLockedThisFrame = false; // Reset flag at start of frame
 
         // Log start of touch input handling
         Debug.Log($"[Frame {Time.frameCount}] HandleTouchInput: Touch Count = {touchCount}");
-        Debug.Log($"[Frame {Time.frameCount}] IsCameraGestureActive: {TouchInputContext.IsCameraGestureActive}, currentGesture: {currentGesture}, gestureInitialized: {gestureInitialized}");
+        Debug.Log($"[Frame {Time.frameCount}] IsCameraGestureActive: {TouchInputContext.IsCameraGestureActive}, IsRecentGesture: {TouchInputContext.IsRecentGesture}, currentGesture: {currentGesture}, gestureInitialized: {gestureInitialized}");
 
 
         if (touchCount != 2)
@@ -68,7 +70,7 @@ public class CameraInputRouter : MonoBehaviour
             // Reset gesture state if not exactly two fingers are down
             if (gestureInitialized)
             {
-                Debug.Log($"[Frame {Time.frameCount}] Resetting gesture state. Touch count not 2. Current gesture was {currentGesture}");
+                Debug.Log($"[Frame {Time.frameCount}] Resetting gesture state. Touch count changed from 2 to {touchCount}. Current gesture was {currentGesture}");
                 TouchInputContext.IsCameraGestureActive = false;
                 TouchInputContext.GestureStartTime = Time.time; // Mark end of gesture for IsRecentGesture
             }
@@ -81,28 +83,40 @@ public class CameraInputRouter : MonoBehaviour
         Touch touch0 = Input.GetTouch(0);
         Touch touch1 = Input.GetTouch(1);
 
-        // --- Gesture Initialization ---
+        // --- RAW TOUCH DATA LOGGING ---
+        Debug.Log($"[Frame {Time.frameCount}] Touch 0: Pos={touch0.position}, Phase={touch0.phase}");
+        Debug.Log($"[Frame {Time.frameCount}] Touch 1: Pos={touch1.position}, Phase={touch1.phase}");
+        // --- END RAW TOUCH DATA LOGGING ---
+
+
+        // --- Gesture Initialization (first frame with 2 touches) ---
         if (!gestureInitialized)
         {
             gestureStartTouch0 = touch0.position;
             gestureStartTouch1 = touch1.position;
-            lastTouch0Pos = touch0.position;
+            lastTouch0Pos = touch0.position; // Initialize last positions for subsequent delta calculations
             lastTouch1Pos = touch1.position;
             gestureStartFrame = Time.frameCount;
             gestureInitialized = true;
             currentGesture = GestureMode.None; // Ensure it's None at start
             TouchInputContext.IsCameraGestureActive = true; // Block other inputs immediately
-            Debug.Log($"[Frame {Time.frameCount}] Initializing 2-finger gesture. Touch0: {touch0.position}, Touch1: {touch1.position}. Setting TouchInputContext.IsCameraGestureActive = true.");
-            return; // Skip processing movement in the very first frame to avoid jolts
+            Debug.Log($"[Frame {Time.frameCount}] Initializing 2-finger gesture. Touch0 start: {touch0.position}, Touch1 start: {touch1.position}. Setting TouchInputContext.IsCameraGestureActive = true.");
+            return; // Skip processing movement in the very first frame to avoid using uninitialized deltas
         }
 
         int framesHeld = Time.frameCount - gestureStartFrame;
 
         // --- Dead Phase ---
-        if (framesHeld < deadPhaseFrames)
+        if (framesHeld <= deadPhaseFrames) // Use <= to include the 'deadPhaseFrames' itself
         {
-            Debug.Log($"[Frame {Time.frameCount}] Dead phase: framesHeld = {framesHeld}. Waiting for motion before locking gesture.");
-            // Update last positions but don't detect gesture yet
+            Vector2 currentTouch0Offset = touch0.position - gestureStartTouch0;
+            Vector2 currentTouch1Offset = touch1.position - gestureStartTouch1;
+            Vector2 currentTotalMovement = (currentTouch0Offset + currentTouch1Offset) * 0.5f; // Average movement from start
+            float currentPinchDeltaFromStart = Vector2.Distance(touch0.position, touch1.position) - Vector2.Distance(gestureStartTouch0, gestureStartTouch1);
+            float currentDeltaMagnitudeDiffFromStart = Mathf.Abs(currentTouch0Offset.magnitude - currentTouch1Offset.magnitude);
+
+            Debug.Log($"[Frame {Time.frameCount}] Dead phase ({framesHeld}/{deadPhaseFrames}): Total Movement (avg pixels from start): {currentTotalMovement.magnitude}, Pinch Delta (from start): {currentPinchDeltaFromStart}, Delta Magnitude Diff (from start): {currentDeltaMagnitudeDiffFromStart}. Waiting for motion before locking gesture.");
+            // Update last positions so deltas are correct after dead phase
             lastTouch0Pos = touch0.position;
             lastTouch1Pos = touch1.position;
             return;
@@ -111,11 +125,14 @@ public class CameraInputRouter : MonoBehaviour
         // --- Gesture Detection (after dead phase, if not locked yet) ---
         if (currentGesture == GestureMode.None)
         {
-            Vector2 currentTotalMovement = (touch0.position - gestureStartTouch0) + (touch1.position - gestureStartTouch1);
-            float currentPinchDelta = Vector2.Distance(touch0.position, touch1.position) - Vector2.Distance(gestureStartTouch0, gestureStartTouch1);
-            float currentDeltaMagnitudeDiff = Mathf.Abs((touch0.position - gestureStartTouch0).magnitude - (touch1.position - gestureStartTouch1).magnitude);
+            // Calculate total movement relative to the start of the gesture (after dead phase)
+            Vector2 currentTouch0Offset = touch0.position - gestureStartTouch0;
+            Vector2 currentTouch1Offset = touch1.position - gestureStartTouch1;
+            Vector2 currentTotalMovement = (currentTouch0Offset + currentTouch1Offset) * 0.5f; // Average movement
+            float currentPinchDeltaFromStart = Vector2.Distance(touch0.position, touch1.position) - Vector2.Distance(gestureStartTouch0, gestureStartTouch1);
+            float currentDeltaMagnitudeDiffFromStart = Mathf.Abs(currentTouch0Offset.magnitude - currentTouch1Offset.magnitude);
 
-            Debug.Log($"[Frame {Time.frameCount}] Detecting gesture... Total Movement (pixels): {currentTotalMovement.magnitude}, Pinch Delta: {currentPinchDelta}, Delta Magnitude Diff: {currentDeltaMagnitudeDiff}");
+            Debug.Log($"[Frame {Time.frameCount}] Detecting gesture... Total Movement (avg pixels from start): {currentTotalMovement.magnitude}, Pinch Delta (from start): {currentPinchDeltaFromStart}, Delta Magnitude Diff (from start): {currentDeltaMagnitudeDiffFromStart}");
 
             if (currentTotalMovement.magnitude < twoFingerMovementThreshold)
             {
@@ -124,11 +141,11 @@ public class CameraInputRouter : MonoBehaviour
             else
             {
                 // Prioritize zoom and rotate as they are more distinct
-                if (Mathf.Abs(currentPinchDelta) > zoomPinchThreshold)
+                if (Mathf.Abs(currentPinchDeltaFromStart) > zoomPinchThreshold)
                 {
                     currentGesture = GestureMode.Zoom;
                 }
-                else if (currentDeltaMagnitudeDiff > rotateMagnitudeDiffThreshold)
+                else if (currentDeltaMagnitudeDiffFromStart > rotateMagnitudeDiffThreshold)
                 {
                     currentGesture = GestureMode.Rotate;
                 }
@@ -137,12 +154,18 @@ public class CameraInputRouter : MonoBehaviour
                     // If not zoom or rotate, it's likely a pan
                     currentGesture = GestureMode.Pan;
                 }
-                Debug.Log($"🔒 [Frame {Time.frameCount}] Gesture LOCKED: {currentGesture}");
+                gestureLockedThisFrame = true; // Set flag to delay first execution
+                Debug.Log($"🔒 [Frame {Time.frameCount}] Gesture LOCKED: {currentGesture}. Delaying first execution.");
+
+                // IMPORTANT: Reset last positions to current positions AFTER locking
+                // This prevents the "jolt" by ensuring the next frame's delta is from this new, locked state.
+                lastTouch0Pos = touch0.position;
+                lastTouch1Pos = touch1.position;
             }
         }
 
-        // --- Execute the locked gesture only ---
-        if (currentGesture != GestureMode.None)
+        // --- Execute the locked gesture only (if not locked this frame) ---
+        if (currentGesture != GestureMode.None && !gestureLockedThisFrame)
         {
             Vector2 movement = (touch0.position - lastTouch0Pos + touch1.position - lastTouch1Pos) * 0.5f;
             float currentPinchDelta = Vector2.Distance(touch0.position, touch1.position) - Vector2.Distance(lastTouch0Pos, lastTouch1Pos);
@@ -163,7 +186,7 @@ public class CameraInputRouter : MonoBehaviour
             }
         }
 
-        // Update for next frame
+        // Always update for next frame (even if gesture was locked this frame, to set up next delta)
         lastTouch0Pos = touch0.position;
         lastTouch1Pos = touch1.position;
     }
