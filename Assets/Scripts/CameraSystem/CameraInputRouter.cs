@@ -35,20 +35,12 @@ public class CameraInputRouter : MonoBehaviour
 
     private void HandleTouchInput()
     {
-        if (Input.touchCount == 1)
-        {
-            Touch touch = Input.GetTouch(0);
+        int touchCount = Input.touchCount;
 
-            if (touch.phase == TouchPhase.Moved)
-            {
-                Vector2 delta = touch.deltaPosition;
-                cameraModeManager?.HandlePanOrRotateIntent(delta);
-            }
-
-            lastTouchPos = touch.position;
-        }
-        else if (Input.touchCount == 2)
+        if (touchCount == 2)
         {
+            TouchInputContext.IsCameraGestureActive = true;
+
             Touch touch1 = Input.GetTouch(0);
             Touch touch2 = Input.GetTouch(1);
 
@@ -59,8 +51,25 @@ public class CameraInputRouter : MonoBehaviour
             float currDist = Vector2.Distance(touch1.position, touch2.position);
             float deltaZoom = currDist - prevDist;
 
-            cameraModeManager?.HandleZoomIntent(deltaZoom * 0.02f); // Adjust multiplier as needed
-            lastTouchDistance = currDist;
+            // Average movement = pan
+            Vector2 avgDelta = (touch1.deltaPosition + touch2.deltaPosition) * 0.5f;
+
+            cameraModeManager?.HandleZoomIntent(deltaZoom * 0.02f);
+            cameraModeManager?.HandlePanOrRotateIntent(avgDelta);
+        }
+        else if (touchCount == 1)
+        {
+            TouchInputContext.IsCameraGestureActive = false;
+
+            Touch touch = Input.GetTouch(0);
+            if (touch.phase == TouchPhase.Moved)
+            {
+                cameraModeManager?.HandlePanOrRotateIntent(touch.deltaPosition);
+            }
+        }
+        else
+        {
+            TouchInputContext.IsCameraGestureActive = false;
         }
     }
 

@@ -38,6 +38,11 @@ public class ClickMarcherSelector : MonoBehaviour
 
     void HandleMouseInput()
     {
+        if (TouchInputContext.IsCameraGestureActive)
+        {
+            return; // ⛔ skip selection logic while in camera mode
+        }
+
         // Frame check and UI blocking (existing)
         if (lastInputFrame == Time.frameCount) return;
         lastInputFrame = Time.frameCount;
