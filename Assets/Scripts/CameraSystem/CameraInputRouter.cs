@@ -32,6 +32,11 @@ public class CameraInputRouter : MonoBehaviour
     [Tooltip("Minimum difference in individual finger movement magnitudes (pixels) to detect a rotate gesture.")]
     public float rotateMagnitudeDiffThreshold = 4f; // Tune this: higher value makes it harder to accidentally rotate
 
+    [Header("Debugging")]
+    [Tooltip("If true, logs verbose messages when no touch input is detected.")]
+    public bool logNoTouchInput = false; // New toggle for verbose logging
+
+
     void Awake()
     {
         isMobile = Application.isMobilePlatform || Input.touchSupported;
@@ -60,10 +65,12 @@ public class CameraInputRouter : MonoBehaviour
         int touchCount = Input.touchCount;
         gestureLockedThisFrame = false; // Reset flag at start of frame
 
-        // Log start of touch input handling
-        Debug.Log($"[Frame {Time.frameCount}] HandleTouchInput: Touch Count = {touchCount}");
-        Debug.Log($"[Frame {Time.frameCount}] IsCameraGestureActive: {TouchInputContext.IsCameraGestureActive}, IsRecentGesture: {TouchInputContext.IsRecentGesture}, currentGesture: {currentGesture}, gestureInitialized: {gestureInitialized}");
-
+        // Conditionally log when no touch input is present
+        if (touchCount == 0 && logNoTouchInput)
+        {
+            Debug.Log($"[Frame {Time.frameCount}] HandleTouchInput: Touch Count = 0");
+            Debug.Log($"[Frame {Time.frameCount}] IsCameraGestureActive: {TouchInputContext.IsCameraGestureActive}, IsRecentGesture: {TouchInputContext.IsRecentGesture}, currentGesture: {currentGesture}, gestureInitialized: {gestureInitialized}");
+        }
 
         if (touchCount != 2)
         {
@@ -134,26 +141,24 @@ public class CameraInputRouter : MonoBehaviour
 
             Debug.Log($"[Frame {Time.frameCount}] Detecting gesture... Total Movement (avg pixels from start): {currentTotalMovement.magnitude}, Pinch Delta (from start): {currentPinchDeltaFromStart}, Delta Magnitude Diff (from start): {currentDeltaMagnitudeDiffFromStart}");
 
-            if (currentTotalMovement.magnitude < twoFingerMovementThreshold)
+            // Prioritize specific gestures (Zoom, Rotate) if their unique thresholds are met
+            if (Mathf.Abs(currentPinchDeltaFromStart) > zoomPinchThreshold)
             {
-                Debug.Log($"[Frame {Time.frameCount}] Movement below two-finger threshold ({currentTotalMovement.magnitude} < {twoFingerMovementThreshold}). No gesture locked yet.");
+                currentGesture = GestureMode.Zoom;
             }
-            else
+            else if (currentDeltaMagnitudeDiffFromStart > rotateMagnitudeDiffThreshold)
             {
-                // Prioritize zoom and rotate as they are more distinct
-                if (Mathf.Abs(currentPinchDeltaFromStart) > zoomPinchThreshold)
-                {
-                    currentGesture = GestureMode.Zoom;
-                }
-                else if (currentDeltaMagnitudeDiffFromStart > rotateMagnitudeDiffThreshold)
-                {
-                    currentGesture = GestureMode.Rotate;
-                }
-                else
-                {
-                    // If not zoom or rotate, it's likely a pan
-                    currentGesture = GestureMode.Pan;
-                }
+                currentGesture = GestureMode.Rotate;
+            }
+            // Only consider Pan if neither Zoom nor Rotate are strongly detected,
+            // and there is enough overall average movement.
+            else if (currentTotalMovement.magnitude >= twoFingerMovementThreshold)
+            {
+                currentGesture = GestureMode.Pan;
+            }
+
+            if (currentGesture != GestureMode.None)
+            {
                 gestureLockedThisFrame = true; // Set flag to delay first execution
                 Debug.Log($"🔒 [Frame {Time.frameCount}] Gesture LOCKED: {currentGesture}. Delaying first execution.");
 
@@ -161,6 +166,10 @@ public class CameraInputRouter : MonoBehaviour
                 // This prevents the "jolt" by ensuring the next frame's delta is from this new, locked state.
                 lastTouch0Pos = touch0.position;
                 lastTouch1Pos = touch1.position;
+            }
+            else
+            {
+                Debug.Log($"[Frame {Time.frameCount}] Movement not enough to lock a specific gesture (Total: {currentTotalMovement.magnitude}, Pinch: {currentPinchDeltaFromStart}, Diff: {currentDeltaMagnitudeDiffFromStart}). No gesture locked yet.");
             }
         }
 
