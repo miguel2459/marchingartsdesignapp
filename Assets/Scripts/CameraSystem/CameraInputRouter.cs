@@ -8,13 +8,13 @@ public class CameraInputRouter : MonoBehaviour
 {
     private bool isMobile;
     [SerializeField] private CameraModeManager cameraModeManager;
-    private Vector2 lastTouchPos;
-    private float lastTouchDistance;
-    private float initialPinchDistance;
-    private bool isPinching = false;
-    private bool isTwoFingerPan = false;
-    private bool isTwoFingerRotate = false;
-    private float gestureStartTime = 0f;
+
+    private enum GestureMode { None, Zoom, Pan, Rotate }
+    private GestureMode currentGesture = GestureMode.None;
+
+    private Vector2 lastTouch0Pos;
+    private Vector2 lastTouch1Pos;
+    private bool gestureInitialized = false;
 
     void Awake()
     {
@@ -43,69 +43,71 @@ public class CameraInputRouter : MonoBehaviour
     {
         int touchCount = Input.touchCount;
 
-        // Reset if no touch
-        if (touchCount == 0)
+        // 🔁 Reset on lift
+        if (touchCount != 2)
         {
             TouchInputContext.IsCameraGestureActive = false;
-            isPinching = false;
-            isTwoFingerPan = false;
-            isTwoFingerRotate = false;
+            currentGesture = GestureMode.None;
+            gestureInitialized = false;
             return;
         }
 
-        // 2-FINGER LOGIC
-        if (touchCount == 2)
-        {
-            Touch touch0 = Input.GetTouch(0);
-            Touch touch1 = Input.GetTouch(1);
+        Touch touch0 = Input.GetTouch(0);
+        Touch touch1 = Input.GetTouch(1);
 
+        // 🕓 Wait for movement before interpreting
+        if (!gestureInitialized)
+        {
+            lastTouch0Pos = touch0.position;
+            lastTouch1Pos = touch1.position;
+            gestureInitialized = true;
             TouchInputContext.IsCameraGestureActive = true;
-            gestureStartTime = Time.time;
-
-            Vector2 touch0Prev = touch0.position - touch0.deltaPosition;
-            Vector2 touch1Prev = touch1.position - touch1.deltaPosition;
-
-            float prevDistance = Vector2.Distance(touch0Prev, touch1Prev);
-            float currDistance = Vector2.Distance(touch0.position, touch1.position);
-            float deltaZoom = currDistance - prevDistance;
-
-            Vector2 avgMovement = (touch0.deltaPosition + touch1.deltaPosition) * 0.5f;
-            float deltaMagnitudeDiff = Mathf.Abs(touch0.deltaPosition.magnitude - touch1.deltaPosition.magnitude);
-
-            bool isZoomGesture = Mathf.Abs(deltaZoom) > 5f;
-            bool isRotateGesture = deltaMagnitudeDiff > 3f;
-            bool isPanGesture = !isZoomGesture && !isRotateGesture;
-
-            if (isZoomGesture)
-            {
-                cameraModeManager?.HandleZoomIntent(deltaZoom * 0.005f);
-            }
-            else if (isRotateGesture)
-            {
-                cameraModeManager?.HandleRotateIntent(avgMovement);
-            }
-            else if (isPanGesture)
-            {
-                cameraModeManager?.HandlePanIntent(avgMovement);
-            }
+            return; // Do NOT move camera on first frame of touch
         }
 
-        // 1-FINGER LOGIC
-        else if (touchCount == 1)
+        // Calculate deltas
+        Vector2 delta0 = touch0.position - lastTouch0Pos;
+        Vector2 delta1 = touch1.position - lastTouch1Pos;
+        Vector2 avgDelta = (delta0 + delta1) * 0.5f;
+        float pinchDelta = (Vector2.Distance(touch0.position, touch1.position) -
+                            Vector2.Distance(lastTouch0Pos, lastTouch1Pos));
+        float deltaMagnitudeDiff = Mathf.Abs(delta0.magnitude - delta1.magnitude);
+
+        // 🔐 Lock gesture once based on early motion
+        if (currentGesture == GestureMode.None)
         {
-            Touch touch = Input.GetTouch(0);
-
-            // Only allow 1-finger gestures to pass to selection system
-            TouchInputContext.IsCameraGestureActive = false;
-
-            // You don't need to do anything here — clickdrag already works
-            // and you're intentionally letting it route to ClickMarcherSelector
+            if (Mathf.Abs(pinchDelta) > 2f)
+                currentGesture = GestureMode.Zoom;
+            else if (deltaMagnitudeDiff > 4f)
+                currentGesture = GestureMode.Rotate;
+            else if (avgDelta.magnitude > 2f)
+                currentGesture = GestureMode.Pan;
+            else
+                return; // Not enough motion yet
+            Debug.Log($"🔒 Gesture locked: {currentGesture}");
         }
-    }
 
+        // 🎯 Perform locked gesture only
+        switch (currentGesture)
+        {
+            case GestureMode.Zoom:
+                cameraModeManager?.HandleZoomIntent(pinchDelta * 0.005f); // softened
+                break;
+            case GestureMode.Pan:
+                cameraModeManager?.HandlePanIntent(avgDelta);
+                break;
+            case GestureMode.Rotate:
+                cameraModeManager?.HandleRotateIntent(avgDelta);
+                break;
+        }
+
+        // Update last positions
+        lastTouch0Pos = touch0.position;
+        lastTouch1Pos = touch1.position;
+    }
 
     private void HandleMouseInput()
     {
-        // ⏳ We'll preserve existing camera Update() logic here later
+        // ⏳ Existing camera logic handles mouse input directly
     }
 }
