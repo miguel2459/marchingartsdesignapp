@@ -128,6 +128,21 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
             transform.Translate(new Vector3(moveZ, 0f, moveX), Space.World);
         }
     }
+    
+    public void ApplyZoom(float delta)
+    {
+        currentOrthoSize -= delta * zoomSpeed * Time.deltaTime;
+        currentOrthoSize = Mathf.Clamp(currentOrthoSize, minOrthoSize, maxOrthoSize);
+        if (cam != null)
+            cam.orthographicSize = currentOrthoSize;
+    }
+
+    public void ApplyPan(Vector2 delta)
+    {
+        // Convert swipe to top-down movement
+        Vector3 move = new Vector3(-delta.y, 0f, delta.x) * panSpeed * Time.deltaTime;
+        transform.Translate(move, Space.World);
+    }
 
     public void FocusOnSelection(Vector3 focalPoint)
     {

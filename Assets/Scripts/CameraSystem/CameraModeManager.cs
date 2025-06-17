@@ -82,6 +82,33 @@ public class CameraModeManager : MonoBehaviour
         Debug.Log("CameraModeManager: Camera focus updated to selection.");
     }
 
+    public void HandleZoomIntent(float delta)
+    {
+        if (IsInputBlocked()) return;
+
+        if (isTopDownActive)
+        {
+            topDownCamera?.ApplyZoom(delta);
+        }
+        else
+        {
+            flyingCamera?.ApplyZoom(delta);
+        }
+    }
+
+    public void HandlePanOrRotateIntent(Vector2 delta)
+    {
+        if (IsInputBlocked()) return;
+
+        if (isTopDownActive)
+        {
+            topDownCamera?.ApplyPan(delta);
+        }
+        else
+        {
+            flyingCamera?.ApplyRotation(delta);
+        }
+    }
 
     public void ReapplyActiveCameraMode()
     {

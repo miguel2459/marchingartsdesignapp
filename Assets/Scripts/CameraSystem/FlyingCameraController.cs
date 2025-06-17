@@ -131,48 +131,18 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         }
     }
 
-    // void MoveCameraToFocus()
-    // {
-    //     Vector3 targetFocus;
-    //     float targetDistance;
+    public void ApplyZoom(float delta)
+    {
+        transform.position += transform.forward * delta * zoomSpeed * Time.deltaTime;
+    }
 
-    //     if (gizmoManager != null && gizmoManager.IsGizmoActive())
-    //     {
-    //         targetFocus = gizmoManager.transformGizmo.transform.position;
-    //         targetDistance = targetFocusDistance;
-    //     }
-    //     else if (selectedMarchers.Count > 0)
-    //     {
-    //         if (selectedMarchers.Count == 1)
-    //         {
-    //             targetFocus = selectedMarchers[0].transform.position;
-    //             targetDistance = targetFocusDistance;
-    //         }
-    //         else
-    //         {
-    //             Vector3 totalPosition = Vector3.zero;
-    //             foreach (var marcher in selectedMarchers)
-    //                 totalPosition += marcher.transform.position;
+    public void ApplyRotation(Vector2 delta)
+    {
+        yaw += delta.x * rotationSpeed * Time.deltaTime;
+        pitch -= delta.y * rotationSpeed * Time.deltaTime;
+        transform.eulerAngles = new Vector3(pitch, yaw, 0f);
+    }
 
-    //             targetFocus = totalPosition / selectedMarchers.Count;
-    //             targetDistance = CalculateRequiredDistanceToFit();
-    //         }
-    //     }
-    //     else
-    //     {
-    //         isFocusing = false;
-    //         return;
-    //     }
-
-    //     Vector3 directionToFocus = (targetFocus - initialCameraPosition).normalized;
-    //     Vector3 finalPosition = targetFocus - directionToFocus * targetDistance;
-
-    //     transform.position = Vector3.Lerp(transform.position, finalPosition, focusSpeed * Time.deltaTime);
-    //     transform.LookAt(targetFocus);
-
-    //     if (Vector3.Distance(transform.position, finalPosition) < 0.1f)
-    //         isFocusing = false;
-    // }
 
     void MoveCameraToFocus()
     {
