@@ -72,14 +72,18 @@ public class CameraInputRouter : MonoBehaviour
             Debug.Log($"[Frame {Time.frameCount}] IsCameraGestureActive: {TouchInputContext.IsCameraGestureActive}, IsRecentGesture: {TouchInputContext.IsRecentGesture}, currentGesture: {currentGesture}, gestureInitialized: {gestureInitialized}");
         }
 
+        // Reset gesture state if not exactly two fingers are down
         if (touchCount != 2)
         {
-            // Reset gesture state if not exactly two fingers are down
             if (gestureInitialized)
             {
-                Debug.Log($"[Frame {Time.frameCount}] Resetting gesture state. Touch count changed from 2 to {touchCount}. Current gesture was {currentGesture}");
-                TouchInputContext.IsCameraGestureActive = false;
-                TouchInputContext.GestureStartTime = Time.time; // Mark end of gesture for IsRecentGesture
+                Debug.Log($"[Frame {Time.frameCount}] Resetting gesture state. Touch count changed from 2 to {touchCount}. Current gesture was {currentGesture}. IsCameraGestureActive was {TouchInputContext.IsCameraGestureActive}");
+                // Only reset IsCameraGestureActive if it was set
+                if (TouchInputContext.IsCameraGestureActive)
+                {
+                    TouchInputContext.IsCameraGestureActive = false;
+                    TouchInputContext.GestureStartTime = Time.time; // Mark end of gesture for IsRecentGesture
+                }
             }
             currentGesture = GestureMode.None;
             gestureInitialized = false;
@@ -106,8 +110,9 @@ public class CameraInputRouter : MonoBehaviour
             gestureStartFrame = Time.frameCount;
             gestureInitialized = true;
             currentGesture = GestureMode.None; // Ensure it's None at start
-            TouchInputContext.IsCameraGestureActive = true; // Block other inputs immediately
-            Debug.Log($"[Frame {Time.frameCount}] Initializing 2-finger gesture. Touch0 start: {touch0.position}, Touch1 start: {touch1.position}. Setting TouchInputContext.IsCameraGestureActive = true.");
+            // DO NOT set TouchInputContext.IsCameraGestureActive = true here.
+            // It will be set only when a gesture type is confirmed.
+            Debug.Log($"[Frame {Time.frameCount}] Initializing 2-finger gesture. Touch0 start: {touch0.position}, Touch1 start: {touch1.position}. IsCameraGestureActive remains {TouchInputContext.IsCameraGestureActive}.");
             return; // Skip processing movement in the very first frame to avoid using uninitialized deltas
         }
 
@@ -160,7 +165,8 @@ public class CameraInputRouter : MonoBehaviour
             if (currentGesture != GestureMode.None)
             {
                 gestureLockedThisFrame = true; // Set flag to delay first execution
-                Debug.Log($"🔒 [Frame {Time.frameCount}] Gesture LOCKED: {currentGesture}. Delaying first execution.");
+                TouchInputContext.IsCameraGestureActive = true; // <<< MOVED THIS LINE HERE
+                Debug.Log($"🔒 [Frame {Time.frameCount}] Gesture LOCKED: {currentGesture}. Setting TouchInputContext.IsCameraGestureActive = true. Delaying first execution.");
 
                 // IMPORTANT: Reset last positions to current positions AFTER locking
                 // This prevents the "jolt" by ensuring the next frame's delta is from this new, locked state.
@@ -169,7 +175,7 @@ public class CameraInputRouter : MonoBehaviour
             }
             else
             {
-                Debug.Log($"[Frame {Time.frameCount}] Movement not enough to lock a specific gesture (Total: {currentTotalMovement.magnitude}, Pinch: {currentPinchDeltaFromStart}, Diff: {currentDeltaMagnitudeDiffFromStart}). No gesture locked yet.");
+                Debug.Log($"[Frame {Time.frameCount}] Movement not enough to lock a specific gesture (Total: {currentTotalMovement.magnitude}, Pinch: {currentPinchDeltaFromStart}, Diff: {currentDeltaMagnitudeDiffFromStart}). No gesture locked yet. IsCameraGestureActive remains {TouchInputContext.IsCameraGestureActive}.");
             }
         }
 
