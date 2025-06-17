@@ -12,7 +12,8 @@ public class CameraInputRouter : MonoBehaviour
     private float lastTouchDistance;
     void Awake()
     {
-        isMobile = Application.isMobilePlatform;
+        isMobile = Application.isMobilePlatform || Input.touchSupported;
+        Debug.Log($"📱 CameraInputRouter Awake → isMobile = {isMobile}");
     }
 
     void Start()
