@@ -142,6 +142,13 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         pitch -= delta.y * rotationSpeed * Time.deltaTime;
         transform.eulerAngles = new Vector3(pitch, yaw, 0f);
     }
+    
+    public void ApplyPan(Vector2 delta)
+    {
+        Vector3 panDirection = new Vector3(-delta.x * panSpeed, -delta.y * panSpeed, 0);
+        transform.Translate(panDirection, Space.Self);
+    }
+
 
 
     void MoveCameraToFocus()

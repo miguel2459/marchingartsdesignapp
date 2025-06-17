@@ -69,35 +69,27 @@ public class CameraInputRouter : MonoBehaviour
             float currDistance = Vector2.Distance(touch0.position, touch1.position);
             float deltaZoom = currDistance - prevDistance;
 
-            float pinchThreshold = 5f; // pixels
-            float moveThreshold = 2f;
-
-            bool isZoomGesture = Mathf.Abs(deltaZoom) > pinchThreshold;
             Vector2 avgMovement = (touch0.deltaPosition + touch1.deltaPosition) * 0.5f;
+            float deltaMagnitudeDiff = Mathf.Abs(touch0.deltaPosition.magnitude - touch1.deltaPosition.magnitude);
+
+            bool isZoomGesture = Mathf.Abs(deltaZoom) > 5f;
+            bool isRotateGesture = deltaMagnitudeDiff > 3f;
+            bool isPanGesture = !isZoomGesture && !isRotateGesture;
 
             if (isZoomGesture)
             {
-                isPinching = true;
-                cameraModeManager?.HandleZoomIntent(deltaZoom * 0.005f); // softened zoom for mobile
+                cameraModeManager?.HandleZoomIntent(deltaZoom * 0.005f);
             }
-            else
+            else if (isRotateGesture)
             {
-                float separation = Vector2.Distance(touch0.deltaPosition, touch1.deltaPosition);
-
-                if (separation > moveThreshold)
-                {
-                    // Fingers moving apart in different directions = rotate
-                    isTwoFingerRotate = true;
-                    cameraModeManager?.HandlePanOrRotateIntent(avgMovement);
-                }
-                else
-                {
-                    // Fingers moving same direction = pan
-                    isTwoFingerPan = true;
-                    cameraModeManager?.HandlePanOrRotateIntent(avgMovement);
-                }
+                cameraModeManager?.HandleRotateIntent(avgMovement);
+            }
+            else if (isPanGesture)
+            {
+                cameraModeManager?.HandlePanIntent(avgMovement);
             }
         }
+
         // 1-FINGER LOGIC
         else if (touchCount == 1)
         {

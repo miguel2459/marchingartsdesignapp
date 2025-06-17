@@ -96,19 +96,24 @@ public class CameraModeManager : MonoBehaviour
         }
     }
 
-    public void HandlePanOrRotateIntent(Vector2 delta)
+    public void HandlePanIntent(Vector2 delta)
     {
         if (IsInputBlocked()) return;
 
         if (isTopDownActive)
-        {
             topDownCamera?.ApplyPan(delta);
-        }
         else
-        {
-            flyingCamera?.ApplyRotation(delta);
-        }
+            flyingCamera?.ApplyPan(delta); // this was missing before
     }
+
+    public void HandleRotateIntent(Vector2 delta)
+    {
+        if (IsInputBlocked()) return;
+
+        if (!isTopDownActive) // only FlyingCamera supports rotation
+            flyingCamera?.ApplyRotation(delta);
+    }
+
 
     public void ReapplyActiveCameraMode()
     {
