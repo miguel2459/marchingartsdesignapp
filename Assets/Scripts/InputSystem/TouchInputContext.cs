@@ -1,8 +1,8 @@
-// TouchInputContext.cs
+using UnityEngine;
 public static class TouchInputContext
 {
-    /// <summary>
-    /// True if the current input is a camera-related gesture (pinch, 2-finger drag, etc)
-    /// </summary>
     public static bool IsCameraGestureActive = false;
+    public static float GestureStartTime = 0f;
+
+    public static bool IsRecentGesture => (Time.time - GestureStartTime) < 0.15f;
 }

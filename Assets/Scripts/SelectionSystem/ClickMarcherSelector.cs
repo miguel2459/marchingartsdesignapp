@@ -38,9 +38,9 @@ public class ClickMarcherSelector : MonoBehaviour
 
     void HandleMouseInput()
     {
-        if (TouchInputContext.IsCameraGestureActive)
+        if (TouchInputContext.IsCameraGestureActive || TouchInputContext.IsRecentGesture)
         {
-            return; // ⛔ skip selection logic while in camera mode
+            return; // Block clickdrag when in or near a gesture
         }
 
         // Frame check and UI blocking (existing)

@@ -10,6 +10,12 @@ public class CameraInputRouter : MonoBehaviour
     [SerializeField] private CameraModeManager cameraModeManager;
     private Vector2 lastTouchPos;
     private float lastTouchDistance;
+    private float initialPinchDistance;
+    private bool isPinching = false;
+    private bool isTwoFingerPan = false;
+    private bool isTwoFingerRotate = false;
+    private float gestureStartTime = 0f;
+
     void Awake()
     {
         isMobile = Application.isMobilePlatform || Input.touchSupported;
@@ -37,41 +43,74 @@ public class CameraInputRouter : MonoBehaviour
     {
         int touchCount = Input.touchCount;
 
+        // Reset if no touch
+        if (touchCount == 0)
+        {
+            TouchInputContext.IsCameraGestureActive = false;
+            isPinching = false;
+            isTwoFingerPan = false;
+            isTwoFingerRotate = false;
+            return;
+        }
+
+        // 2-FINGER LOGIC
         if (touchCount == 2)
         {
+            Touch touch0 = Input.GetTouch(0);
+            Touch touch1 = Input.GetTouch(1);
+
             TouchInputContext.IsCameraGestureActive = true;
+            gestureStartTime = Time.time;
 
-            Touch touch1 = Input.GetTouch(0);
-            Touch touch2 = Input.GetTouch(1);
-
+            Vector2 touch0Prev = touch0.position - touch0.deltaPosition;
             Vector2 touch1Prev = touch1.position - touch1.deltaPosition;
-            Vector2 touch2Prev = touch2.position - touch2.deltaPosition;
 
-            float prevDist = Vector2.Distance(touch1Prev, touch2Prev);
-            float currDist = Vector2.Distance(touch1.position, touch2.position);
-            float deltaZoom = currDist - prevDist;
+            float prevDistance = Vector2.Distance(touch0Prev, touch1Prev);
+            float currDistance = Vector2.Distance(touch0.position, touch1.position);
+            float deltaZoom = currDistance - prevDistance;
 
-            // Average movement = pan
-            Vector2 avgDelta = (touch1.deltaPosition + touch2.deltaPosition) * 0.5f;
+            float pinchThreshold = 5f; // pixels
+            float moveThreshold = 2f;
 
-            cameraModeManager?.HandleZoomIntent(deltaZoom * 0.02f);
-            cameraModeManager?.HandlePanOrRotateIntent(avgDelta);
-        }
-        else if (touchCount == 1)
-        {
-            TouchInputContext.IsCameraGestureActive = false;
+            bool isZoomGesture = Mathf.Abs(deltaZoom) > pinchThreshold;
+            Vector2 avgMovement = (touch0.deltaPosition + touch1.deltaPosition) * 0.5f;
 
-            Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Moved)
+            if (isZoomGesture)
             {
-                cameraModeManager?.HandlePanOrRotateIntent(touch.deltaPosition);
+                isPinching = true;
+                cameraModeManager?.HandleZoomIntent(deltaZoom * 0.005f); // softened zoom for mobile
+            }
+            else
+            {
+                float separation = Vector2.Distance(touch0.deltaPosition, touch1.deltaPosition);
+
+                if (separation > moveThreshold)
+                {
+                    // Fingers moving apart in different directions = rotate
+                    isTwoFingerRotate = true;
+                    cameraModeManager?.HandlePanOrRotateIntent(avgMovement);
+                }
+                else
+                {
+                    // Fingers moving same direction = pan
+                    isTwoFingerPan = true;
+                    cameraModeManager?.HandlePanOrRotateIntent(avgMovement);
+                }
             }
         }
-        else
+        // 1-FINGER LOGIC
+        else if (touchCount == 1)
         {
+            Touch touch = Input.GetTouch(0);
+
+            // Only allow 1-finger gestures to pass to selection system
             TouchInputContext.IsCameraGestureActive = false;
+
+            // You don't need to do anything here — clickdrag already works
+            // and you're intentionally letting it route to ClickMarcherSelector
         }
     }
+
 
     private void HandleMouseInput()
     {
