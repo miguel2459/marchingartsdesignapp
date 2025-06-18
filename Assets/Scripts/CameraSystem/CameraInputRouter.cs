@@ -18,6 +18,10 @@ public class CameraInputRouter : MonoBehaviour
     private bool gestureInitialized = false;
     private bool gestureLockedThisFrame = false;
 
+    private bool isStabilizingAfterTouch = false;
+    private int stabilizeStartFrame = -1;
+    private const int stabilizationFrames = 4; // ~4 frames ≈ 66ms at 60fps
+
     public int deadPhaseFrames = 4;
 
     void Awake()
@@ -50,6 +54,9 @@ public class CameraInputRouter : MonoBehaviour
 
         if (touchCount != 2)
         {
+            isStabilizingAfterTouch = false;
+            stabilizeStartFrame = -1;
+
             if (gestureInitialized)
             {
                 if (TouchInputContext.IsCameraGestureActive)
@@ -66,12 +73,11 @@ public class CameraInputRouter : MonoBehaviour
 
         Touch touch0 = Input.GetTouch(0);
         Touch touch1 = Input.GetTouch(1);
-        
+
         // 🔍 Touch Debug Log
         Debug.Log($"📱 Touch Debug: " +
-                  $"T0 Δ={touch0.deltaPosition} force={touch0.pressure}, radius={touch0.radius}, angle={touch0.altitudeAngle} | " +
-                  $"T1 Δ={touch1.deltaPosition} force={touch1.pressure}, radius={touch1.radius}, angle={touch1.altitudeAngle}");
-
+                  $"T0 ∆={touch0.deltaPosition} force={touch0.pressure}, radius={touch0.radius}, angle={touch0.altitudeAngle} | " +
+                  $"T1 ∆={touch1.deltaPosition} force={touch1.pressure}, radius={touch1.radius}, angle={touch1.altitudeAngle}");
 
         if (!gestureInitialized)
         {
@@ -82,7 +88,9 @@ public class CameraInputRouter : MonoBehaviour
             gestureStartFrame = Time.frameCount;
             gestureInitialized = true;
             currentGesture = GestureMode.None;
-            Debug.Log($"[Frame {Time.frameCount}] Initializing 2-finger gesture");
+            isStabilizingAfterTouch = true;
+            stabilizeStartFrame = Time.frameCount;
+            Debug.Log($"🔚 Stabilizing gesture for {stabilizationFrames} frames");
             return;
         }
 
@@ -94,11 +102,26 @@ public class CameraInputRouter : MonoBehaviour
             return;
         }
 
-        // --- Per-finger movement ---
+        if (isStabilizingAfterTouch)
+        {
+            int framesSinceStart = Time.frameCount - stabilizeStartFrame;
+            if (framesSinceStart <= stabilizationFrames)
+            {
+                Debug.Log($"⏳ Still stabilizing gesture… frame {framesSinceStart}/{stabilizationFrames}");
+                lastTouch0Pos = touch0.position;
+                lastTouch1Pos = touch1.position;
+                return;
+            }
+            else
+            {
+                isStabilizingAfterTouch = false;
+                Debug.Log($"✅ Gesture stabilized, analyzing input");
+            }
+        }
+
         Vector2 delta0 = touch0.position - lastTouch0Pos;
         Vector2 delta1 = touch1.position - lastTouch1Pos;
-        
-        // 🛡️ Jitter Suppression
+
         float minDelta = 2f;
         float maxDelta = 100f;
         bool touch0Valid = delta0.magnitude > minDelta && delta0.magnitude < maxDelta;
@@ -106,10 +129,10 @@ public class CameraInputRouter : MonoBehaviour
 
         if (!touch0Valid || !touch1Valid)
         {
-            Debug.Log($"⛔ Ignored gesture due to jitter or ghost input. Δ0={delta0.magnitude:F2}, Δ1={delta1.magnitude:F2}");
+            Debug.Log($"❌ Ignored gesture due to jitter or ghost input. ∆0={delta0.magnitude:F2}, ∆1={delta1.magnitude:F2}");
             return;
         }
-        
+
         bool touch0Moved = delta0.magnitude > 0.5f;
         bool touch1Moved = delta1.magnitude > 0.5f;
 
@@ -121,7 +144,7 @@ public class CameraInputRouter : MonoBehaviour
         float deltaMagnitudeRatio = Mathf.Min(delta0.magnitude, delta1.magnitude) / (Mathf.Max(delta0.magnitude, delta1.magnitude) + 0.001f);
 
         bool isZoomIntent = touch0Moved && touch1Moved && angleOpposing < 45f && pinchMagnitude > 1f;
-        bool isRotateIntent = (touch0Moved ^ touch1Moved); // XOR: only one moves
+        bool isRotateIntent = (touch0Moved ^ touch1Moved);
         bool isPanIntent = touch0Moved && touch1Moved &&
                            angleBetween < 25f &&
                            pinchMagnitude < 2.5f &&
@@ -156,22 +179,29 @@ public class CameraInputRouter : MonoBehaviour
             }
         }
 
-        if (currentGesture != GestureMode.None && !gestureLockedThisFrame)
+        if (currentGesture != GestureMode.None)
         {
-            Debug.Log($"[Frame {Time.frameCount}] Executing {currentGesture}. Touch0 Δ={delta0}, Touch1 Δ={delta1}, Pinch Δ={pinchDelta}");
-
-            switch (currentGesture)
+            if (gestureLockedThisFrame)
             {
-                case GestureMode.Zoom:
-                    if (touch0Moved && touch1Moved)
-                        cameraModeManager?.HandleZoomIntent(pinchDelta * 0.005f);
-                    break;
-                case GestureMode.Rotate:
-                    cameraModeManager?.HandleRotateIntent(touch0Moved ? delta0 : delta1);
-                    break;
-                case GestureMode.Pan:
-                    cameraModeManager?.HandlePanIntent(avgMovement);
-                    break;
+                Debug.Log($"🔚 Holding camera still — gesture just locked: {currentGesture}");
+            }
+            else
+            {
+                Debug.Log($"▶️ [Frame {Time.frameCount}] Executing {currentGesture}. Touch0 ∆={delta0}, Touch1 ∆={delta1}, Pinch ∆={pinchDelta}");
+
+                switch (currentGesture)
+                {
+                    case GestureMode.Zoom:
+                        if (touch0Moved && touch1Moved)
+                            cameraModeManager?.HandleZoomIntent(pinchDelta * 0.005f);
+                        break;
+                    case GestureMode.Rotate:
+                        cameraModeManager?.HandleRotateIntent(touch0Moved ? delta0 : delta1);
+                        break;
+                    case GestureMode.Pan:
+                        cameraModeManager?.HandlePanIntent(avgMovement);
+                        break;
+                }
             }
         }
 
