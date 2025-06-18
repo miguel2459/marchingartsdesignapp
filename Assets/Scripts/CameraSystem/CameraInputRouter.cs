@@ -1,4 +1,4 @@
-// ✅ Full refactor of HandleTouchInput() in CameraInputRouter.cs to use per-finger intent logic
+// ✅ Full refactor of HandleTouchInput() in CameraInputRouter.cs to use per-finger intent logic with stricter pan detection
 
 using UnityEngine;
 
@@ -98,19 +98,33 @@ public class CameraInputRouter : MonoBehaviour
         Vector2 avgMovement = (delta0 + delta1) * 0.5f;
         float angleBetween = Vector2.Angle(delta0, delta1);
         float angleOpposing = Vector2.Angle(delta0, -delta1);
+        float pinchMagnitude = Mathf.Abs(pinchDelta);
+        float deltaMagnitudeRatio = Mathf.Min(delta0.magnitude, delta1.magnitude) / (Mathf.Max(delta0.magnitude, delta1.magnitude) + 0.001f);
 
-        bool isZoomIntent = touch0Moved && touch1Moved && angleOpposing < 45f;
+        bool isZoomIntent = touch0Moved && touch1Moved && angleOpposing < 45f && pinchMagnitude > 1f;
         bool isRotateIntent = (touch0Moved ^ touch1Moved); // XOR: only one moves
-        bool isPanIntent = touch0Moved && touch1Moved && angleBetween < 30f;
+        bool isPanIntent = touch0Moved && touch1Moved &&
+                           angleBetween < 25f &&
+                           pinchMagnitude < 2.5f &&
+                           deltaMagnitudeRatio > 0.6f;
 
         if (currentGesture == GestureMode.None)
         {
             if (isZoomIntent)
+            {
+                Debug.Log($"🔍 Detected ZOOM intent: angleOpposing={angleOpposing}, pinchDelta={pinchDelta}");
                 currentGesture = GestureMode.Zoom;
+            }
             else if (isRotateIntent)
+            {
+                Debug.Log($"🔍 Detected ROTATE intent: touch0Moved={touch0Moved}, touch1Moved={touch1Moved}");
                 currentGesture = GestureMode.Rotate;
+            }
             else if (isPanIntent)
+            {
+                Debug.Log($"🔍 Detected PAN intent: angleBetween={angleBetween}, ratio={deltaMagnitudeRatio}, pinch={pinchDelta}");
                 currentGesture = GestureMode.Pan;
+            }
 
             if (currentGesture != GestureMode.None)
             {
