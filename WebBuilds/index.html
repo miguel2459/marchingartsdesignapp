@@ -12,6 +12,14 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="MADA" />
     <title>MADA | Marching Arts Design App</title>
+    <style>
+        html, body, canvas {
+            touch-action: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            overscroll-behavior: contain;
+        }
+    </style>
 </head>
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
 <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
@@ -114,6 +122,16 @@
         return originalFetch(url, options);
     };
 })();
+</script>
+<script>
+    const canvas = document.getElementById("unity-canvas") || document.querySelector("canvas");
+    ['touchstart', 'touchmove'].forEach(eventName => {
+        canvas.addEventListener(eventName, function(e) {
+            if (e.touches.length >= 2) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    });
 </script>
 </body>
 </html>

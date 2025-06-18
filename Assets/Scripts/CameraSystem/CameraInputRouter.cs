@@ -66,6 +66,12 @@ public class CameraInputRouter : MonoBehaviour
 
         Touch touch0 = Input.GetTouch(0);
         Touch touch1 = Input.GetTouch(1);
+        
+        // 🔍 Touch Debug Log
+        Debug.Log($"📱 Touch Debug: " +
+                  $"T0 Δ={touch0.deltaPosition} force={touch0.pressure}, radius={touch0.radius}, angle={touch0.altitudeAngle} | " +
+                  $"T1 Δ={touch1.deltaPosition} force={touch1.pressure}, radius={touch1.radius}, angle={touch1.altitudeAngle}");
+
 
         if (!gestureInitialized)
         {
@@ -91,6 +97,19 @@ public class CameraInputRouter : MonoBehaviour
         // --- Per-finger movement ---
         Vector2 delta0 = touch0.position - lastTouch0Pos;
         Vector2 delta1 = touch1.position - lastTouch1Pos;
+        
+        // 🛡️ Jitter Suppression
+        float minDelta = 2f;
+        float maxDelta = 100f;
+        bool touch0Valid = delta0.magnitude > minDelta && delta0.magnitude < maxDelta;
+        bool touch1Valid = delta1.magnitude > minDelta && delta1.magnitude < maxDelta;
+
+        if (!touch0Valid || !touch1Valid)
+        {
+            Debug.Log($"⛔ Ignored gesture due to jitter or ghost input. Δ0={delta0.magnitude:F2}, Δ1={delta1.magnitude:F2}");
+            return;
+        }
+        
         bool touch0Moved = delta0.magnitude > 0.5f;
         bool touch1Moved = delta1.magnitude > 0.5f;
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20250618-013048 -->
+    <!-- Build Timestamp: 20250618-021217 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,15 +12,23 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="MADA" />
     <title>MADA | Marching Arts Design App</title>
+    <style>
+        html, body, canvas {
+            touch-action: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            overscroll-behavior: contain;
+        }
+    </style>
 </head>
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
 <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
 
-<script src="Build/f13b99dff02a0db1fec5da6012c83a58.loader.js?v=20250618-013048"></script>
+<script src="Build/5e3d3df9b1df5011b4ca2c1614976108.loader.js?v=20250618-021217"></script>
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "20250618-013048"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "20250618-021217"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -70,9 +78,9 @@
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/f2aa7b69cd1ac718b5280ff177a948fd.data?v=20250618-013048",
-        frameworkUrl: "Build/a7c483512f24dcfc267aa5f9429f43b7.framework.js?v=20250618-013048",
-        codeUrl: "Build/159fa000f8b42367d58934ba5517f3f4.wasm?v=20250618-013048",
+        dataUrl: "Build/a325f6489950697146c8efdd57ae2753.data?v=20250618-021217",
+        frameworkUrl: "Build/03235a2149e2f66495120b84484f423e.framework.js?v=20250618-021217",
+        codeUrl: "Build/d29051e18f81ed03a69420d5b0e25516.wasm?v=20250618-021217",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
@@ -115,8 +123,18 @@
     };
 })();
 </script>
+<script>
+    const canvas = document.getElementById("unity-canvas") || document.querySelector("canvas");
+    ['touchstart', 'touchmove'].forEach(eventName => {
+        canvas.addEventListener(eventName, function(e) {
+            if (e.touches.length >= 2) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    });
+</script>
 <div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20250618-013048
+    Build Timestamp: 20250618-021217
 </div>
 </body>
 </html>
