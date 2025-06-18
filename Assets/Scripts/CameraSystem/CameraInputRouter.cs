@@ -1,4 +1,5 @@
-// ✅ Full refactor of HandleTouchInput() in CameraInputRouter.cs to use per-finger intent logic with stricter pan detection
+// ✅ Full refactor of HandleTouchInput() in CameraInputRouter.cs
+//    with gesture stabilization, jitter suppression, and delayed lock
 
 using UnityEngine;
 
@@ -20,8 +21,9 @@ public class CameraInputRouter : MonoBehaviour
 
     private bool isStabilizingAfterTouch = false;
     private int stabilizeStartFrame = -1;
-    private const int stabilizationFrames = 4; // ~4 frames ≈ 66ms at 60fps
+    private const int stabilizationFrames = 6; // ~100ms at 60fps
 
+    private const float initialJitterThreshold = 5f;
     public int deadPhaseFrames = 4;
 
     void Awake()
@@ -57,14 +59,12 @@ public class CameraInputRouter : MonoBehaviour
             isStabilizingAfterTouch = false;
             stabilizeStartFrame = -1;
 
-            if (gestureInitialized)
+            if (gestureInitialized && TouchInputContext.IsCameraGestureActive)
             {
-                if (TouchInputContext.IsCameraGestureActive)
-                {
-                    TouchInputContext.IsCameraGestureActive = false;
-                    TouchInputContext.GestureStartTime = Time.time;
-                }
+                TouchInputContext.IsCameraGestureActive = false;
+                TouchInputContext.GestureStartTime = Time.time;
             }
+
             currentGesture = GestureMode.None;
             gestureInitialized = false;
             gestureStartFrame = -1;
@@ -74,10 +74,14 @@ public class CameraInputRouter : MonoBehaviour
         Touch touch0 = Input.GetTouch(0);
         Touch touch1 = Input.GetTouch(1);
 
-        // 🔍 Touch Debug Log
+        // Ignore touches that haven’t moved
+        if (touch0.phase == TouchPhase.Began || touch1.phase == TouchPhase.Began)
+            return;
+
+        // 🔍 Debug Log
         Debug.Log($"📱 Touch Debug: " +
-                  $"T0 ∆={touch0.deltaPosition} force={touch0.pressure}, radius={touch0.radius}, angle={touch0.altitudeAngle} | " +
-                  $"T1 ∆={touch1.deltaPosition} force={touch1.pressure}, radius={touch1.radius}, angle={touch1.altitudeAngle}");
+                  $"T0 Δ={touch0.deltaPosition} force={touch0.pressure}, radius={touch0.radius} | " +
+                  $"T1 Δ={touch1.deltaPosition} force={touch1.pressure}, radius={touch1.radius}");
 
         if (!gestureInitialized)
         {
@@ -88,9 +92,10 @@ public class CameraInputRouter : MonoBehaviour
             gestureStartFrame = Time.frameCount;
             gestureInitialized = true;
             currentGesture = GestureMode.None;
+
             isStabilizingAfterTouch = true;
             stabilizeStartFrame = Time.frameCount;
-            Debug.Log($"🔚 Stabilizing gesture for {stabilizationFrames} frames");
+            Debug.Log($"🛑 Stabilizing gesture for {stabilizationFrames} frames...");
             return;
         }
 
@@ -104,75 +109,80 @@ public class CameraInputRouter : MonoBehaviour
 
         if (isStabilizingAfterTouch)
         {
-            int framesSinceStart = Time.frameCount - stabilizeStartFrame;
-            if (framesSinceStart <= stabilizationFrames)
+            int stabilizeFrames = Time.frameCount - stabilizeStartFrame;
+            Vector2 delta0 = touch0.position - lastTouch0Pos;
+            Vector2 delta1 = touch1.position - lastTouch1Pos;
+
+            if (stabilizeFrames < stabilizationFrames)
             {
-                Debug.Log($"⏳ Still stabilizing gesture… frame {framesSinceStart}/{stabilizationFrames}");
-                lastTouch0Pos = touch0.position;
-                lastTouch1Pos = touch1.position;
-                return;
+                // 🛡️ Filter jitter
+                if (delta0.magnitude < initialJitterThreshold && delta1.magnitude < initialJitterThreshold)
+                {
+                    lastTouch0Pos = touch0.position;
+                    lastTouch1Pos = touch1.position;
+                    Debug.Log($"⏳ Ignoring jitter during stabilization... Δ0={delta0.magnitude:F2}, Δ1={delta1.magnitude:F2}");
+                    return;
+                }
             }
-            else
-            {
-                isStabilizingAfterTouch = false;
-                Debug.Log($"✅ Gesture stabilized, analyzing input");
-            }
+
+            isStabilizingAfterTouch = false;
+            Debug.Log($"✅ Gesture stabilized at frame {Time.frameCount}");
         }
 
-        Vector2 delta0 = touch0.position - lastTouch0Pos;
-        Vector2 delta1 = touch1.position - lastTouch1Pos;
+        Vector2 delta0Final = touch0.position - lastTouch0Pos;
+        Vector2 delta1Final = touch1.position - lastTouch1Pos;
 
         float minDelta = 2f;
         float maxDelta = 100f;
-        bool touch0Valid = delta0.magnitude > minDelta && delta0.magnitude < maxDelta;
-        bool touch1Valid = delta1.magnitude > minDelta && delta1.magnitude < maxDelta;
+        bool touch0Valid = delta0Final.magnitude > minDelta && delta0Final.magnitude < maxDelta;
+        bool touch1Valid = delta1Final.magnitude > minDelta && delta1Final.magnitude < maxDelta;
 
         if (!touch0Valid || !touch1Valid)
         {
-            Debug.Log($"❌ Ignored gesture due to jitter or ghost input. ∆0={delta0.magnitude:F2}, ∆1={delta1.magnitude:F2}");
+            Debug.Log($"❌ Ignored gesture due to ghost or outlier delta. Δ0={delta0Final.magnitude:F2}, Δ1={delta1Final.magnitude:F2}");
             return;
         }
 
-        bool touch0Moved = delta0.magnitude > 0.5f;
-        bool touch1Moved = delta1.magnitude > 0.5f;
+        bool touch0Moved = delta0Final.magnitude > 0.5f;
+        bool touch1Moved = delta1Final.magnitude > 0.5f;
 
         float pinchDelta = Vector2.Distance(touch0.position, touch1.position) - Vector2.Distance(lastTouch0Pos, lastTouch1Pos);
-        Vector2 avgMovement = (delta0 + delta1) * 0.5f;
-        float angleBetween = Vector2.Angle(delta0, delta1);
-        float angleOpposing = Vector2.Angle(delta0, -delta1);
+        Vector2 avgMovement = (delta0Final + delta1Final) * 0.5f;
+        float angleBetween = Vector2.Angle(delta0Final, delta1Final);
+        float angleOpposing = Vector2.Angle(delta0Final, -delta1Final);
         float pinchMagnitude = Mathf.Abs(pinchDelta);
-        float deltaMagnitudeRatio = Mathf.Min(delta0.magnitude, delta1.magnitude) / (Mathf.Max(delta0.magnitude, delta1.magnitude) + 0.001f);
+        float deltaRatio = Mathf.Min(delta0Final.magnitude, delta1Final.magnitude) / (Mathf.Max(delta0Final.magnitude, delta1Final.magnitude) + 0.001f);
 
         bool isZoomIntent = touch0Moved && touch1Moved && angleOpposing < 45f && pinchMagnitude > 1f;
         bool isRotateIntent = (touch0Moved ^ touch1Moved);
         bool isPanIntent = touch0Moved && touch1Moved &&
                            angleBetween < 25f &&
                            pinchMagnitude < 2.5f &&
-                           deltaMagnitudeRatio > 0.6f;
+                           deltaRatio > 0.6f;
 
         if (currentGesture == GestureMode.None)
         {
             if (isZoomIntent)
             {
-                Debug.Log($"🔍 Detected ZOOM intent: angleOpposing={angleOpposing}, pinchDelta={pinchDelta}");
                 currentGesture = GestureMode.Zoom;
+                Debug.Log($"🔍 ZOOM intent detected: angleOpposing={angleOpposing:F1}, pinch={pinchDelta:F2}");
             }
             else if (isRotateIntent)
             {
-                Debug.Log($"🔍 Detected ROTATE intent: touch0Moved={touch0Moved}, touch1Moved={touch1Moved}");
                 currentGesture = GestureMode.Rotate;
+                Debug.Log($"🔄 ROTATE intent detected.");
             }
             else if (isPanIntent)
             {
-                Debug.Log($"🔍 Detected PAN intent: angleBetween={angleBetween}, ratio={deltaMagnitudeRatio}, pinch={pinchDelta}");
                 currentGesture = GestureMode.Pan;
+                Debug.Log($"📦 PAN intent detected: angleBetween={angleBetween:F1}, ratio={deltaRatio:F2}");
             }
 
             if (currentGesture != GestureMode.None)
             {
                 gestureLockedThisFrame = true;
                 TouchInputContext.IsCameraGestureActive = true;
-                Debug.Log($"🔒 [Frame {Time.frameCount}] Gesture LOCKED: {currentGesture}");
+                Debug.Log($"🔒 Gesture LOCKED: {currentGesture}");
                 lastTouch0Pos = touch0.position;
                 lastTouch1Pos = touch1.position;
                 return;
@@ -183,11 +193,11 @@ public class CameraInputRouter : MonoBehaviour
         {
             if (gestureLockedThisFrame)
             {
-                Debug.Log($"🔚 Holding camera still — gesture just locked: {currentGesture}");
+                Debug.Log($"⏸️ Holding camera still — first frame after locking: {currentGesture}");
             }
             else
             {
-                Debug.Log($"▶️ [Frame {Time.frameCount}] Executing {currentGesture}. Touch0 ∆={delta0}, Touch1 ∆={delta1}, Pinch ∆={pinchDelta}");
+                Debug.Log($"▶️ Executing {currentGesture}: Δ0={delta0Final}, Δ1={delta1Final}, pinch={pinchDelta:F2}");
 
                 switch (currentGesture)
                 {
@@ -196,7 +206,7 @@ public class CameraInputRouter : MonoBehaviour
                             cameraModeManager?.HandleZoomIntent(pinchDelta * 0.005f);
                         break;
                     case GestureMode.Rotate:
-                        cameraModeManager?.HandleRotateIntent(touch0Moved ? delta0 : delta1);
+                        cameraModeManager?.HandleRotateIntent(touch0Moved ? delta0Final : delta1Final);
                         break;
                     case GestureMode.Pan:
                         cameraModeManager?.HandlePanIntent(avgMovement);
@@ -211,6 +221,6 @@ public class CameraInputRouter : MonoBehaviour
 
     private void HandleMouseInput()
     {
-        // Placeholder for desktop input (WASD, RMB drag, scrollwheel, etc.)
+        // Optional desktop input logic
     }
 }
