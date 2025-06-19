@@ -124,25 +124,46 @@
 })();
 </script>
 <script>
-    const unityCanvas = document.getElementById("#canvas");
+    const unityCanvas = document.getElementById("unity-canvas"); // Corrected ID
 
-    document.addEventListener("touchstart", function (e) {
-        if (e.touches.length > 1) {
-            e.preventDefault(); // 🚫 Block pinch zoom
-        }
-    }, { passive: false });
+    // Ensure unityCanvas exists before adding listeners to it
+    if (unityCanvas) {
+        // Prevent default browser gestures on the canvas itself
+        // touch-action: none; in CSS should cover most of this,
+        // but these act as explicit JS overrides for specific event types.
+        unityCanvas.addEventListener("touchstart", function (e) {
+            // Only prevent if multiple touches are involved, to allow single-tap for UI/selection
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
-    document.addEventListener("gesturestart", function (e) {
-        e.preventDefault(); // 🚫 Block browser gesture zoom
-    }, { passive: false });
+        unityCanvas.addEventListener("touchmove", function (e) {
+            // Prevent scrolling/panning by the browser
+            e.preventDefault();
+        }, { passive: false });
 
-    document.addEventListener("gesturechange", function (e) {
-        e.preventDefault();
-    }, { passive: false });
+        // 'gesturestart', 'gesturechange', 'gestureend' are deprecated in favor of pointer events
+        // and touch events. While they might still work on some platforms (e.g., iOS Safari),
+        // touch-action: none; and preventing default on touchstart/touchmove are more standard.
+        // Keeping them for now if they are explicitly causing issues, but touch-action is primary.
 
-    document.addEventListener("gestureend", function (e) {
-        e.preventDefault();
-    }, { passive: false });
+        // If you still want to explicitly prevent 'gesture' events, attach to document
+        // as they are browser-level gestures that might not originate directly on canvas.
+        document.addEventListener("gesturestart", function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener("gesturechange", function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener("gestureend", function (e) {
+            e.preventDefault();
+        }, { passive: false }); // Added passive: false
+    } else {
+        console.warn("Unity canvas element not found with ID 'unity-canvas'. Touch event preventDefault may not be fully effective.");
+    }
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20250618-194424 -->
+    <!-- Build Timestamp: 20250618-202033 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,11 +24,11 @@
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
 <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
 
-<script src="Build/5527ed8e5999d8e55ee9776ba75f0576.loader.js?v=20250618-194424"></script>
+<script src="Build/5527ed8e5999d8e55ee9776ba75f0576.loader.js?v=20250618-202033"></script>
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "20250618-194424"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "20250618-202033"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -78,9 +78,9 @@
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/c064a6ead4a07733d8b66444946270a0.data?v=20250618-194424",
-        frameworkUrl: "Build/edef12d88dc14a229f3947030008c517.framework.js?v=20250618-194424",
-        codeUrl: "Build/d739c2ff7c5162e3574d1cee90d7f952.wasm?v=20250618-194424",
+        dataUrl: "Build/c064a6ead4a07733d8b66444946270a0.data?v=20250618-202033",
+        frameworkUrl: "Build/edef12d88dc14a229f3947030008c517.framework.js?v=20250618-202033",
+        codeUrl: "Build/d739c2ff7c5162e3574d1cee90d7f952.wasm?v=20250618-202033",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
@@ -124,28 +124,49 @@
 })();
 </script>
 <script>
-    const unityCanvas = document.getElementById("#canvas");
+    const unityCanvas = document.getElementById("unity-canvas"); // Corrected ID
 
-    document.addEventListener("touchstart", function (e) {
-        if (e.touches.length > 1) {
-            e.preventDefault(); // ?? Block pinch zoom
-        }
-    }, { passive: false });
+    // Ensure unityCanvas exists before adding listeners to it
+    if (unityCanvas) {
+        // Prevent default browser gestures on the canvas itself
+        // touch-action: none; in CSS should cover most of this,
+        // but these act as explicit JS overrides for specific event types.
+        unityCanvas.addEventListener("touchstart", function (e) {
+            // Only prevent if multiple touches are involved, to allow single-tap for UI/selection
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
-    document.addEventListener("gesturestart", function (e) {
-        e.preventDefault(); // ?? Block browser gesture zoom
-    }, { passive: false });
+        unityCanvas.addEventListener("touchmove", function (e) {
+            // Prevent scrolling/panning by the browser
+            e.preventDefault();
+        }, { passive: false });
 
-    document.addEventListener("gesturechange", function (e) {
-        e.preventDefault();
-    }, { passive: false });
+        // 'gesturestart', 'gesturechange', 'gestureend' are deprecated in favor of pointer events
+        // and touch events. While they might still work on some platforms (e.g., iOS Safari),
+        // touch-action: none; and preventing default on touchstart/touchmove are more standard.
+        // Keeping them for now if they are explicitly causing issues, but touch-action is primary.
 
-    document.addEventListener("gestureend", function (e) {
-        e.preventDefault();
-    }, { passive: false });
+        // If you still want to explicitly prevent 'gesture' events, attach to document
+        // as they are browser-level gestures that might not originate directly on canvas.
+        document.addEventListener("gesturestart", function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener("gesturechange", function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener("gestureend", function (e) {
+            e.preventDefault();
+        }, { passive: false }); // Added passive: false
+    } else {
+        console.warn("Unity canvas element not found with ID 'unity-canvas'. Touch event preventDefault may not be fully effective.");
+    }
 </script>
 <div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20250618-194424
+    Build Timestamp: 20250618-202033
 </div>
 </body>
 </html>
