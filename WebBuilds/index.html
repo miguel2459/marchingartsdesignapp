@@ -124,14 +124,25 @@
 })();
 </script>
 <script>
-    const canvas = document.getElementById("unity-canvas") || document.querySelector("canvas");
-    ['touchstart', 'touchmove'].forEach(eventName => {
-        canvas.addEventListener(eventName, function(e) {
-            if (e.touches.length >= 2) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-    });
+    const unityCanvas = document.getElementById("#canvas");
+
+    document.addEventListener("touchstart", function (e) {
+        if (e.touches.length > 1) {
+            e.preventDefault(); // 🚫 Block pinch zoom
+        }
+    }, { passive: false });
+
+    document.addEventListener("gesturestart", function (e) {
+        e.preventDefault(); // 🚫 Block browser gesture zoom
+    }, { passive: false });
+
+    document.addEventListener("gesturechange", function (e) {
+        e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener("gestureend", function (e) {
+        e.preventDefault();
+    }, { passive: false });
 </script>
 </body>
 </html>
