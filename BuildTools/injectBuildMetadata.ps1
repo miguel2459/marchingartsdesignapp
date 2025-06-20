@@ -50,7 +50,7 @@ $html = $html -replace '<script src="Build/.*?\.loader\.js"></script>', "<script
 
 # Replace file references inside createUnityInstance
 $html = $html `
-    -replace 'dataUrl:\s*"Build/.*?\.data\?v=.*?(&cb=\$\{Date\.now\(\)\})"', "dataUrl: `"Build/$($dataFile.Name)?v=$timestamp`$1`"" `
+    -replace 'dataUrl:\s*"Build/.*?\.data\?v=.*?"\s*\+\s*Date\.now\(\)', "dataUrl: `"Build/$($dataFile.Name)?v=$timestamp&cb=`" + Date.now()" `
     -replace 'frameworkUrl:\s*".*?"', "frameworkUrl: `"Build/$($frameworkFile.Name)?v=$timestamp`"" `
     -replace 'codeUrl:\s*".*?"', "codeUrl: `"Build/$($wasmFile.Name)?v=$timestamp`""
 
