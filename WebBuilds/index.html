@@ -28,7 +28,7 @@
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "2025.06.14"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "xxxxyyyyzzzz"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -78,7 +78,7 @@
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/570b9498a2484421d55cdf708775e4cb.data",
+        dataUrl: "Build/570b9498a2484421d55cdf708775e4cb.data?v=xxxxyyyy&cb=${Date.now()}",
         frameworkUrl: "Build/a11a9db354cab075021ca429de7f9e6f.framework.js",
         codeUrl: "Build/fa2fa927de8b9acd177bf7e00d8e870c.wasm",
         streamingAssetsUrl: "StreamingAssets",

@@ -21,7 +21,7 @@ public class SessionStateValidator : MonoBehaviour
 
         if (cachedVersion != runtimeVersion)
         {
-            PlayerPrefs.DeleteAll();
+            //PlayerPrefs.DeleteAll();
             Debug.Log($"🚨 Cache invalidated. New build version: {runtimeVersion}");
             PlayerPrefs.SetString("AppVersion", runtimeVersion);
             PlayerPrefs.Save();
