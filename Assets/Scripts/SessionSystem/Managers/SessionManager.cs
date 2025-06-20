@@ -167,6 +167,14 @@ public class SessionManager : MonoBehaviour
     /// </summary>
     public void InitializeJsonService()
     {
+        // ⛔ Catch missing backendURL/apiKey early
+        if (string.IsNullOrEmpty(backendURL) || string.IsNullOrEmpty(apiKey))
+        {
+            Debug.LogWarning("⚠️ backendURL or apiKey is missing — deferring JsonService initialization...");
+            StartCoroutine(WaitForBackendConfigAndInitJson());
+            return;
+        }
+        
         if (!string.IsNullOrEmpty(userStateSO.UserFolderId) && !string.IsNullOrEmpty(userStateSO.AccountSheetID))
         {
             JsonService = new JsonCoordinatorService(
@@ -185,8 +193,26 @@ public class SessionManager : MonoBehaviour
             Debug.LogError("❌ Cannot initialize JsonService: userFolderId or accountSheetId is missing.");
         }
     }
+    
+    private IEnumerator WaitForBackendConfigAndInitJson()
+    {
+        float timeout = 3f;
+        while ((string.IsNullOrEmpty(backendURL) || string.IsNullOrEmpty(apiKey)) && timeout > 0f)
+        {
+            yield return new WaitForSeconds(0.1f);
+            timeout -= 0.1f;
+        }
 
-
+        if (!string.IsNullOrEmpty(backendURL) && !string.IsNullOrEmpty(apiKey))
+        {
+            Debug.Log("✅ Config values now present. Retrying JsonService initialization...");
+            InitializeJsonService(); // try again now that values are injected
+        }
+        else
+        {
+            Debug.LogError("❌ Timeout: backendURL or apiKey still missing. JsonService not initialized.");
+        }
+    }
     #endregion
 
     //================================================================================
