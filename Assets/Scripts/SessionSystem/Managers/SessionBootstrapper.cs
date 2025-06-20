@@ -4,8 +4,8 @@ using System;
 
 public class SessionBootstrapper : MonoBehaviour
 {
-    SessionManager sessionManager;            
-    JsonCoordinatorService jsonService;       
+    [SerializeField] private SessionManager sessionManager;
+    [SerializeField] private JsonCoordinatorService jsonService;      
 
     /// <summary>Fired when both JSON blobs are parsed and cached.</summary>
     public event Action OnSessionReady = delegate { };
@@ -18,6 +18,8 @@ public class SessionBootstrapper : MonoBehaviour
 
     private IEnumerator Start()
     {
+        Debug.Log("🚀 SessionBootstrapper starting...");
+        
         // 1. Wait until ShowSelectionManager has written the raw JSON strings.
         yield return new WaitUntil(() =>
                sessionManager.runtimeCacheSO != null

@@ -120,23 +120,22 @@ public class SessionManager : MonoBehaviour
 
     private IEnumerator LoadConfigurationWebGL()
     {
-        string configPath = Application.streamingAssetsPath + "/config.json";
-        using (UnityWebRequest request = UnityWebRequest.Get(configPath))
-        {
-            yield return request.SendWebRequest();
+        // Read values injected by ConfigLoader
+        apiKey = PlayerPrefs.GetString("MADA_API_KEY", "");
+        backendURL = PlayerPrefs.GetString("MADA_BACKEND_URL", "");
 
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                ParseConfig(request.downloadHandler.text);
-            }
-            else
-            {
-                Debug.LogError($"❌ WebGL failed to load config.json: {request.error}");
-                apiKey = null;
-                backendURL = null;
-            }
+        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
+        {
+            Debug.LogError("❌ Config values missing from PlayerPrefs in WebGL.");
         }
+        else
+        {
+            Debug.Log("✅ API key and Backend URL loaded from PlayerPrefs.");
+        }
+
+        yield return null; // still behave like a coroutine
     }
+
     private void FinalizeInitialization()
     {
         if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
