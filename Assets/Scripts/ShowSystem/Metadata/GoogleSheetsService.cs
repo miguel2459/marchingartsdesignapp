@@ -17,13 +17,13 @@ public class GoogleSheetsService
 
     public void FetchUserShowMetadata(string sheetId, System.Action<string> onSuccess, System.Action<string> onError)
     {
-        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetId}/values/Main!B2:B10?key={apiKey}";
+        string url = $"https://us-central1-mada-backend.cloudfunctions.net/appsScriptProxy?action=getUserShowMetadata&accountSheetId={sheetId}";
         coroutineHost.StartCoroutine(GetRequest(url, onSuccess, onError));
     }
 
     public void FetchShowList(string sheetId, System.Action<JSONNode> onSuccess, System.Action<string> onError)
     {
-        string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetId}/values/Shows!A2:G?key={apiKey}";
+        string url = $"https://us-central1-mada-backend.cloudfunctions.net/appsScriptProxy?action=getShowList&accountSheetId={sheetId}";
         coroutineHost.StartCoroutine(GetJSONRequest(url, onSuccess, onError));
     }
 
