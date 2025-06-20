@@ -43,22 +43,6 @@ public class SessionManager : MonoBehaviour
         {
             instance = this;
             DontDestroyOnLoad(gameObject);
-
-            InitializeSessionState();
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-            StartCoroutine(LoadConfigurationWebGL_ThenInitialize());
-#else
-            LoadConfigurationLocal();
-#endif
-
-            if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
-            {
-                Debug.LogWarning("SessionManager Awake: API Key or Backend URL not loaded. Aborting service initialization.");
-                return;
-            }
-
-            userSession.InjectUserState(userStateSO);
         }
         else if (instance != this)
         {
@@ -75,13 +59,27 @@ public class SessionManager : MonoBehaviour
     /// <summary>
     /// Clears ScriptableObject states and local lists for a fresh session start.
     /// </summary>
-    private void InitializeSessionState()
+    public void InitializeSessionState()
     {
         savedShows.Clear();
         if (userStateSO != null) userStateSO.Clear(); 
         if (showStateSO != null) showStateSO.Clear(); 
         if (runtimeCacheSO != null) runtimeCacheSO.Clear();
         Debug.Log("Session state cleared.");
+        
+#if UNITY_WEBGL && !UNITY_EDITOR
+            StartCoroutine(LoadConfigurationWebGL_ThenInitialize());
+#else
+        LoadConfigurationLocal();
+#endif
+
+        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
+        {
+            Debug.LogWarning("SessionManager Awake: API Key or Backend URL not loaded. Aborting service initialization.");
+            return;
+        }
+
+        userSession.InjectUserState(userStateSO);
     }
 
     /// <summary>
