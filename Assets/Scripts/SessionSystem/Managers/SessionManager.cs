@@ -46,7 +46,7 @@ public class SessionManager : MonoBehaviour
         }
         else if (instance != this)
         {
-            Debug.LogWarning("Duplicate SessionManager instance detected. Destroying self.");
+            Debug.LogWarning("SessionManager: Duplicate SessionManager instance detected. Destroying self.");
             Destroy(gameObject);
         }
     }
@@ -65,7 +65,7 @@ public class SessionManager : MonoBehaviour
         if (userStateSO != null) userStateSO.Clear(); 
         if (showStateSO != null) showStateSO.Clear(); 
         if (runtimeCacheSO != null) runtimeCacheSO.Clear();
-        Debug.Log("Session state cleared.");
+        Debug.Log("SessionManager: Session state cleared.");
         
 #if UNITY_WEBGL && !UNITY_EDITOR
             StartCoroutine(LoadConfigurationWebGL_ThenInitialize());
@@ -75,7 +75,7 @@ public class SessionManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
         {
-            Debug.LogWarning("SessionManager Awake: API Key or Backend URL not loaded. Aborting service initialization.");
+            Debug.LogWarning("SessionManager: API Key or Backend URL not loaded. Aborting service initialization.");
             return;
         }
 
@@ -97,14 +97,14 @@ public class SessionManager : MonoBehaviour
             }
             catch (Exception e)
             {
-                Debug.LogError($"❌ Error reading or parsing config.json: {e.Message}");
+                Debug.LogError($"❌SessionManager: Error reading or parsing config.json: {e.Message}");
                 apiKey = null;
                 backendURL = null;
             }
         }
         else
         {
-            Debug.LogError($"❌ config.json not found at path: {configPath}. API Key and Backend URL will be unavailable.");
+            Debug.LogError($"❌SessionManager: config.json not found at path: {configPath}. API Key and Backend URL will be unavailable.");
             apiKey = null;
             backendURL = null;
         }
@@ -124,11 +124,11 @@ public class SessionManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
         {
-            Debug.LogError("❌ Config values missing from PlayerPrefs in WebGL.");
+            Debug.LogError("❌SessionManager: Config values missing from PlayerPrefs in WebGL.");
         }
         else
         {
-            Debug.Log("✅ API key and Backend URL loaded from PlayerPrefs.");
+            Debug.Log("✅SessionManager: API key and Backend URL loaded from PlayerPrefs.");
         }
 
         yield return null; // still behave like a coroutine
@@ -153,11 +153,11 @@ public class SessionManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(backendURL))
         {
-            Debug.LogError("❌ config.json is missing 'googleApiKey' or 'backendURL'.");
+            Debug.LogError("❌SessionManager: config.json is missing 'googleApiKey' or 'backendURL'.");
         }
         else
         {
-            Debug.Log("✅ API key and Backend URL loaded successfully.");
+            Debug.Log("✅SessionManager: API key and Backend URL loaded successfully.");
         }
     }
 
@@ -167,14 +167,6 @@ public class SessionManager : MonoBehaviour
     /// </summary>
     public void InitializeJsonService()
     {
-        // ⛔ Catch missing backendURL/apiKey early
-        if (string.IsNullOrEmpty(backendURL) || string.IsNullOrEmpty(apiKey))
-        {
-            Debug.LogWarning("⚠️ backendURL or apiKey is missing — deferring JsonService initialization...");
-            StartCoroutine(WaitForBackendConfigAndInitJson());
-            return;
-        }
-        
         if (!string.IsNullOrEmpty(userStateSO.UserFolderId) && !string.IsNullOrEmpty(userStateSO.AccountSheetID))
         {
             JsonService = new JsonCoordinatorService(
@@ -186,33 +178,14 @@ public class SessionManager : MonoBehaviour
 
             sheetsService = new GoogleSheetsService(apiKey, this);
 
-            Debug.Log("✅ JsonService initialized after user state was loaded.");
+            Debug.Log("✅SessionManager: JsonService initialized after user state was loaded.");
         }
         else
         {
-            Debug.LogError("❌ Cannot initialize JsonService: userFolderId or accountSheetId is missing.");
+            Debug.LogError("❌SessionManager: Cannot initialize JsonService: userFolderId or accountSheetId is missing.");
         }
     }
-    
-    private IEnumerator WaitForBackendConfigAndInitJson()
-    {
-        float timeout = 3f;
-        while ((string.IsNullOrEmpty(backendURL) || string.IsNullOrEmpty(apiKey)) && timeout > 0f)
-        {
-            yield return new WaitForSeconds(0.1f);
-            timeout -= 0.1f;
-        }
 
-        if (!string.IsNullOrEmpty(backendURL) && !string.IsNullOrEmpty(apiKey))
-        {
-            Debug.Log("✅ Config values now present. Retrying JsonService initialization...");
-            InitializeJsonService(); // try again now that values are injected
-        }
-        else
-        {
-            Debug.LogError("❌ Timeout: backendURL or apiKey still missing. JsonService not initialized.");
-        }
-    }
     #endregion
 
     //================================================================================
@@ -227,7 +200,7 @@ public class SessionManager : MonoBehaviour
         // Ensure services needed for fetching are ready
         if (sheetsService == null || userStateSO == null || string.IsNullOrEmpty(userStateSO.AccountSheetID))
         {
-             Debug.LogError("InitializeUserShows: Cannot fetch shows. SheetsService not ready or AccountSheetID missing.");
+             Debug.LogError("SessionManager: Cannot fetch shows. SheetsService not ready or AccountSheetID missing.");
              return;
         }
         StartCoroutine(FetchUserShows());
@@ -239,7 +212,7 @@ public class SessionManager : MonoBehaviour
     /// </summary>
     private IEnumerator FetchUserShows()
     {
-        Debug.Log("📡 Fetching user metadata and show count from Google Sheets...");
+        Debug.Log("📡SessionManager: Fetching user metadata and show count from Google Sheets...");
         string sheetId = userStateSO.AccountSheetID;
         bool isDone = false;
         string error = null;
@@ -255,19 +228,19 @@ public class SessionManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(error))
         {
-            Debug.LogError($"❌ Error fetching main user sheet metadata: {error}");
+            Debug.LogError($"❌SessionManager: Error fetching main user sheet metadata: {error}");
             // TODO: Handle error - maybe inform user?
             yield break;
         }
 
         // Parse the response safely
         JSONNode mainSheetResponse = null;
-        try { mainSheetResponse = JSON.Parse(jsonText); } catch (Exception e) { Debug.LogError($"❌ JSON Parse Error (User Metadata): {e.Message}"); yield break; }
+        try { mainSheetResponse = JSON.Parse(jsonText); } catch (Exception e) { Debug.LogError($"❌SessionManager: JSON Parse Error (User Metadata): {e.Message}"); yield break; }
 
         // Validate response structure (expecting 'values' array with at least 9 rows for numberOfShows at index 8)
         if (mainSheetResponse?["values"] == null || mainSheetResponse["values"].Count < 9)
         {
-            Debug.LogError($"❌ Invalid response format or missing data fetching user metadata. Response: {jsonText}");
+            Debug.LogError($"❌SessionManager: Invalid response format or missing data fetching user metadata. Response: {jsonText}");
             yield break;
         }
 
@@ -276,8 +249,8 @@ public class SessionManager : MonoBehaviour
         int numberOfShows = 0;
         int.TryParse(mainSheetResponse["values"][8]?[0]?.Value ?? "0", out numberOfShows);
 
-        Debug.Log($"👤 Account: {creatorName}");
-        Debug.Log($"📜 Number of Shows reported: {numberOfShows}");
+        Debug.Log($"👤SessionManager: Account: {creatorName}");
+        Debug.Log($"📜SessionManager: Number of Shows reported: {numberOfShows}");
 
         // Fetch the detailed show list if applicable
         if (numberOfShows > 0)
@@ -286,7 +259,7 @@ public class SessionManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("ℹ️ No shows found for this user.");
+            Debug.Log("ℹ️SessionManager: No shows found for this user.");
             // Still need to notify SceneController that initialization is done
              if (SceneController.instance != null) SceneController.instance.OnSessionInitialized(); else Debug.LogError("FetchUserShows: SceneController instance is null!");
         }
@@ -299,7 +272,7 @@ public class SessionManager : MonoBehaviour
     /// </summary>
     private IEnumerator FetchShowList()
     {
-        Debug.Log("📡 Fetching detailed show list...");
+        Debug.Log("📡SessionManager: Fetching detailed show list...");
         bool isDone = false;
         JSONNode result = null;
         string error = null;
@@ -313,7 +286,7 @@ public class SessionManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(error))
         {
-            Debug.LogError($"❌ Error fetching show list: {error}");
+            Debug.LogError($"❌SessionManager: Error fetching show list: {error}");
             // TODO: Handle error
              if (SceneController.instance != null) SceneController.instance.OnSessionInitialized(); // Still signal init complete, but with error
             yield break;
@@ -346,15 +319,15 @@ public class SessionManager : MonoBehaviour
                          savedShows.Add(show);
                          // Debug.Log($"✅ Added show: {show.showTitle} | ID: {show.showID}");
                     } else {
-                         Debug.LogWarning($"Skipping show entry due to missing showID or showSheetID: {row.ToString()}");
+                         Debug.LogWarning($"SessionManager: Skipping show entry due to missing showID or showSheetID: {row.ToString()}");
                     }
                 } else {
-                     Debug.LogWarning($"Skipping row in Show List due to insufficient columns: {row.ToString()}");
+                     Debug.LogWarning($"SessionManager: Skipping row in Show List due to insufficient columns: {row.ToString()}");
                 }
             }
-            Debug.Log($"🎭 Total Valid Shows Fetched: {savedShows.Count}");
+            Debug.Log($"🎭SessionManager: Total Valid Shows Fetched: {savedShows.Count}");
         } else {
-             Debug.Log("ℹ️ No show data found in the 'Shows' sheet or response format incorrect.");
+             Debug.Log("ℹ️SessionManager: No show data found in the 'Shows' sheet or response format incorrect.");
         }
 
         // Notify SceneController that session initialization (including show list fetch) is complete
@@ -373,7 +346,7 @@ public class SessionManager : MonoBehaviour
     /// </summary>
     public void SaveToSessionManager(string id, string title, string group, string field, string year, int marchers, int sets, int props, string modified, string status, string setOnExit, string JSONMarching, string JSONTiming)
     {
-        if (showStateSO == null) { Debug.LogError("SaveToSessionManager: ShowStateSO is null!"); return; }
+        if (showStateSO == null) { Debug.LogError("SessionManager: ShowStateSO is null!"); return; }
 
         showStateSO.CurrentShowID = id;
         showStateSO.ShowTitle = title;
@@ -389,7 +362,7 @@ public class SessionManager : MonoBehaviour
         // These URLs might become less relevant if JsonPersistenceService always uses backend endpoints based on ID
         showStateSO.JSONMarchersURL = JSONMarching;
         showStateSO.JSONSetTimingURL = JSONTiming;
-         Debug.Log($"ShowStateSO updated for Show ID: {id}");
+         Debug.Log($"SessionManager: ShowStateSO updated for Show ID: {id}");
 
          // ✅ Initialize ShowDataManager after show metadata is loaded
         showDataManager = new ShowDataManager(
@@ -408,7 +381,7 @@ public class SessionManager : MonoBehaviour
     /// <param name="showTitle">The title of the newly created show.</param>
     public void AddNewShow(string showTitle)
     {
-        Debug.Log($"➕ Adding new show '{showTitle}' to session flow.");
+        Debug.Log($"➕SessionManager: Adding new show '{showTitle}' to session flow.");
         StartCoroutine(ReinitializeAndSelectNewShow(showTitle));
     }
 
@@ -418,7 +391,7 @@ public class SessionManager : MonoBehaviour
     /// </summary>
     private IEnumerator ReinitializeAndSelectNewShow(string showTitle)
     {
-        Debug.Log("Refreshing show list after new show creation...");
+        Debug.Log("SessionManager: Refreshing show list after new show creation...");
         yield return StartCoroutine(FetchUserShows()); // Re-fetch user data and show list
 
         // Attempt to find the new show by title (assuming titles are unique for the user)
@@ -426,12 +399,12 @@ public class SessionManager : MonoBehaviour
 
         if (selectedShow == null)
         {
-            Debug.LogError($"❌ Could not find newly created show '{showTitle}' in refreshed savedShows list.");
+            Debug.LogError($"❌SessionManager: Could not find newly created show '{showTitle}' in refreshed savedShows list.");
             // TODO: Handle error - maybe inform the user?
             yield break;
         }
 
-        Debug.Log($"✅ Found newly created show: {selectedShow.showTitle} (ID: {selectedShow.showID}). Triggering selection.");
+        Debug.Log($"✅SessionManager: Found newly created show: {selectedShow.showTitle} (ID: {selectedShow.showID}). Triggering selection.");
 
         // Attempt to trigger the selection logic in ShowSelectionManager
         // Note: FindObjectOfType is generally discouraged; consider event-based communication or direct reference if possible.
@@ -443,7 +416,7 @@ public class SessionManager : MonoBehaviour
         else
         {
             // This might happen if the scene changed before this coroutine finished, which shouldn't normally occur here.
-            Debug.LogWarning("⚠️ ShowSelectionManager not found in the current scene. Cannot auto-select the new show.");
+            Debug.LogWarning("⚠️SessionManager: ShowSelectionManager not found in the current scene. Cannot auto-select the new show.");
         }
     }
 
@@ -456,16 +429,16 @@ public class SessionManager : MonoBehaviour
     public void AutoLogin()
     {
         // Ensure UserSessionManager is initialized
-         if (userSession == null) { Debug.LogError("AutoLogin: userSession is null!"); return; }
+         if (userSession == null) { Debug.LogError("SessionManager: AutoLogin: userSession is null!"); return; }
 
         if (userSession.TryAutoLogin()) // TryAutoLogin now also calls InitializeUser
         {
-            Debug.Log($"🔄 Auto-Login successful. Initializing User Shows for: {userStateSO?.UserName ?? "N/A"}");
+            Debug.Log($"🔄SessionManager: Auto-Login successful. Initializing User Shows for: {userStateSO?.UserName ?? "N/A"}");
             InitializeUserShows(); // Fetch shows for the logged-in user
         }
         else
         {
-            Debug.Log("No persistent login found or auto-login failed.");
+            Debug.Log("SessionManager: No persistent login found or auto-login failed.");
             // If auto-login fails, the SceneController should already handle navigating to Login/Startup scene.
         }
     }
@@ -473,16 +446,16 @@ public class SessionManager : MonoBehaviour
     public void SaveShow()
     {
          if (showDataManager == null) { Debug.LogError("SaveShow: showDataManager is null!"); return; }
-         Debug.Log("💾 Initiating save process...");
+         Debug.Log("💾SessionManager: Initiating save process...");
         showDataManager.SaveShow();
     }
 
     public void ExitShow()
     {
-        Debug.Log("🚪 Exiting Show... Saving changes first...");
+        Debug.Log("🚪SessionManager: Exiting Show... Saving changes first...");
         if (showDataManager == null || SceneController.instance == null)
         {
-             Debug.LogError("ExitShow: showDataManager or SceneController is null! Cannot exit properly.");
+             Debug.LogError("SessionManager: ExitShow: showDataManager or SceneController is null! Cannot exit properly.");
              return;
         }
         // Tell ShowDataManager to save, and upon completion, switch to Scene 3 (Show Selection)
@@ -491,14 +464,14 @@ public class SessionManager : MonoBehaviour
 
     public void StartLogout()
     {
-         Debug.Log("🔒 Initiating logout process... Saving changes first...");
-         if (showDataManager == null) { Debug.LogError("StartLogout: showDataManager is null! Cannot save before logout."); Logout(); return; }
+         Debug.Log("🔒SessionManager: Initiating logout process... Saving changes first...");
+         if (showDataManager == null) { Debug.LogError("SessionManager: StartLogout: showDataManager is null! Cannot save before logout."); Logout(); return; }
         showDataManager.LogOut(); // LogOut now handles the save AND the call to SessionManager.Logout
     }
 
     public void Logout()
     {
-        Debug.Log("🔒 Performing final logout operations...");
+        Debug.Log("🔒SessionManager: Performing final logout operations...");
         if (userSession != null) userSession.Logout(); // Handles PlayerPrefs and clearing UserStateSO
 
         // Clear remaining session state
@@ -512,9 +485,9 @@ public class SessionManager : MonoBehaviour
         {
              SceneController.instance.SwitchScene(1); // Switch to Startup Scene (index 1)
         } else {
-             Debug.LogError("Logout: SceneController instance is null! Cannot switch scene.");
+             Debug.LogError("SessionManager: Logout: SceneController instance is null! Cannot switch scene.");
         }
-        Debug.Log("Logout complete.");
+        Debug.Log("SessionManager: Logout complete.");
     }
 
     #endregion

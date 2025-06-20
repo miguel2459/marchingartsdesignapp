@@ -3,14 +3,17 @@ using System.Collections;
 
 public class SessionStateValidator : MonoBehaviour
 {
-    private IEnumerator Start()
+    public static bool WasSessionValid { get; private set; }
+    public static bool HasValidationRun { get; private set; }
+    
+    public IEnumerator StartValidation()
     {
-        Debug.Log("🧪 SessionStateValidator.Start coroutine called.");
+        Debug.Log("🧪 SessionStateValidator: StartValidation coroutine called.");
 
         // Wait until BuildVersion is initialized
         while (BuildInfoManager.BuildVersion == "unknown")
         {
-            Debug.Log("⏳ Waiting for BuildInfoManager.BuildVersion...");
+            Debug.Log("⏳ SessionStateValidator: Waiting for BuildInfoManager.BuildVersion...");
             yield return null;
         }
 
@@ -21,21 +24,23 @@ public class SessionStateValidator : MonoBehaviour
 
         if (cachedVersion != runtimeVersion)
         {
-            //PlayerPrefs.DeleteAll();
-            Debug.Log($"🚨 Cache invalidated. New build version: {runtimeVersion}");
+            Debug.Log($"🚨 SessionStateValidator: Cache invalidated. New build version: {runtimeVersion}");
             PlayerPrefs.SetString("AppVersion", runtimeVersion);
             PlayerPrefs.Save();
-            Debug.Log($"💾 AppVersion stored to PlayerPrefs: {runtimeVersion}");
-
+            Debug.Log($"💾 SessionStateValidator: AppVersion stored to PlayerPrefs: {runtimeVersion}");
         }
         else
         {
-            Debug.Log("✅ Version is current. No cache clearing needed.");
+            Debug.Log("✅ SessionStateValidator: Version is current. No cache clearing needed.");
         }
 
-        if (!IsSessionValid())
+        // Perform session validation
+        WasSessionValid = IsSessionValid();
+        HasValidationRun = true;
+
+        if (!WasSessionValid)
         {
-            Debug.LogWarning("⚠️ Session validation failed.");
+            Debug.LogWarning("⚠️ SessionStateValidator: Session validation failed.");
             ForceLogoutAndRedirect();
         }
         else
@@ -48,23 +53,23 @@ public class SessionStateValidator : MonoBehaviour
     private bool IsSessionValid()
     {
         string sheetID = PlayerPrefs.GetString("AccountSheetID");
-        string userRef = PlayerPrefs.GetString("UserInfoRef");
+        string userFolder = PlayerPrefs.GetString("FolderID");
 
-        Debug.Log($"🔍 Checking PlayerPrefs: AccountSheetID = '{sheetID}', UserInfoRef = '{userRef}'");
+        Debug.Log($"🔍 SessionStateValidator: Checking PlayerPrefs: AccountSheetID = '{sheetID}', UserFolderID = '{userFolder}'");
 
-        return !string.IsNullOrEmpty(sheetID) && !string.IsNullOrEmpty(userRef);
+        return !string.IsNullOrEmpty(sheetID) && !string.IsNullOrEmpty(userFolder);
     }
 
     private void ForceLogoutAndRedirect()
     {
-        Debug.Log("🧹 Clearing session-related PlayerPrefs...");
+        Debug.Log("🧹 SessionStateValidator: Clearing session-related PlayerPrefs...");
         PlayerPrefs.DeleteKey("AccountSheetID");
         PlayerPrefs.DeleteKey("UserInfoRef");
 
         // Optional: clear session cache object if you have one
         //SessionState.Clear();
 
-        Debug.Log("🔁 Restarting to login scene...");
+        Debug.Log("🔁 SessionStateValidator: Restarting to login scene...");
         //SceneController.Instance.SwitchScene("LoginScene");
     }
 }

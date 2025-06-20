@@ -13,14 +13,31 @@ public class AppBootstrapper : MonoBehaviour
         if (configLoader != null)
         {
             yield return StartCoroutine(configLoader.LoadAndStore());
-            Debug.Log("✅ Config ready. Now triggering SessionManager.Initialize().");
+
+            // Wait for validation to complete
+            yield return new WaitUntil(() => SessionStateValidator.HasValidationRun);
+
+            Debug.Log("✅ AppBootstrapper: Config & SessionStateValidator finished.");
 
             SessionManager.instance.InitializeSessionState();
+
+            if (SessionStateValidator.WasSessionValid)
+            {
+                Debug.Log("🔁 AppBootstrapper: Session is valid. Attempting AutoLogin...");
+                SessionManager.instance.AutoLogin();
+                // Wait for user shows to finish loading before switching
+                yield return new WaitUntil(() => SceneController.instance.isSessionInitialized);
+                SceneController.instance.SwitchScene(3); // Show Selection Scene
+            }
+            else
+            {
+                Debug.Log("🚪 AppBootstrapper: No session found. Awaiting login scene.");
+                SceneController.instance.LoadSceneAdditive(1); // Startup Scene
+            }
         }
         else
         {
-            Debug.LogWarning("⚠️ ConfigLoader not assigned to AppBootstrapper.");
+            Debug.LogWarning("⚠️ AppBootstrapper: ConfigLoader not assigned.");
         }
-            
     }
 }

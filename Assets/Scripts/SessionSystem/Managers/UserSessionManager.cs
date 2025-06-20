@@ -84,11 +84,11 @@ public class UserSessionManager
         string jsonCacheDir = Path.Combine(Application.persistentDataPath, "MADA_JSONS");
         if (Directory.Exists(jsonCacheDir))
         {
-            Debug.Log($"🧹 Deleting cached JSON files in: {jsonCacheDir}");
+            Debug.Log($"🧹 UserSessionManager: Deleting cached JSON files in: {jsonCacheDir}");
             foreach (string file in Directory.GetFiles(jsonCacheDir, "*_*.json"))
             {
-                try { File.Delete(file); Debug.Log($"🗑️ Deleted cached JSON: {file}"); }
-                catch (System.Exception ex) { Debug.LogWarning($"⚠️ Failed to delete {file}: {ex.Message}"); }
+                try { File.Delete(file); Debug.Log($"🗑️ UserSessionManager: Deleted cached JSON: {file}"); }
+                catch (System.Exception ex) { Debug.LogWarning($"⚠️ UserSessionManager: Failed to delete {file}: {ex.Message}"); }
             }
         }
 

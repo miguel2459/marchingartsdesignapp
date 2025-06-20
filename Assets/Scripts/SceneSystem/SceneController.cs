@@ -38,7 +38,7 @@ public class SceneController : MonoBehaviour
     {
         if (PlayerPrefs.GetInt("IsLoggedIn", 0) == 1)
         {
-            SessionManager.instance.AutoLogin();
+            //SessionManager.instance.AutoLogin();
             StartCoroutine(WaitForSessionInitialization());
         }
         else

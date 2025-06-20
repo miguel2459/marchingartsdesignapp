@@ -8,7 +8,7 @@ public class BuildInfoManager : MonoBehaviour
     public void SetBuildVersion(string version)
     {
         BuildVersion = version;
-        Debug.Log($"🛠️ Build version set from JS: {version}");
+        Debug.Log($"🛠️ BuildInfoManager: Build version set from JS: {version}");
     }
 
     private void Awake()

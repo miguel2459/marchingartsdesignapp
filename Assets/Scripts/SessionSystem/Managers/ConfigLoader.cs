@@ -8,6 +8,8 @@ public class ConfigLoader : MonoBehaviour
     [SerializeField] private string configEndpoint =
         "https://us-central1-mada-backend.cloudfunctions.net/getConfig";
 
+    [SerializeField] private SessionStateValidator validator;
+
     [System.Serializable]
     private class ConfigResponse
     {
@@ -17,7 +19,7 @@ public class ConfigLoader : MonoBehaviour
 
     public IEnumerator LoadAndStore()
     {
-        Debug.Log("🌐 Requesting config from Google Cloud...");
+        Debug.Log("🌐 ConfigLoader: Requesting config from Google Cloud...");
 
         using (UnityWebRequest request = UnityWebRequest.Get(configEndpoint))
         {
@@ -26,12 +28,12 @@ public class ConfigLoader : MonoBehaviour
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"❌ Config fetch failed: {request.error}");
+                Debug.LogError($"❌ ConfigLoader: Config fetch failed: {request.error}");
                 yield break;
             }
 
             var json = request.downloadHandler.text;
-            Debug.Log($"📦 Config raw response: {json}");
+            Debug.Log($"📦 ConfigLoader: Config raw response: {json}");
 
             ConfigResponse config = JsonUtility.FromJson<ConfigResponse>(json);
 
@@ -41,11 +43,12 @@ public class ConfigLoader : MonoBehaviour
                 PlayerPrefs.SetString("MADA_BACKEND_URL", config.backendURL);
                 PlayerPrefs.Save();
 
-                Debug.Log("✅ Config loaded and stored to PlayerPrefs.");
+                Debug.Log("✅ ConfigLoader: Config loaded and stored to PlayerPrefs.");
+                StartCoroutine(validator.StartValidation());
             }
             else
             {
-                Debug.LogError("❌ Config response missing required fields.");
+                Debug.LogError("❌ ConfigLoader: Config response missing required fields.");
             }
         }
     }

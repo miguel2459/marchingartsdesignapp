@@ -191,6 +191,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   configEndpoint: https://us-central1-mada-backend.cloudfunctions.net/getConfig
+  validator: {fileID: 540937508}
 --- !u!114 &182553787
 MonoBehaviour:
   m_ObjectHideFlags: 0
