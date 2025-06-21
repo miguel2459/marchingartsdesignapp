@@ -37,63 +37,49 @@ class ScrollAndPinch : MonoBehaviour
 
     private void Update()
     {
+        if (Input.touchCount == 2)
+        {
+            Touch touch0 = Input.GetTouch(0);
+            Touch touch1 = Input.GetTouch(1);
 
-        //Update Plane
-        if (Input.touchCount >= 1)
             Plane.SetNormalAndPosition(transform.up, transform.position);
 
-        var Delta1 = Vector3.zero;
-        var Delta2 = Vector3.zero;
+            Vector2 touch0PrevPos = touch0.position - touch0.deltaPosition;
+            Vector2 touch1PrevPos = touch1.position - touch1.deltaPosition;
 
-        //Scroll (Pan function)
-        if (Input.touchCount >= 1)
-        {
-            //Get distance camera should travel
-            Delta1 = PlanePositionDelta(Input.GetTouch(0))/DecreaseCameraPanSpeed;
-            if (Input.GetTouch(0).phase == TouchPhase.Moved)
-                Camera.transform.Translate(Delta1, Space.World);
-        }
+            Vector3 pos0 = PlanePosition(touch0.position);
+            Vector3 pos1 = PlanePosition(touch1.position);
+            Vector3 pos0Prev = PlanePosition(touch0PrevPos);
+            Vector3 pos1Prev = PlanePosition(touch1PrevPos);
 
-        //Pinch (Zoom Function)
-        if (Input.touchCount >= 2)
-        {
-            var pos1 = PlanePosition(Input.GetTouch(0).position);
-            var pos2 = PlanePosition(Input.GetTouch(1).position);
-            var pos1b = PlanePosition(Input.GetTouch(0).position - Input.GetTouch(0).deltaPosition);
-            var pos2b = PlanePosition(Input.GetTouch(1).position - Input.GetTouch(1).deltaPosition);
+            // === Pan ===
+            Vector3 mid = (pos0 + pos1) * 0.5f;
+            Vector3 midPrev = (pos0Prev + pos1Prev) * 0.5f;
+            Vector3 panDelta = (midPrev - mid) / DecreaseCameraPanSpeed;
+            Camera.transform.Translate(panDelta, Space.World);
 
-            //calc zoom
-            var zoom = Vector3.Distance(pos1, pos2) /
-                       Vector3.Distance(pos1b, pos2b);
+            // === Zoom ===
+            float prevDist = Vector3.Distance(pos0Prev, pos1Prev);
+            float currDist = Vector3.Distance(pos0, pos1);
+            float zoomFactor = prevDist > 0 ? currDist / prevDist : 1f;
 
-            //edge case
-            if (zoom == 0 || zoom > 10)
-                return;
+            Vector3 camBeforeZoom = Camera.transform.position;
+            Camera.transform.position = Vector3.LerpUnclamped(mid, Camera.transform.position, 1 / zoomFactor);
 
-            //Move cam amount the mid ray
-            Vector3 camPositionBeforeAdjustment = Camera.transform.position;
-            Camera.transform.position = Vector3.LerpUnclamped(pos1, Camera.transform.position, 1 / zoom);
+            float y = Camera.transform.position.y;
+            float baseY = cameraStartPosition.y;
+            if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
+                Camera.transform.position = camBeforeZoom;
 
-            //Restricts zoom height 
-            
-            //Upper (ZoomOut)
-            if (Camera.transform.position.y > (cameraStartPosition.y + CameraUpperHeightBound))
+            // === Rotate ===
+            if (Rotate && pos1Prev != pos1)
             {
-                Camera.transform.position = camPositionBeforeAdjustment;
+                float angle = Vector3.SignedAngle(pos1 - pos0, pos1Prev - pos0Prev, Plane.normal);
+                Camera.transform.RotateAround(mid, Plane.normal, angle);
             }
-            //Lower (Zoom in)
-            if (Camera.transform.position.y < (cameraStartPosition.y - CameraLowerHeightBound) || Camera.transform.position.y <= 1)
-            {
-                Camera.transform.position = camPositionBeforeAdjustment;
-            }
-
-
-            //Rotation Function
-            if (Rotate && pos2b != pos2)
-                Camera.transform.RotateAround(pos1, Plane.normal, Vector3.SignedAngle(pos2 - pos1, pos2b - pos1b, Plane.normal));
         }
-
     }
+
 
     //Returns the point between first and final finger position
     protected Vector3 PlanePositionDelta(Touch touch)
