@@ -48,7 +48,7 @@ public class ResponsivePanelHeightPortrait : MonoBehaviour
         rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, currentHeight);
 
 #if UNITY_EDITOR
-        Debug.Log($"📱 Aspect {currentAspect:F2} → Ratio {currentRatio:F2} → Height {currentHeight}px");
+        //Debug.Log($"📱 Aspect {currentAspect:F2} → Ratio {currentRatio:F2} → Height {currentHeight}px");
 #endif
     }
 
