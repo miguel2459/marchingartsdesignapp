@@ -8420,13 +8420,17 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 218049294}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ccd93c2521e6db444b236064a3f415c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   cameraModeManager: {fileID: 218049296}
   deadPhaseFrames: 4
+  singleFingerDragThreshold: 10
+  twoFingerMovementThreshold: 5
+  initialJitterThreshold: 10
+  stabilizationFrames: 10
 --- !u!114 &218049299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8434,7 +8438,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 218049294}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ea082ea10e301f24f8405e098173481a, type: 3}
   m_Name: 
@@ -39025,6 +39029,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0232a45cb1bda8c41b3eecc27a59132f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sessionManager: {fileID: 0}
 --- !u!114 &1219379206
 MonoBehaviour:
   m_ObjectHideFlags: 0
