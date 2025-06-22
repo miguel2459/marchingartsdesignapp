@@ -13,6 +13,8 @@ public class CameraModeManager : MonoBehaviour
     private bool inputBlocked = false;
     [SerializeField] private SelectedMarchers selected;
     [SerializeField] private EnsembleDirector2 director;
+    [SerializeField] private UICameraToggleButton topDownToggle;
+    public bool IsTopDown() => isTopDownActive;
 
     void Start()
     {
@@ -31,6 +33,7 @@ public class CameraModeManager : MonoBehaviour
                 ActivateFlyingMode();
             else
                 ActivateTopDownMode();
+            topDownToggle.UpdateIcon(isTopDownActive);
         }
     }
 

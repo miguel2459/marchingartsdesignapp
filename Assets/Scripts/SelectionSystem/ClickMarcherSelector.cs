@@ -8,6 +8,7 @@ public class ClickMarcherSelector : MonoBehaviour
     public SelectedMarchers selectedMarchers;
     public TransformGizmoManager transformGizmoManager;
     public EnsembleDirector2 director; // Needed for accessing the list of all marchers
+    public TransformGizmoUIButtonManager gizmoButtonUI;
 
     [Header("Drag Selection")]
     public RectTransform selectionImage; // Assign the UI Image/Panel for the selection box
@@ -200,6 +201,10 @@ public class ClickMarcherSelector : MonoBehaviour
                             // Reset drag state just in case
                             isDragging = false;
                             ResetSelectionBox();
+                            if (gizmoButtonUI != null)
+                            {
+                                gizmoButtonUI.SetVisualGizmoOff();
+                            }
                             return; // Handled click-away
                         }
                     }
@@ -268,17 +273,28 @@ public class ClickMarcherSelector : MonoBehaviour
     // Updates the VISUAL selection box UI element
     void UpdateSelectionBoxVisual()
     {
-         if (selectionImage == null || !isDragging) return; // Don't update if not dragging or no image
+        if (selectionImage == null || !isDragging) return;
 
-        // Position the UI element; anchor is assumed to be center
-        Vector2 center = (startMousePos + endMousePos) / 2f;
-        selectionImage.position = center;
+        // Convert screen positions to canvas local positions
+        RectTransform parentRect = selectionImage.parent as RectTransform;
 
-        // Set the size of the UI element
-        float sizeX = Mathf.Abs(startMousePos.x - endMousePos.x);
-        float sizeY = Mathf.Abs(startMousePos.y - endMousePos.y);
-        selectionImage.sizeDelta = new Vector2(sizeX, sizeY);
+        Vector2 localStart;
+        Vector2 localEnd;
+
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, startMousePos, null, out localStart);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, endMousePos, null, out localEnd);
+
+        // Calculate center and size
+        Vector2 center = (localStart + localEnd) / 2f;
+        Vector2 size = new Vector2(
+            Mathf.Abs(localStart.x - localEnd.x),
+            Mathf.Abs(localStart.y - localEnd.y)
+        );
+
+        selectionImage.anchoredPosition = center;
+        selectionImage.sizeDelta = size;
     }
+
 
     // Selects marchers within the logical selectionRect
     void SelectMarchersInDrag(bool isAdditive)

@@ -15,7 +15,15 @@ public class MarcherVisualStateController : MonoBehaviour
     {
         positionManager = GetComponent<MarcherPositionsManager>();
         unit = GetComponent<Unit>();
+
+        var rend = GetComponent<Renderer>();
+        if (rend != null)
+        {
+            // Clone the material so this marcher can tint independently
+            rend.material = new Material(rend.material);
+        }
     }
+
 
     /// <summary>
     /// Toggles the unit selector visual (e.g., ring highlight).
@@ -89,8 +97,10 @@ public class MarcherVisualStateController : MonoBehaviour
     public void SetMaterialColor(Color c)
     {
         var rend = GetComponent<Renderer>();
-        if (rend != null) rend.material.color = c;
+        if (rend != null && rend.material.HasProperty("_Color"))
+            rend.material.SetColor("_Color", c);
     }
+
 
     public void SetSelected(bool selected)
     {

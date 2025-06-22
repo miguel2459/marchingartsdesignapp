@@ -19,6 +19,7 @@ public class TransformGizmoManager : MonoBehaviour
     public bool HasActiveGizmo => activeGizmo != null;
     public GameObject transformGizmo => activeGizmo;
     public bool IsFreeDraggingGizmo => isFreeDraggingGizmo;
+    [SerializeField] private TransformGizmoUIButtonManager gizmoButtonUI;
 
 
     public bool IsGizmoActive()
@@ -97,6 +98,8 @@ public class TransformGizmoManager : MonoBehaviour
         {
             HideTransformGizmo();
             currentMode = null;
+            // 🔄 Notify the UI that the gizmo was turned off by hotkey
+            //gizmoButtonUI?.SetVisualGizmoOff();
             return;
         }
 
@@ -110,6 +113,8 @@ public class TransformGizmoManager : MonoBehaviour
             {
                 behavior.SetMode(currentMode);
             }
+            // 🔄 Notify the UI that a mode was switched via hotkey
+            gizmoButtonUI?.UpdateVisualFromExternalMode(mode);
             return;
         }
 
@@ -138,6 +143,7 @@ public class TransformGizmoManager : MonoBehaviour
 
         selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
         selectedMarchers.ReCacheAnchorsForSelected(); // ensures anchor state is up-to-date
+        gizmoButtonUI?.UpdateVisualFromExternalMode(mode); 
     }
 
     public void ReanchorGizmoToMarcher(GameObject marcher)

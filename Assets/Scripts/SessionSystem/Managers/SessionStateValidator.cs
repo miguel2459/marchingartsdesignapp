@@ -9,6 +9,9 @@ public class SessionStateValidator : MonoBehaviour
     public IEnumerator StartValidation()
     {
         Debug.Log("🧪 SessionStateValidator: StartValidation coroutine called.");
+#if UNITY_EDITOR
+        BuildInfoManager.BuildVersion = "dev-editor";
+#endif
 
         // Wait until BuildVersion is initialized
         while (BuildInfoManager.BuildVersion == "unknown")
