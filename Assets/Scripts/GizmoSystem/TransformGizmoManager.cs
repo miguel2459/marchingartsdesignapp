@@ -98,8 +98,6 @@ public class TransformGizmoManager : MonoBehaviour
         {
             HideTransformGizmo();
             currentMode = null;
-            // 🔄 Notify the UI that the gizmo was turned off by hotkey
-            //gizmoButtonUI?.SetVisualGizmoOff();
             return;
         }
 

@@ -12,7 +12,8 @@ public static class InputRouter
     /// Set to true by UI components to block world interaction for this frame.
     /// </summary>
     private static int frameLastBlocked = -1;
-    public static bool BlockSceneInputThisFrame => frameLastBlocked == Time.frameCount;
+    public static bool BlockSceneInputThisFrame =>
+        frameLastBlocked == Time.frameCount || frameLastBlocked == Time.frameCount - 1;
 
     /// <summary>
     /// Called by UI elements when clicked to block world input.
