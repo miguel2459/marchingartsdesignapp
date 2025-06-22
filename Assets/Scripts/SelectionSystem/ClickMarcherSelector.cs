@@ -39,31 +39,32 @@ public class ClickMarcherSelector : MonoBehaviour
 
     void HandleMouseInput()
     {
-        if (TouchInputContext.IsCameraGestureActive || TouchInputContext.IsRecentGesture)
-        {
-            return; // Block clickdrag when in or near a gesture
-        }
-
-        // Frame check and UI blocking (existing)
         if (lastInputFrame == Time.frameCount) return;
         lastInputFrame = Time.frameCount;
-        if (InputRouter.BlockSceneInputThisFrame)
+
+        // 🔒 Global input blocks
+        if (InputRouter.BlockSceneInputThisFrame || InputRouter.IsTouchOverUI())
         {
-            // Debug.Log("⛔ World input blocked by UI. Skipping MarcherSelector input.");
+            Debug.Log("⛔ Input blocked: UI interaction or touch over UI.");
             return;
         }
-        // Prevent interaction if mouse starts or ends action over UI
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+
+        // 🤚 Block selection while camera gesture is active or recently used
+        if (TouchInputContext.IsCameraGestureActive || TouchInputContext.IsRecentGesture)
         {
-             // Debug.Log("🛡️ MarcherSelector: Input ignored, pointer is over UI element.");
-             if (isDragging && Input.GetMouseButtonUp(0)) // Reset drag if released over UI
-             {
-                 ResetSelectionBox();
-                 isDragging = false;
-             }
-             return;
+            return;
         }
 
+        // 🖱️ Standard desktop UI check (for mouse-over UI elements)
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            if (isDragging && Input.GetMouseButtonUp(0))
+            {
+                ResetSelectionBox();
+                isDragging = false;
+            }
+            return;
+        }
 
         // --- Mouse Button Down ---
         if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))

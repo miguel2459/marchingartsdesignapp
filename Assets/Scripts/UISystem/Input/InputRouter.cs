@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Centralized input router for AAA-style input context management.
@@ -19,5 +20,15 @@ public static class InputRouter
     public static void FlagUIInteracted()
     {
         frameLastBlocked = Time.frameCount;
+    }
+    
+    public static bool IsTouchOverUI()
+    {
+        if (Input.touchCount > 0)
+        {
+            return EventSystem.current != null &&
+                   EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
+        }
+        return false;
     }
 }
