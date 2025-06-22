@@ -11,18 +11,17 @@ public static class InputRouter
     /// <summary>
     /// Set to true by UI components to block world interaction for this frame.
     /// </summary>
-    private static int frameLastBlocked = -1;
-    public static bool BlockSceneInputThisFrame =>
-        frameLastBlocked == Time.frameCount || frameLastBlocked == Time.frameCount - 1;
+    private static float blockInputUntilTime = -1f;
+    private const float BlockDuration = 0.1f; // 100ms
 
-    /// <summary>
-    /// Called by UI elements when clicked to block world input.
-    /// </summary>
+    public static bool BlockSceneInputThisFrame => Time.unscaledTime < blockInputUntilTime;
+
     public static void FlagUIInteracted()
     {
-        frameLastBlocked = Time.frameCount;
+        blockInputUntilTime = Time.unscaledTime + BlockDuration;
+        Debug.Log($"🧱 BlockSceneInput active until: {blockInputUntilTime:F3}");
     }
-    
+
     public static bool IsTouchOverUI()
     {
         if (Input.touchCount > 0)
