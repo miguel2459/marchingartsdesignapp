@@ -69,18 +69,26 @@ public class CameraModeManager : MonoBehaviour
         director.GetComponent<MarcherManager>().OnMarchersReady -= ActivateFlyingMode;
     }
 
-    public void UpdateCameraFocus()
-    {
-        if (selected.SelectedCount == 0) return;
 
-        Vector3 center = SmartReshapeService.GetFocalPoint(selected.GetSelectionCopy());
-        List<GameObject> selectedList = selected.GetSelectionCopy();
+	public void UpdateCameraFocus()
+	{
+    	List<GameObject> targets = selected.SelectedCount > 0
+        	? selected.GetSelectionCopy()
+        	: director.MarcherObjects;
 
-        selected.cameraFocusHandler?.SetSelectedMarchers(selectedList);
-        selected.cameraFocusHandler?.FocusOnSelection(center);
+    	if (targets == null || targets.Count == 0)
+    	{
+        	Debug.LogWarning("🎯 Camera focus failed: No marchers available.");
+        	return;
+    	}
 
-        Debug.Log("CameraModeManager: Camera focus updated to selection.");
-    }
+    	Vector3 center = SmartReshapeService.GetFocalPoint(targets);
+
+    	selected.cameraFocusHandler?.SetSelectedMarchers(targets);
+    	selected.cameraFocusHandler?.FocusOnSelection(center);
+
+    	Debug.Log($"📸 Camera focus updated to {(selected.SelectedCount > 0 ? "selected" : "all")} marchers.");
+	}
 
     public void HandleZoomIntent(float delta)
     {
