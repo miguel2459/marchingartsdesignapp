@@ -47,4 +47,17 @@ public class InputGestureManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F))
             OnFocusCamera?.Invoke();
     }
+    
+    // InputGestureManager.cs
+
+    public void TriggerConfirmDotFromUI()
+    {
+        OnConfirmDot?.Invoke(); // behaves like pressing Spacebar
+    }
+
+    public void TriggerDeleteDotFromUI()
+    {
+        OnDeleteDot?.Invoke(); // behaves like pressing Backspace
+    }
+
 }

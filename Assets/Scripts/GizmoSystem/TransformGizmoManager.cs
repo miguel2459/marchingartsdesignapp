@@ -52,7 +52,7 @@ public class TransformGizmoManager : MonoBehaviour
             {
                 float distance;
 
-                if (Input.GetKey(KeyCode.LeftShift))
+                if (Input.GetKey(KeyCode.LeftShift) || MobileModifierKeyProxy.IsShiftHeld)
                 {
                     Debug.Log("TransformGizmoManager: Shift+Clicked gizmo - initiating freeform drag.");
                     isFreeDraggingGizmo = true;
@@ -67,7 +67,7 @@ public class TransformGizmoManager : MonoBehaviour
                     selectedMarchers.ForEachSelected(m => m.transform.SetParent(null));
                     return;
                 }
-                if (!Input.GetKey(KeyCode.LeftShift))
+                if (!Input.GetKey(KeyCode.LeftShift) || !MobileModifierKeyProxy.IsShiftHeld)
                 {
                     Debug.Log("TransformGizmoManager: Regular gizmo click - initiating standard drag.");
                     isMoving = true;
