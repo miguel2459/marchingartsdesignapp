@@ -22,6 +22,7 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
     private float currentOrthoSize;
     private Camera cam;
     [SerializeField] private CameraModeManager cameraModeManager;
+    private bool isMobile;
 
     public void Enable()
     {
@@ -36,6 +37,7 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
         SaveCurrentTransform();
         SnapToTopDown();
         isActive = true;
+        isMobile = Application.isMobilePlatform;
     }
 
     public void Disable()
@@ -56,6 +58,7 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
     void Update()
     {
         if (!isActive) return;
+        if (isMobile) return; // 🚫 Skip keyboard/mouse input on mobile
 
         HandleZoom();
         HandlePan();

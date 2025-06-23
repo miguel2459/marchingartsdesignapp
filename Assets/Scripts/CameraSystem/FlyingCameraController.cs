@@ -24,6 +24,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     private List<GameObject> selectedMarchers = new List<GameObject>();
     private bool isFocusing = false;
     private bool isActive = true;
+    private bool isMobile;
 
     public TransformGizmoManager gizmoManager;
     [SerializeField] private CameraModeManager cameraModeManager;
@@ -33,11 +34,13 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         //Debug.Log($"[FlyingCameraController] 🔵 Awake — Position: {transform.position}, Rotation: {transform.rotation}");
         yaw = transform.eulerAngles.y;
         pitch = transform.eulerAngles.x;
+        isMobile = Application.isMobilePlatform;
     }
 
     void Update()
     {
         if (!isActive) return;
+        if (isMobile) return; // 🚫 Skip keyboard/mouse input on mobile
 
         if (isFocusing)
         {
