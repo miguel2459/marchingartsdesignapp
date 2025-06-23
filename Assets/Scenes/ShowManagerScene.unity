@@ -8513,6 +8513,7 @@ GameObject:
   - component: {fileID: 218049295}
   - component: {fileID: 218049296}
   - component: {fileID: 218049298}
+  - component: {fileID: 218049299}
   - component: {fileID: 218049297}
   m_Layer: 0
   m_Name: Active Cameras
@@ -8572,7 +8573,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 218049294}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ea082ea10e301f24f8405e098173481a, type: 3}
   m_Name: 
@@ -8582,6 +8583,24 @@ MonoBehaviour:
   DecreaseCameraPanSpeed: 1
   CameraUpperHeightBound: 0
   CameraLowerHeightBound: 0
+--- !u!114 &218049299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 218049294}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccd93c2521e6db444b236064a3f415c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cameraModeManager: {fileID: 218049296}
+  deadPhaseFrames: 10
+  singleFingerDragThreshold: 10
+  twoFingerMovementThreshold: 20
+  initialJitterThreshold: 10
+  stabilizationFrames: 10
 --- !u!1 &219078349
 GameObject:
   m_ObjectHideFlags: 0
