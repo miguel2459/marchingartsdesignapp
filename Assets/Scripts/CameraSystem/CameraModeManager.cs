@@ -52,10 +52,9 @@ public class CameraModeManager : MonoBehaviour
         selected.cameraFocusHandler = topDownCamera;
         if (scrollAndPinch != null)
         {
-            scrollAndPinch.Camera = flyingCamComponent;
-            scrollAndPinch.Rotate = true;
+            scrollAndPinch.Camera = topDownCamComponent;
+            scrollAndPinch.Rotate = false;
         }
-
     }
 
     private void ActivateFlyingMode()
@@ -72,8 +71,8 @@ public class CameraModeManager : MonoBehaviour
         selected.cameraFocusHandler = flyingCamera;
         if (scrollAndPinch != null)
         {
-            scrollAndPinch.Camera = topDownCamComponent;
-            scrollAndPinch.Rotate = false;
+            scrollAndPinch.Camera = flyingCamComponent;
+            scrollAndPinch.Rotate = true;
         }
 
         //Debug.Log($"[CameraModeManager] 🔵 ActivateFlyingMode — Position: {transform.position}, Rotation: {transform.rotation}");
