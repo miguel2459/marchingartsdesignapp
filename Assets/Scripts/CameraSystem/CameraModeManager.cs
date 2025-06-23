@@ -14,6 +14,8 @@ public class CameraModeManager : MonoBehaviour
     [SerializeField] private SelectedMarchers selected;
     [SerializeField] private EnsembleDirector2 director;
     [SerializeField] private UICameraToggleButton topDownToggle;
+    [SerializeField] private ScrollAndPinch scrollAndPinch; // Inject in inspector
+
     public bool IsTopDown() => isTopDownActive;
 
     void Start()
@@ -48,6 +50,11 @@ public class CameraModeManager : MonoBehaviour
         isTopDownActive = true;
         SetActiveCamera(topDownCamComponent);
         selected.cameraFocusHandler = topDownCamera;
+        if (scrollAndPinch != null)
+        {
+            scrollAndPinch.Camera = flyingCamComponent;
+            scrollAndPinch.Rotate = true;
+        }
 
     }
 
@@ -63,6 +70,11 @@ public class CameraModeManager : MonoBehaviour
 
         SetActiveCamera(flyingCamComponent);
         selected.cameraFocusHandler = flyingCamera;
+        if (scrollAndPinch != null)
+        {
+            scrollAndPinch.Camera = topDownCamComponent;
+            scrollAndPinch.Rotate = false;
+        }
 
         //Debug.Log($"[CameraModeManager] 🔵 ActivateFlyingMode — Position: {transform.position}, Rotation: {transform.rotation}");
         flyingCamera.SetInitialTransform(
