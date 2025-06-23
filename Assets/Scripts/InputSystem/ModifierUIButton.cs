@@ -1,25 +1,47 @@
 // ModifierUIButton.cs
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
-public class ModifierUIButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+public class ModifierUIButton : MonoBehaviour, IPointerClickHandler
 {
     public enum ModifierType { Shift, Control }
     public ModifierType modifierKey = ModifierType.Shift;
 
-    public void OnPointerDown(PointerEventData eventData)
+    [Header("Optional Visuals")]
+    public Image iconImage;
+    public Color activeColor = Color.yellow;
+    public Color inactiveColor = Color.white;
+
+    public void OnPointerClick(PointerEventData eventData)
     {
         if (modifierKey == ModifierType.Shift)
-            MobileModifierKeyProxy.SetShiftHeld(true);
+        {
+            MobileModifierKeyProxy.ToggleShift();
+            UpdateVisual(MobileModifierKeyProxy.IsShiftHeld);
+        }
         else if (modifierKey == ModifierType.Control)
-            MobileModifierKeyProxy.SetControlHeld(true);
+        {
+            MobileModifierKeyProxy.ToggleControl();
+            UpdateVisual(MobileModifierKeyProxy.IsControlHeld);
+        }
     }
 
-    public void OnPointerUp(PointerEventData eventData)
+    private void UpdateVisual(bool isActive)
     {
-        if (modifierKey == ModifierType.Shift)
-            MobileModifierKeyProxy.SetShiftHeld(false);
-        else if (modifierKey == ModifierType.Control)
-            MobileModifierKeyProxy.SetControlHeld(false);
+        if (iconImage != null)
+        {
+            iconImage.color = isActive ? activeColor : inactiveColor;
+        }
+    }
+
+    private void Start()
+    {
+        // Ensure correct initial state
+        bool isActive = modifierKey == ModifierType.Shift
+            ? MobileModifierKeyProxy.IsShiftHeld
+            : MobileModifierKeyProxy.IsControlHeld;
+
+        UpdateVisual(isActive);
     }
 }

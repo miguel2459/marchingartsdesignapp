@@ -8,6 +8,9 @@ public static class MobileModifierKeyProxy
 
     public static bool IsShiftHeld => shiftHeld;
     public static bool IsControlHeld => controlHeld;
+    
+    public static void ToggleShift() => shiftHeld = !shiftHeld;
+    public static void ToggleControl() => controlHeld = !controlHeld;
 
     public static void SetShiftHeld(bool value) => shiftHeld = value;
     public static void SetControlHeld(bool value) => controlHeld = value;

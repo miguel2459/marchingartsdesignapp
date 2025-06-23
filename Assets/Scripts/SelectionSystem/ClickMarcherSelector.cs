@@ -41,6 +41,14 @@ public class ClickMarcherSelector : MonoBehaviour
     {
         if (lastInputFrame == Time.frameCount) return;
         lastInputFrame = Time.frameCount;
+        
+        // 👆 BLOCK: If two or more fingers are touching, disable drag selector
+        if (Input.touchCount >= 2)
+        {
+            // Optional: log this only once if you need confirmation
+            Debug.Log("⛔ Two-finger touch detected — blocking drag selection.");
+            return;
+        }
 
         // 🔒 Global input blocks
         if (InputRouter.BlockSceneInputThisFrame || InputRouter.IsTouchOverUI())
