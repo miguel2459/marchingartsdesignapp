@@ -66,15 +66,12 @@ class ScrollAndPinch : MonoBehaviour
             float zoomFactor = prevDist > 0 ? currDist / prevDist : 1f;
 
             Vector3 camBeforeZoom = Camera.transform.position;
-            float zoomStrength = 2.0f; // test with 1.5 to 3.0
-            float adjustedZoomFactor = Mathf.Pow(zoomFactor, zoomStrength);
-            Camera.transform.position = Vector3.LerpUnclamped(mid, Camera.transform.position, 1 / adjustedZoomFactor);
-
+            Camera.transform.position = Vector3.LerpUnclamped(mid, Camera.transform.position, 1 / zoomFactor);
 
             float y = Camera.transform.position.y;
             float baseY = cameraStartPosition.y;
-            //if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
-                //Camera.transform.position = camBeforeZoom;
+            if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
+                Camera.transform.position = camBeforeZoom;
 
             // === Rotate ===
             if (Rotate && pos1Prev != pos1)
