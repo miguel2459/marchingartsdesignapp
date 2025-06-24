@@ -135,6 +135,15 @@ public class CameraModeManager : MonoBehaviour
         if (!isTopDownActive) // only FlyingCamera supports rotation
             flyingCamera?.ApplyRotation(delta);
     }
+    
+    public void HandlePivotIntent(Vector2 delta)
+    {
+        if (IsInputBlocked()) return;
+
+        if (!isTopDownActive)
+            flyingCamera?.ApplyPivot(delta);
+    }
+
 
 
     public void ReapplyActiveCameraMode()

@@ -4,13 +4,11 @@ using System.Collections.Generic;
 public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
 
 {
-    public float moveSpeed = 10f;
-    public float fastMoveSpeed = 50f;
     public float rotationSpeed = 3f;
     public float zoomSpeed = 50f;
     public float panSpeed = 0.3f;
     public float pivotDistance = 5f;
-    public float altZoomSpeed = 5f;
+    
     public float focusSpeed = 5f;
     public float zoomMultiplier = 1.5f;
     public float additionalDistanceFactor = 1.2f;
@@ -25,6 +23,15 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     private bool isFocusing = false;
     private bool isActive = true;
     private bool isMobile;
+    
+    [Header("Camera Boundaries")]
+    [SerializeField] private float minX = -20f;
+    [SerializeField] private float maxX = 75f;
+    [SerializeField] private float minY = 5f;
+    [SerializeField] private float maxY = 40f;
+    [SerializeField] private float minZ = 5f;
+    [SerializeField] private float maxZ = 120f;
+
 
     public TransformGizmoManager gizmoManager;
     [SerializeField] private CameraModeManager cameraModeManager;
@@ -46,14 +53,6 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         {
             if (HandleUserInputInterrupt()) isFocusing = false;
             else MoveCameraToFocus();
-        }
-        else
-        {
-            HandleRotation();
-            HandleZoom();
-            HandlePanning();
-            HandlePivotRotation();
-            HandleAltZoom();
         }
     }
 
@@ -80,63 +79,10 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         //Debug.Log($"[FlyingCameraController] 🧭 SetInitialTransform — Position: {transform.position}, Rotation: {transform.rotation}");
     }
 
-    void HandleRotation()
-    {
-        if (Input.GetMouseButton(1) && !Input.GetKey(KeyCode.LeftAlt))
-        {
-            yaw += rotationSpeed * Input.GetAxis("Mouse X");
-            pitch -= rotationSpeed * Input.GetAxis("Mouse Y");
-            transform.eulerAngles = new Vector3(pitch, yaw, 0f);
-        }
-    }
-
-    void HandleZoom()
-    {
-        if (cameraModeManager != null && cameraModeManager.IsInputBlocked()) return;
-
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        transform.position += transform.forward * scroll * zoomSpeed * Time.deltaTime;
-    }
-
-    void HandlePanning()
-    {
-        if (Input.GetMouseButton(2))
-        {
-            Vector3 panDirection = new Vector3(-Input.GetAxis("Mouse X") * panSpeed, -Input.GetAxis("Mouse Y") * panSpeed, 0);
-            transform.Translate(panDirection, Space.Self);
-        }
-    }
-
-    void HandlePivotRotation()
-    {
-        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(0))
-        {
-            Vector3 pivotPoint = transform.position + transform.forward * pivotDistance;
-            float rotationX = Input.GetAxis("Mouse X") * rotationSpeed;
-            float rotationY = -Input.GetAxis("Mouse Y") * rotationSpeed;
-
-            transform.RotateAround(pivotPoint, Vector3.up, rotationX);
-            transform.RotateAround(pivotPoint, transform.right, rotationY);
-
-            yaw = transform.eulerAngles.y;
-            pitch = transform.eulerAngles.x;
-        }
-    }
-
-    void HandleAltZoom()
-    {
-        if (Input.GetKey(KeyCode.LeftAlt) && Input.GetMouseButton(1))
-        {
-            float zoomAmountX = Input.GetAxis("Mouse X") * altZoomSpeed * Time.deltaTime;
-            float zoomAmountY = Input.GetAxis("Mouse Y") * altZoomSpeed * Time.deltaTime;
-            Vector3 zoomDirection = transform.forward * (zoomAmountY + zoomAmountX);
-            transform.position += zoomDirection;
-        }
-    }
-
     public void ApplyZoom(float delta)
     {
         transform.position += transform.forward * delta * zoomSpeed * Time.deltaTime;
+        ClampPositionToBounds();
     }
 
     public void ApplyRotation(Vector2 delta)
@@ -150,9 +96,36 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     {
         Vector3 panDirection = new Vector3(-delta.x * panSpeed, -delta.y * panSpeed, 0);
         transform.Translate(panDirection, Space.Self);
+        ClampPositionToBounds();
     }
+    
+    public void ApplyPivot(Vector2 delta)
+    {
+        Vector3 pivotPoint = transform.position + transform.forward * pivotDistance;
 
+        yaw += delta.x * rotationSpeed * Time.deltaTime;
+        pitch -= delta.y * rotationSpeed * Time.deltaTime;
 
+        // Clamp pitch to avoid flipping
+        pitch = Mathf.Clamp(pitch, -89f, 89f);
+
+        Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 direction = rotation * Vector3.forward;
+
+        transform.position = pivotPoint - direction * pivotDistance;
+        transform.LookAt(pivotPoint);
+        
+        ClampPositionToBounds();
+    }
+    
+    private void ClampPositionToBounds()
+    {
+        Vector3 pos = transform.position;
+        pos.x = Mathf.Clamp(pos.x, minX, maxX);
+        pos.y = Mathf.Clamp(pos.y, minY, maxY);
+        pos.z = Mathf.Clamp(pos.z, minZ, maxZ);
+        transform.position = pos;
+    }
 
     void MoveCameraToFocus()
     {
@@ -211,8 +184,6 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
             isFocusing = false;
         }
     }
-
-
     float CalculateRequiredDistanceToFit()
     {
         if (selectedMarchers.Count == 1)
@@ -224,7 +195,6 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
 
         return bounds.size.magnitude * zoomMultiplier * additionalDistanceFactor;
     }
-
     public void SetSelectedMarchers(List<GameObject> marchers)
     {
         selectedMarchers = marchers;

@@ -10,6 +10,6 @@ public class UIInputFlagSetter : MonoBehaviour, IPointerDownHandler
     public void OnPointerDown(PointerEventData eventData)
     {
         Debug.Log("🖱️ UI clicked - blocking world input this frame.");
-        InputRouter.FlagUIInteracted();
+        UIInteractionBlocker.FlagUIInteracted();
     }
 }

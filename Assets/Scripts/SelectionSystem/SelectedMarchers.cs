@@ -17,7 +17,6 @@ public class SelectedMarchers : MonoBehaviour
     [SerializeField] public DashedPathPreviewManager dashedPathPreviewManager; // Assign in Inspector
     [SerializeField] public CameraModeManager cameraModeManager;
     [SerializeField] public MarcherEditActions marcherEditActions;
-    [SerializeField] public InputGestureManager inputGestureManager;
 
     // 🎥 Camera & Interaction
     public Camera cam;
@@ -34,27 +33,9 @@ public class SelectedMarchers : MonoBehaviour
     {
         selectionManager = new MarcherSelectionManager(director, dashedPathPreviewManager);
         marcherEditActions.SetSelectionManager(selectionManager);
-        inputGestureManager.OnConfirmDot += marcherEditActions.ConfirmDotViaSpacebar;
-        inputGestureManager.OnDeleteDot += marcherEditActions.DeleteConfirmedDot;
-        inputGestureManager.OnDeleteMarcher += marcherEditActions.PromptDeleteMarchers;
-        inputGestureManager.OnRespaceSmart += SnapAndRespaceSmartReviewed;
-        inputGestureManager.OnSelectAll += SelectAllMarchers;
-        inputGestureManager.OnSnapToGrid += () =>
-        {
-            MarcherSnapper.SnapSelectionToGrid(selectionManager, transformGizmoManager.snapToGrid);
-        };
-        inputGestureManager.OnFocusCamera += () =>
-        {
-            cameraModeManager?.UpdateCameraFocus();
-        };
     }
     private void Update()
     {
-        // if (SelectedCount > 0 && transformGizmoManager != null && transformGizmoManager.isMoving)
-        // {
-        //     Debug.Log($"[Update] SelectedCount={SelectedCount}, IsMoving={transformGizmoManager?.isMoving}");
-
-        // }
         if (SelectedCount > 0 && transformGizmoManager != null && transformGizmoManager.isMoving)
         {
             //Debug.Log($"[Update] SelectedCount={SelectedCount}, IsMoving={transformGizmoManager?.isMoving}");
@@ -95,6 +76,14 @@ public class SelectedMarchers : MonoBehaviour
     public void SelectAllMarchers()
     {
         selectionManager.SelectAll(director.MarcherObjects);
+    }
+    
+    public void InvokeSnapToGrid()
+    {
+        MarcherSnapper.SnapSelectionToGrid(
+            this.selectionManager,
+            this.transformGizmoManager.snapToGrid
+        );
     }
 
     public void ClearSelection()

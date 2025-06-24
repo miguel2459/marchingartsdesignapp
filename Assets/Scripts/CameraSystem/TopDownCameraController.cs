@@ -14,6 +14,13 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
 
     [Header("Initial Fallback Height Logic")]
     public float yHeightMultiplier = 1.5f;
+    
+    [Header("Camera Movement Boundaries")]
+    [SerializeField] private float minX = 0f;
+    [SerializeField] private float maxX = 53f;
+    [SerializeField] private float minZ = 0f;
+    [SerializeField] private float maxZ = 120f;
+    [SerializeField] private float fixedY = 40f; // top-down height
 
     private List<GameObject> selectedMarchers = new List<GameObject>();
     private bool isActive = false;
@@ -23,6 +30,7 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
     private Camera cam;
     [SerializeField] private CameraModeManager cameraModeManager;
     private bool isMobile;
+    public bool IsActive() => isActive;
 
     public void Enable()
     {
@@ -59,9 +67,6 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
     {
         if (!isActive) return;
         if (isMobile) return; // 🚫 Skip keyboard/mouse input on mobile
-
-        HandleZoom();
-        HandlePan();
     }
 
     private void SaveCurrentTransform()
@@ -79,6 +84,16 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
             cam.orthographicSize = defaultOrthoSize;
         }
     }
+    
+    private void ClampPositionToBounds()
+    {
+        Vector3 pos = transform.position;
+        pos.x = Mathf.Clamp(pos.x, minX, maxX);
+        pos.y = fixedY;
+        pos.z = Mathf.Clamp(pos.z, minZ, maxZ);
+        transform.position = pos;
+    }
+
 
     private void SnapToTopDown()
     {
@@ -106,31 +121,6 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
         cam.orthographicSize = orthoSize;
         currentOrthoSize = orthoSize;
     }
-
-    private void HandleZoom()
-    {
-        if (cameraModeManager != null && cameraModeManager.IsInputBlocked()) return;
-        
-        float scrollDelta = Input.GetAxis("Mouse ScrollWheel");
-        currentOrthoSize -= scrollDelta * zoomSpeed * Time.deltaTime;
-        currentOrthoSize = Mathf.Clamp(currentOrthoSize, minOrthoSize, maxOrthoSize);
-
-        if (cam != null)
-        {
-            cam.orthographicSize = currentOrthoSize;
-        }
-    }
-
-    private void HandlePan()
-    {
-        if (Input.GetMouseButton(2)) // Middle mouse drag
-        {
-            float moveX = Input.GetAxis("Mouse X") * panSpeed;
-            float moveZ = -Input.GetAxis("Mouse Y") * panSpeed;
-            // Move relative to world space — top-down is fixed orientation
-            transform.Translate(new Vector3(moveZ, 0f, moveX), Space.World);
-        }
-    }
     
     public void ApplyZoom(float delta)
     {
@@ -145,6 +135,7 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
         // Convert swipe to top-down movement
         Vector3 move = new Vector3(-delta.y, 0f, delta.x) * panSpeed * Time.deltaTime;
         transform.Translate(move, Space.World);
+        ClampPositionToBounds();
     }
 
     public void FocusOnSelection(Vector3 focalPoint)
@@ -171,7 +162,6 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
         }
 
         transform.position = target;
+        ClampPositionToBounds();
     }
-
-    public bool IsActive() => isActive;
 }

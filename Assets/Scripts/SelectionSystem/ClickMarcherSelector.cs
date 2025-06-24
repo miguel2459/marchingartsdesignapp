@@ -51,7 +51,7 @@ public class ClickMarcherSelector : MonoBehaviour
         }
 
         // 🔒 Global input blocks
-        if (InputRouter.BlockSceneInputThisFrame || InputRouter.IsTouchOverUI())
+        if (UIInteractionBlocker.BlockSceneInputThisFrame || UIInteractionBlocker.IsTouchOverUI())
         {
             Debug.Log("⛔ Input blocked: UI interaction or touch over UI.");
             return;
