@@ -20,6 +20,8 @@ public class ClickMarcherSelector : MonoBehaviour
     private Vector2 startMousePos;
     private Vector2 endMousePos;
     private Rect selectionRect;
+    private bool dragSelectorLocked = false;
+
     // Removed redundant 'selectMarcher' and 'cam' references
 
     void Start() // Changed Awake to Start to ensure other components might be ready
@@ -43,12 +45,28 @@ public class ClickMarcherSelector : MonoBehaviour
         lastInputFrame = Time.frameCount;
         
         // 👆 BLOCK: If two or more fingers are touching, disable drag selector
-        if (Input.touchCount >= 2)
+        int touchCount = Input.touchCount;
+
+// 🔒 Lock drag when 2+ fingers are down
+        if (touchCount >= 2)
         {
-            // Optional: log this only once if you need confirmation
-            Debug.Log("⛔ Two-finger touch detected — blocking drag selection.");
-            return;
+            if (!dragSelectorLocked)
+            {
+                Debug.Log("⛔ Locking drag selector due to 2-finger touch.");
+                dragSelectorLocked = true;
+                ResetSelectionBox();
+            }
+
+            return; // Exit early to block drag logic
         }
+
+// 🔓 Unlock drag only when all fingers are lifted
+        if (dragSelectorLocked && touchCount == 0)
+        {
+            Debug.Log("✅ Drag selector unlocked (all fingers lifted).");
+            dragSelectorLocked = false;
+        }
+
 
         // 🔒 Global input blocks
         if (UIInteractionBlocker.BlockSceneInputThisFrame || UIInteractionBlocker.IsTouchOverUI())
