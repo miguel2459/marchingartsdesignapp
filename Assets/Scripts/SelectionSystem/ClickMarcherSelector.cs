@@ -165,6 +165,14 @@ public class ClickMarcherSelector : MonoBehaviour
         // --- Mouse Button Up ---
         if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt))
         {
+            // 🧼 Block ghost selection if drag selector was locked during gesture
+            if (dragSelectorLocked)
+            {
+                Debug.Log("🛑 Drag selector was locked — skipping MouseUp selection logic.");
+                isDragging = false;
+                ResetSelectionBox();
+                return;
+            }
             // --- Case 1: We WERE dragging ---
             // Process drag end ONLY if gizmo wasn't active during the drag
             if (isDragging && !transformGizmoManager.HasActiveGizmo)
