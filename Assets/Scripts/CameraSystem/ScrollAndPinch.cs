@@ -44,7 +44,8 @@ public class ScrollAndPinch : MonoBehaviour
 
             //Plane.SetNormalAndPosition(transform.up, transform.position);
             //Plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0, 0));
-            Plane.SetNormalAndPosition(Vector3.up, Camera.transform.position);
+            //Plane.SetNormalAndPosition(Vector3.up, Camera.transform.position);
+            Plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0.1f, 0)); // Slightly above ground plane
 
 
             Vector2 touch0PrevPos = touch0.position - touch0.deltaPosition;
@@ -104,13 +105,18 @@ public class ScrollAndPinch : MonoBehaviour
 
     protected Vector3 PlanePosition(Vector2 screenPos)
     {
-        //position
         var rayNow = Camera.ScreenPointToRay(screenPos);
         if (Plane.Raycast(rayNow, out var enterNow))
-            return rayNow.GetPoint(enterNow);
+        {
+            Vector3 hitPoint = rayNow.GetPoint(enterNow);
+            Debug.Log($"✅ Ray hit at: {hitPoint}");
+            return hitPoint;
+        }
 
+        Debug.LogWarning($"❌ Ray did not hit plane at screenPos: {screenPos}");
         return Vector3.zero;
     }
+
     
     public Vector3 DebugPlanePosition(Vector2 screenPos)
     {
