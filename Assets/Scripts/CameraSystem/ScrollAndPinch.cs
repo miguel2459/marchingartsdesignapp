@@ -70,7 +70,7 @@ public class ScrollAndPinch : MonoBehaviour
             Vector3 camBeforeZoom = Camera.transform.position;
 
             // Zoom along camera's forward vector, but only affect vertical distance (Y)
-            Camera.transform.Translate(deltaMagnitudeDiff * 0.01f * Vector3.forward, Space.Self);
+            Camera.transform.position += Camera.transform.forward * (deltaMagnitudeDiff * 0.01f);
 
             // Clamp to vertical bounds
             float y = Camera.transform.position.y;
