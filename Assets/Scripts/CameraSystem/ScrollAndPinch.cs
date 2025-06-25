@@ -63,17 +63,26 @@ public class ScrollAndPinch : MonoBehaviour
             Camera.transform.Translate(panDelta, Space.World);
 
             // === Zoom ===
-            float prevDist = Vector3.Distance(pos0Prev, pos1Prev);
-            float currDist = Vector3.Distance(pos0, pos1);
-            float zoomFactor = prevDist > 0 ? currDist / prevDist : 1f;
+            float prevTouchDeltaMag = (touch0.position - touch0.deltaPosition - (touch1.position - touch1.deltaPosition)).magnitude;
+            float currentTouchDeltaMag = (touch0.position - touch1.position).magnitude;
+            float deltaMagnitudeDiff = currentTouchDeltaMag - prevTouchDeltaMag;
 
             Vector3 camBeforeZoom = Camera.transform.position;
-            Camera.transform.position = Vector3.LerpUnclamped(mid, Camera.transform.position, 1 / zoomFactor);
 
+            // Zoom along camera's forward vector, but only affect vertical distance (Y)
+            Camera.transform.Translate(deltaMagnitudeDiff * 0.01f * Vector3.forward, Space.Self);
+
+            // Clamp to vertical bounds
             float y = Camera.transform.position.y;
             float baseY = cameraStartPosition.y;
             if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
+            {
                 Camera.transform.position = camBeforeZoom;
+            }
+
+            // Debug (optional)
+            Debug.Log($"🔍 Zoom delta: {deltaMagnitudeDiff}, CamY: {y:F2}");
+
 
             // === Rotate ===
             if (Rotate && pos1Prev != pos1)
