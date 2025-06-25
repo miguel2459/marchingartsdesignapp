@@ -54,6 +54,7 @@ public class ClickMarcherSelector : MonoBehaviour
             {
                 Debug.Log("⛔ Locking drag selector due to 2-finger touch.");
                 dragSelectorLocked = true;
+                isDragging = false;
                 ResetSelectionBox();
             }
 
