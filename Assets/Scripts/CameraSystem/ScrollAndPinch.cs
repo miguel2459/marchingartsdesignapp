@@ -17,7 +17,7 @@ Edited by Kudoshi : 24/3/2021
 
 using UnityEngine;
 
-class ScrollAndPinch : MonoBehaviour
+public class ScrollAndPinch : MonoBehaviour
 {
     public Camera Camera;
     public bool Rotate;
@@ -110,6 +110,13 @@ class ScrollAndPinch : MonoBehaviour
 
         return Vector3.zero;
     }
+    
+    public Vector3 DebugPlanePosition(Vector2 screenPos)
+    {
+        Plane.SetNormalAndPosition(Vector3.up, Vector3.zero); // Match how Plane is set in Update
+        return PlanePosition(screenPos);
+    }
+
 
     private void OnDrawGizmos()
     {
