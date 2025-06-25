@@ -48,25 +48,29 @@ public class GameplayInputHandler : MonoBehaviour
         // Only send to camera if no modifier gesture is blocking
         if (cameraModeManager != null && !UIInteractionBlocker.IsTouchOverUI())
         {
-            cameraModeManager.HandlePanIntent(delta);
+            float mobilePanMultiplier = 4f; // Adjust this value for preferred sensitivity
+            Vector2 adjustedDelta = delta * mobilePanMultiplier;
+            cameraModeManager.HandlePanIntent(adjustedDelta);
         }
     }
+
     private void HandleTouchZoom(float delta)
     {
         if (cameraModeManager != null && !UIInteractionBlocker.IsTouchOverUI())
         {
-            cameraModeManager.HandleZoomIntent(delta);
+            float mobileZoomScale = 0.1f; // Smaller values for smooth control
+            float adjustedZoom = delta * mobileZoomScale;
+            cameraModeManager.HandleZoomIntent(adjustedZoom);
         }
     }
-    
+
     private void HandleTouchRotate(float angleDelta)
     {
         if (cameraModeManager != null && !UIInteractionBlocker.IsTouchOverUI())
         {
-            // Convert angle to Vector2 delta for existing handler
-            Vector2 rotateDelta = new Vector2(angleDelta, 0);
+            float rotateSensitivity = 1f; // Keep at 1f unless you want to dampen twist
+            Vector2 rotateDelta = new Vector2(angleDelta * rotateSensitivity, 0);
             cameraModeManager.HandleRotateIntent(rotateDelta);
         }
     }
-
 }
