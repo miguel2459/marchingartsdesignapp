@@ -10,7 +10,7 @@ public class DebugPanelManager : MonoBehaviour
     {
         if (scrollAndPinch == null || debugText == null) return;
 
-        string debugInfo = $"🖐 Touch Count: {Input.touchCount}\n";
+        string debugInfo = $" Touch Count: {Input.touchCount}\n";
 
         if (Input.touchCount == 2)
         {
@@ -29,12 +29,12 @@ public class DebugPanelManager : MonoBehaviour
             float currDist = Vector3.Distance(pos0, pos1);
             float zoomFactor = prevDist > 0 ? currDist / prevDist : 1f;
 
-            debugInfo += $"📍 pos0: {pos0}\n";
-            debugInfo += $"📍 pos1: {pos1}\n";
-            debugInfo += $"📏 Zoom Factor: {zoomFactor:F3}\n";
+            debugInfo += $" pos0: {pos0}\n";
+            debugInfo += $" pos1: {pos1}\n";
+            debugInfo += $" Zoom Factor: {zoomFactor:F3}\n";
         }
 
-        debugInfo += $"🎥 Camera Y: {scrollAndPinch.Camera.transform.position.y:F2}";
+        debugInfo += $" Camera Y: {scrollAndPinch.Camera.transform.position.y:F2}";
 
         debugText.text = debugInfo;
     }
