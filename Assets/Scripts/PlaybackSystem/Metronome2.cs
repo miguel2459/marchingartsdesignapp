@@ -20,7 +20,7 @@ public class Metronome2 : MonoBehaviour
     [Header("Playback Settings")]
     [SerializeField]
     private float beatInterval;
-    private AudioSource audioSource;
+    public AudioSource audioSource;
     private int cycleCount = 0;
     private bool isRunning = false;
 
@@ -45,7 +45,6 @@ public class Metronome2 : MonoBehaviour
 
     void Start()
     {
-        audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.clip = metronomeClip;
     }
 

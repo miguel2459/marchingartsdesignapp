@@ -189,6 +189,51 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""TouchContact0"",
+                    ""type"": ""PassThrough"",
+                    ""id"": ""31341ec0-87af-4e91-a46c-91a06fa7ea9b"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""TouchContact1"",
+                    ""type"": ""PassThrough"",
+                    ""id"": ""0be2b207-48e7-4310-8b8a-326dbc6fa3bb"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""TouchDelta0"",
+                    ""type"": ""PassThrough"",
+                    ""id"": ""37cc263f-2dd2-4e6b-ba0e-d6ddbe477a31"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""TouchDelta1"",
+                    ""type"": ""PassThrough"",
+                    ""id"": ""d1460c3d-b85b-42ed-bc83-16edd5ab52c8"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""TouchCount"",
+                    ""type"": ""Value"",
+                    ""id"": ""51e51e04-6ffd-42a5-bdb5-1fdc0c2ef87d"",
+                    ""expectedControlType"": ""Integer"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
@@ -422,6 +467,61 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""action"": ""CameraPan"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9afbab4c-54e4-40d6-a42b-2cef63ff5586"",
+                    ""path"": ""<Touchscreen>/touch0/position"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TouchContact0"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a2116fe9-ec1a-4296-9271-5708fd300b56"",
+                    ""path"": ""<Touchscreen>/touch1/position"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TouchContact1"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b38ac48f-4c57-4844-88c4-eef3b07d16ea"",
+                    ""path"": ""<Touchscreen>/touch0/delta"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TouchDelta0"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""31d21340-eeb8-4ac0-bc60-4f799025d387"",
+                    ""path"": ""<Touchscreen>/touch1/delta"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TouchDelta1"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""3a6ca5a9-17a8-431e-83e1-70fa9e747ef2"",
+                    ""path"": ""<Touchscreen>/touchCount "",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TouchCount"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -441,6 +541,11 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         m_Gameplay_CameraRotate = m_Gameplay.FindAction("CameraRotate", throwIfNotFound: true);
         m_Gameplay_CameraPivot = m_Gameplay.FindAction("CameraPivot", throwIfNotFound: true);
         m_Gameplay_CameraPan = m_Gameplay.FindAction("CameraPan", throwIfNotFound: true);
+        m_Gameplay_TouchContact0 = m_Gameplay.FindAction("TouchContact0", throwIfNotFound: true);
+        m_Gameplay_TouchContact1 = m_Gameplay.FindAction("TouchContact1", throwIfNotFound: true);
+        m_Gameplay_TouchDelta0 = m_Gameplay.FindAction("TouchDelta0", throwIfNotFound: true);
+        m_Gameplay_TouchDelta1 = m_Gameplay.FindAction("TouchDelta1", throwIfNotFound: true);
+        m_Gameplay_TouchCount = m_Gameplay.FindAction("TouchCount", throwIfNotFound: true);
     }
 
     ~@MADAControls()
@@ -532,6 +637,11 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_CameraRotate;
     private readonly InputAction m_Gameplay_CameraPivot;
     private readonly InputAction m_Gameplay_CameraPan;
+    private readonly InputAction m_Gameplay_TouchContact0;
+    private readonly InputAction m_Gameplay_TouchContact1;
+    private readonly InputAction m_Gameplay_TouchDelta0;
+    private readonly InputAction m_Gameplay_TouchDelta1;
+    private readonly InputAction m_Gameplay_TouchCount;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -587,6 +697,26 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/CameraPan".
         /// </summary>
         public InputAction @CameraPan => m_Wrapper.m_Gameplay_CameraPan;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/TouchContact0".
+        /// </summary>
+        public InputAction @TouchContact0 => m_Wrapper.m_Gameplay_TouchContact0;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/TouchContact1".
+        /// </summary>
+        public InputAction @TouchContact1 => m_Wrapper.m_Gameplay_TouchContact1;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/TouchDelta0".
+        /// </summary>
+        public InputAction @TouchDelta0 => m_Wrapper.m_Gameplay_TouchDelta0;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/TouchDelta1".
+        /// </summary>
+        public InputAction @TouchDelta1 => m_Wrapper.m_Gameplay_TouchDelta1;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/TouchCount".
+        /// </summary>
+        public InputAction @TouchCount => m_Wrapper.m_Gameplay_TouchCount;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -646,6 +776,21 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @CameraPan.started += instance.OnCameraPan;
             @CameraPan.performed += instance.OnCameraPan;
             @CameraPan.canceled += instance.OnCameraPan;
+            @TouchContact0.started += instance.OnTouchContact0;
+            @TouchContact0.performed += instance.OnTouchContact0;
+            @TouchContact0.canceled += instance.OnTouchContact0;
+            @TouchContact1.started += instance.OnTouchContact1;
+            @TouchContact1.performed += instance.OnTouchContact1;
+            @TouchContact1.canceled += instance.OnTouchContact1;
+            @TouchDelta0.started += instance.OnTouchDelta0;
+            @TouchDelta0.performed += instance.OnTouchDelta0;
+            @TouchDelta0.canceled += instance.OnTouchDelta0;
+            @TouchDelta1.started += instance.OnTouchDelta1;
+            @TouchDelta1.performed += instance.OnTouchDelta1;
+            @TouchDelta1.canceled += instance.OnTouchDelta1;
+            @TouchCount.started += instance.OnTouchCount;
+            @TouchCount.performed += instance.OnTouchCount;
+            @TouchCount.canceled += instance.OnTouchCount;
         }
 
         /// <summary>
@@ -690,6 +835,21 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @CameraPan.started -= instance.OnCameraPan;
             @CameraPan.performed -= instance.OnCameraPan;
             @CameraPan.canceled -= instance.OnCameraPan;
+            @TouchContact0.started -= instance.OnTouchContact0;
+            @TouchContact0.performed -= instance.OnTouchContact0;
+            @TouchContact0.canceled -= instance.OnTouchContact0;
+            @TouchContact1.started -= instance.OnTouchContact1;
+            @TouchContact1.performed -= instance.OnTouchContact1;
+            @TouchContact1.canceled -= instance.OnTouchContact1;
+            @TouchDelta0.started -= instance.OnTouchDelta0;
+            @TouchDelta0.performed -= instance.OnTouchDelta0;
+            @TouchDelta0.canceled -= instance.OnTouchDelta0;
+            @TouchDelta1.started -= instance.OnTouchDelta1;
+            @TouchDelta1.performed -= instance.OnTouchDelta1;
+            @TouchDelta1.canceled -= instance.OnTouchDelta1;
+            @TouchCount.started -= instance.OnTouchCount;
+            @TouchCount.performed -= instance.OnTouchCount;
+            @TouchCount.canceled -= instance.OnTouchCount;
         }
 
         /// <summary>
@@ -807,5 +967,40 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnCameraPan(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "TouchContact0" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnTouchContact0(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "TouchContact1" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnTouchContact1(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "TouchDelta0" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnTouchDelta0(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "TouchDelta1" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnTouchDelta1(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "TouchCount" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnTouchCount(InputAction.CallbackContext context);
     }
 }

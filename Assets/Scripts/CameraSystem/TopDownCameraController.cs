@@ -66,7 +66,7 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
     void Update()
     {
         if (!isActive) return;
-        if (isMobile) return; // 🚫 Skip keyboard/mouse input on mobile
+        //if (isMobile) return; // 🚫 Skip keyboard/mouse input on mobile
     }
 
     private void SaveCurrentTransform()
