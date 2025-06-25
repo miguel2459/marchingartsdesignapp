@@ -43,7 +43,8 @@ public class ScrollAndPinch : MonoBehaviour
             Touch touch1 = Input.GetTouch(1);
 
             //Plane.SetNormalAndPosition(transform.up, transform.position);
-            Plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0, 0));
+            //Plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0, 0));
+            Plane.SetNormalAndPosition(Vector3.up, Camera.transform.position);
 
 
             Vector2 touch0PrevPos = touch0.position - touch0.deltaPosition;
