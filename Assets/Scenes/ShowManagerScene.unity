@@ -8576,9 +8576,9 @@ MonoBehaviour:
   Camera: {fileID: 963194227}
   Rotate: 1
   DecreaseCameraPanSpeed: 1
-  CameraUpperHeightBound: 10
+  CameraUpperHeightBound: 30
   CameraLowerHeightBound: 15
-  zoomSensitivity: 10
+  zoomSensitivity: 5
 --- !u!114 &218049299
 MonoBehaviour:
   m_ObjectHideFlags: 0

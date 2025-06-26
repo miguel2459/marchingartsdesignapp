@@ -34,7 +34,7 @@ public class DebugPanelManager : MonoBehaviour
             debugInfo += $" Zoom Factor: {zoomFactor:F3}\n";
         }
 
-        debugInfo += $" Camera Y: {scrollAndPinch.Camera.transform.position.y:F2}";
+        //debugInfo += $" Camera Y: {Camera.main.transform.position.y:F2}";
 
         debugText.text = debugInfo;
     }

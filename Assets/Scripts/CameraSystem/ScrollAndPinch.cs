@@ -8,13 +8,10 @@ public class ScrollAndPinch : MonoBehaviour
     public Camera Camera;
     public bool Rotate;
     protected Plane Plane;
-
-    public float DecreaseCameraPanSpeed = 1f;
-
-    [Header("Zoom Clamping")]
-    public float CameraUpperHeightBound = 30f;
-    public float CameraLowerHeightBound = 5f;
-    public float zoomSensitivity = 10f;
+    public float DecreaseCameraPanSpeed = 1;
+    public float CameraUpperHeightBound;
+    public float CameraLowerHeightBound;
+    public float zoomSensitivity = 0.01f;
 
     private Vector3 cameraStartPosition;
 
@@ -28,7 +25,6 @@ public class ScrollAndPinch : MonoBehaviour
 
     private void Update()
     {
-        // 🎯 Touch Pinch Input
         if (Input.touchCount == 2)
         {
             Touch touch0 = Input.GetTouch(0);
@@ -36,12 +32,14 @@ public class ScrollAndPinch : MonoBehaviour
 
             Plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0.1f, 0));
 
+            // === Capture Previous and Current Finger Positions ===
             Vector2 touch0PrevPos = touch0.position - touch0.deltaPosition;
             Vector2 touch1PrevPos = touch1.position - touch1.deltaPosition;
 
             Debug.Log($"🖐 Touch0 pos: {touch0.position}, delta: {touch0.deltaPosition}");
             Debug.Log($"🖐 Touch1 pos: {touch1.position}, delta: {touch1.deltaPosition}");
 
+            // === Project to Plane ===
             Vector3 pos0 = PlanePosition(touch0.position);
             Vector3 pos1 = PlanePosition(touch1.position);
             Vector3 pos0Prev = PlanePosition(touch0PrevPos);
@@ -52,14 +50,48 @@ public class ScrollAndPinch : MonoBehaviour
             Vector3 midPrev = (pos0Prev + pos1Prev) * 0.5f;
             Vector3 panDelta = (midPrev - mid) / DecreaseCameraPanSpeed;
             Camera.transform.Translate(panDelta, Space.World);
+
             Debug.Log($"📦 Pan applied: {panDelta}");
 
-            // === Zoom ===
+            // === Zoom (Screen Distance) ===
             float prevTouchDeltaMag = (touch0PrevPos - touch1PrevPos).magnitude;
             float currentTouchDeltaMag = (touch0.position - touch1.position).magnitude;
             float deltaMagnitudeDiff = currentTouchDeltaMag - prevTouchDeltaMag;
 
-            ApplyZoom(deltaMagnitudeDiff * zoomSensitivity * Time.deltaTime);
+            Vector3 camBeforeZoom = Camera.transform.position;
+
+            // === Determine Zoom Direction ===
+            Vector3 zoomDirection = zoomMode == ZoomMode.Vertical
+                ? Vector3.up
+                : Camera.transform.forward;
+
+            Camera.transform.position += zoomDirection * (deltaMagnitudeDiff * zoomSensitivity);
+
+            float y = Camera.transform.position.y;
+            float baseY = cameraStartPosition.y;
+
+            Debug.Log($"🔍 Zoom DeltaMag: {deltaMagnitudeDiff:F4}, Cam Y: {y:F2}");
+
+            // === Clamp zoom bounds ===
+            if (zoomMode == ZoomMode.Vertical)
+            {
+                if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
+                {
+                    Debug.LogWarning($"⛔ Zoom clamped: Y={y:F2} (allowed: {baseY - CameraLowerHeightBound:F2} to {baseY + CameraUpperHeightBound:F2})");
+                    Camera.transform.position = camBeforeZoom;
+                }
+            }
+            else
+            {
+                float camDistanceToCenter = Vector3.Distance(Camera.transform.position, new Vector3(26.25f, Camera.transform.position.y, 60f)); // center of field
+                float startDistance = Vector3.Distance(cameraStartPosition, new Vector3(26.25f, cameraStartPosition.y, 60f));
+                if (camDistanceToCenter > startDistance + CameraUpperHeightBound ||
+                    camDistanceToCenter < startDistance - CameraLowerHeightBound)
+                {
+                    Debug.LogWarning($"⛔ Zoom clamped: Distance={camDistanceToCenter:F2} (allowed: {startDistance - CameraLowerHeightBound:F2} to {startDistance + CameraUpperHeightBound:F2})");
+                    Camera.transform.position = camBeforeZoom;
+                }
+            }
 
             // === Rotate ===
             if (Rotate && pos1Prev != pos1)
@@ -67,50 +99,6 @@ public class ScrollAndPinch : MonoBehaviour
                 float angle = Vector3.SignedAngle(pos1 - pos0, pos1Prev - pos0Prev, Plane.normal);
                 Camera.transform.RotateAround(mid, Plane.normal, angle);
                 Debug.Log($"🔄 Rotate angle: {angle:F2} degrees");
-            }
-        }
-
-#if UNITY_EDITOR
-        // 🧪 Desktop scroll wheel test support
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (Mathf.Abs(scroll) > 0.01f)
-        {
-            Debug.Log($"🖱 ScrollWheel Zoom: {scroll}");
-            ApplyZoom(scroll * zoomSensitivity * 100f * Time.deltaTime);
-        }
-#endif
-    }
-
-    private void ApplyZoom(float zoomAmount)
-    {
-        if (zoomMode == ZoomMode.Vertical && Camera.orthographic)
-        {
-            float orthoSize = Camera.orthographicSize;
-            orthoSize -= zoomAmount;
-            orthoSize = Mathf.Clamp(orthoSize, CameraLowerHeightBound, CameraUpperHeightBound);
-            Camera.orthographicSize = orthoSize;
-            Debug.Log($"🔍 Ortho Zoom adjusted: {orthoSize:F2}");
-        }
-        else
-        {
-            Vector3 camBeforeZoom = Camera.transform.position;
-            Vector3 zoomDirection = Camera.transform.forward;
-            Camera.transform.position += zoomDirection * zoomAmount;
-
-            float y = Camera.transform.position.y;
-            float baseY = cameraStartPosition.y;
-
-            float camDistanceToCenter = Vector3.Distance(Camera.transform.position, new Vector3(26.25f, y, 60f));
-            float startDistance = Vector3.Distance(cameraStartPosition, new Vector3(26.25f, cameraStartPosition.y, 60f));
-
-            if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || camDistanceToCenter > startDistance + CameraUpperHeightBound || camDistanceToCenter < startDistance - CameraLowerHeightBound)
-            {
-                Camera.transform.position = camBeforeZoom;
-                Debug.LogWarning($"⛔ Zoom clamped: Y={y:F2}, Distance={camDistanceToCenter:F2}");
-            }
-            else
-            {
-                Debug.Log($"🔭 Perspective Zoom: Position = {Camera.transform.position}, Distance = {camDistanceToCenter:F2}");
             }
         }
     }
