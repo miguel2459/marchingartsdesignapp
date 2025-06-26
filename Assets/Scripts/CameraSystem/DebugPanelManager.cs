@@ -34,7 +34,14 @@ public class DebugPanelManager : MonoBehaviour
             debugInfo += $" Zoom Factor: {zoomFactor:F3}\n";
         }
 
-        //debugInfo += $" Camera Y: {Camera.main.transform.position.y:F2}";
+        if (scrollAndPinch != null && scrollAndPinch.Camera != null)
+        {
+            debugInfo += $" Camera Y: {scrollAndPinch.Camera.transform.position.y:F2}";
+        }
+        else
+        {
+            debugInfo += " Camera Y: (not available)";
+        }
 
         debugText.text = debugInfo;
     }

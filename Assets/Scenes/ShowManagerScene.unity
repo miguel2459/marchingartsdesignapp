@@ -8578,7 +8578,7 @@ MonoBehaviour:
   DecreaseCameraPanSpeed: 1
   CameraUpperHeightBound: 30
   CameraLowerHeightBound: 15
-  zoomSensitivity: 5
+  zoomSensitivity: 0.1
 --- !u!114 &218049299
 MonoBehaviour:
   m_ObjectHideFlags: 0
