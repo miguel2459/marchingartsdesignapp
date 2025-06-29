@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.IO;
 using System.Collections;
 using UnityEngine;
@@ -47,48 +48,74 @@ public class ShowDataManager
         SessionManager.instance.Logout();
     }
 
-    public void CreateNewShowTemplate(string url, string showID, string title, string group, string email, string field, string year, int marchers, int sets, int props, string modified, string status,
-    string userFolderId, string accountSheetId, string setOnExit, Action onSuccess, Action<string> onError)
+    public void CreateNewShowTemplate(
+        string url,
+        string showID,
+        string title,
+        string group,
+        string email,
+        string field,
+        string year,
+        int marchers,
+        int sets,
+        int props,
+        string modified,
+        string status,
+        string userFolderId,
+        string accountSheetId,
+        string setOnExit,
+        Action onSuccess,
+        Action<string> onError
+    )
     {
         coroutineHost.StartCoroutine(CreateShowCoroutine());
 
         IEnumerator CreateShowCoroutine()
         {
-            WWWForm form = new WWWForm();
-            form.AddField("action", "NewShow");
-            form.AddField("showID", showID);
-            form.AddField("showTitle", title);
-            form.AddField("groupName", group);
-            form.AddField("email", email);
-            form.AddField("fieldType", field);
-            form.AddField("productionYear", year);
-            form.AddField("numberOfMarchers", marchers);
-            form.AddField("numberOfSets", sets);
-            form.AddField("numberOfProps", props);
-            form.AddField("lastModified", modified);
-            form.AddField("showStatus", status);
-            form.AddField("userFolderId", userFolderId);
-            form.AddField("accountSheetId", accountSheetId);
-            form.AddField("lastSet", setOnExit);
-
-            using (UnityWebRequest www = UnityWebRequest.Post(url, form))
+            NewShowPayload payload = new NewShowPayload
             {
-                yield return www.SendWebRequest();
+                showID = showID,
+                showTitle = title,
+                groupName = group,
+                email = email,
+                fieldType = field,
+                productionYear = year,
+                numberOfMarchers = marchers,
+                numberOfSets = sets,
+                numberOfProps = props,
+                lastModified = modified,
+                showStatus = status,
+                userFolderId = userFolderId,
+                accountSheetId = accountSheetId,
+                lastSet = setOnExit
+            };
 
-                if (www.result == UnityWebRequest.Result.Success)
-                {
-                    Debug.Log("✅ Google Sheet copied successfully.");
-                    onSuccess?.Invoke();
-                }
-                else
-                {
-                    string err = www.error;
-                    Debug.LogError("❌ Error copying Google Sheet: " + err);
-                    onError?.Invoke(err);
-                }
+            string json = JsonUtility.ToJson(payload);
+            Debug.Log($"📤 Sending NewShow JSON payload:\n{json}");
+
+            UnityWebRequest www = new UnityWebRequest(url, "POST");
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+            www.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = new DownloadHandlerBuffer();
+            www.SetRequestHeader("Content-Type", "application/json");
+
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log("✅ Google Sheet copied successfully.");
+                onSuccess?.Invoke();
+            }
+            else
+            {
+                string err = www.error;
+                Debug.LogError($"❌ Error copying Google Sheet: {err}");
+                Debug.LogError($"📥 Server Response: {www.downloadHandler?.text}");
+                onError?.Invoke(err);
             }
         }
     }
+
 
     private IEnumerator SaveShowCoroutine()
     {
@@ -127,32 +154,53 @@ public class ShowDataManager
                     Debug.Log($"✅ SetTiming JSON upload result: {success}"));
             }
         }
-
-        // 🔁 Save core show details to Google Sheets
-        WWWForm form = new WWWForm();
-        form.AddField("action", "UpdateShowDetails");
-        form.AddField("numberOfMarchers", showStateSO.NumberOfMarchers);
-        form.AddField("numberOfSets", showStateSO.NumberOfSets);
-        form.AddField("numberOfProps", showStateSO.NumberOfProps);
-        form.AddField("lastModified", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
-        form.AddField("lastSet", showStateSO.LastSet);
-        form.AddField("showSheetId", SessionManager.instance.selectedShow?.showSheetID);
-
-        using (UnityWebRequest www = UnityWebRequest.Post(backendURL, form))
+        
+        // 🔁 Save core show details using serialized payload
+        ShowDetailsUpdatePayload payload = new ShowDetailsUpdatePayload
         {
-            yield return www.SendWebRequest();
+            numberOfMarchers = showStateSO.NumberOfMarchers,
+            numberOfSets = showStateSO.NumberOfSets,
+            numberOfProps = showStateSO.NumberOfProps,
+            lastModified = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+            lastSet = showStateSO.LastSet,
+            showSheetId = SessionManager.instance.selectedShow?.showSheetID
+        };
 
-            if (www.result == UnityWebRequest.Result.Success)
+        string json = JsonUtility.ToJson(payload);
+        Debug.Log($"📦 Serialized ShowDetailsUpdatePayload:\n{json}");
+
+        using (UnityWebRequest request = new UnityWebRequest(backendURL, "POST"))
+        {
+            byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
+            request.uploadHandler = new UploadHandlerRaw(jsonBytes);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
             {
                 Debug.Log($"✅ Show Details updated successfully to GDrive for {showStateSO.ShowTitle}.");
             }
             else
             {
-                Debug.LogError($"❌ Error updating Show Details to GDrive: {www.error}");
+                Debug.LogError($"❌ Error updating Show Details to GDrive: {request.error}");
+                Debug.LogError($"❌ Response Body: {request.downloadHandler.text}");
             }
         }
     }
-
+    
+    [Serializable]
+    public class ShowDetailsUpdatePayload
+    {
+        public string action = "UpdateShowDetails";
+        public int numberOfMarchers;
+        public int numberOfSets;
+        public int numberOfProps;
+        public string lastModified;
+        public string lastSet;
+        public string showSheetId;
+    }
 
     private IEnumerator UploadMarcherJSON(string path)
     {
@@ -242,6 +290,25 @@ public class ShowDataManager
         Debug.Log($"📁 Local cache updated: {destPath}");
     }
 
+    [Serializable]
+    public class NewShowPayload
+    {
+        public string action = "NewShow";
+        public string showID;
+        public string showTitle;
+        public string groupName;
+        public string email;
+        public string fieldType;
+        public string productionYear;
+        public int numberOfMarchers;
+        public int numberOfSets;
+        public int numberOfProps;
+        public string lastModified;
+        public string showStatus;
+        public string userFolderId;
+        public string accountSheetId;
+        public string lastSet;
+    }
 
 
     private void ClearShowData()

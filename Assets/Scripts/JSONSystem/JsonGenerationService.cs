@@ -147,7 +147,7 @@ public class JsonGenerationService
 
             var entryObj = new JSONObject();
             entryObj["pos"] = posArray;
-            entryObj["type"] = "hold";
+            entryObj["type"] = "march";
 
             set0["0"] = entryObj;      // Count 0
             countPosNode["0"] = set0;  // Set 0

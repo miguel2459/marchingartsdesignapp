@@ -85,7 +85,7 @@ public class MarcherManager : MonoBehaviour
             if (sessionLoader.RuntimeCache.ParsedCountPositions.TryGetValue(m.name, out var restored))
             {
                 m.LoadPositions(restored);
-                // Debug.Log($"📦 Loaded saved positions for {m.name}");
+                Debug.Log($"📦 Loaded saved positions for {m.name}");
             }
 
             // Try restoring identity data
@@ -106,13 +106,17 @@ public class MarcherManager : MonoBehaviour
 
             if (TryFindLatestConfirmedPositionAcrossSets(m, sessionLoader.LastSet, out int latestSet, out int latestCount, out Vector3 latestPos))
             {
-                m.transform.position = latestPos;
-                usedSaved = true;
-                // Debug.Log($"✅ {m.name} positioned at Set {latestSet}, Count {latestCount} → {latestPos}");
-            }
-            else
-            {
-                Debug.LogWarning($"{m.name} ⚠️ no confirmed fallback found. Will require ArrangeInSquare.");
+                // Reject fallback positions that are still origin
+                if (latestPos == Vector3.zero)
+                {
+                    Debug.LogWarning($"⚠️ {m.name} has confirmed position at Set {latestSet}, Count {latestCount}, but it's still (0,0,0). Ignoring.");
+                }
+                else
+                {
+                    m.transform.position = latestPos;
+                    usedSaved = true;
+                    Debug.Log($"✅ {m.name} positioned at Set {latestSet}, Count {latestCount} → {latestPos}");
+                }
             }
         }
 
@@ -148,6 +152,7 @@ public class MarcherManager : MonoBehaviour
 
             for (int c = 100; c >= 0; c--)
             {
+                
                 if (counts.TryGetValue(c, out var entry) && entry.IsConfirmed)
                 {
                     latestSet = s;
