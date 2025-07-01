@@ -16,6 +16,9 @@ public class InputRouter : MonoBehaviour
     public static event Action<Vector2> OnPan;
     public static event Action<Vector2> OnRotate;
     public static event Action<Vector2> OnPivot;
+    public static event Action<bool> OnShiftHeldChanged;
+    public static event Action<bool> OnControlHeldChanged;
+
 
     private void Awake()
     {
@@ -57,6 +60,12 @@ public class InputRouter : MonoBehaviour
             Vector2 delta = ctx.ReadValue<Vector2>();
             OnPivot?.Invoke(delta);
         };
+        controls.Gameplay.Shift.performed += ctx => OnShiftHeldChanged?.Invoke(true);
+        controls.Gameplay.Shift.canceled += ctx => OnShiftHeldChanged?.Invoke(false);
+
+        controls.Gameplay.Control.performed += ctx => OnControlHeldChanged?.Invoke(true);
+        controls.Gameplay.Control.canceled += ctx => OnControlHeldChanged?.Invoke(false);
+
     }
 
     private void OnDisable()

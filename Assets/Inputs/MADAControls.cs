@@ -261,6 +261,24 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""Shift"",
+                    ""type"": ""Button"",
+                    ""id"": ""9f04be1b-58b5-4b5b-9051-2c517211e517"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Control"",
+                    ""type"": ""Button"",
+                    ""id"": ""14e66bfa-f8ba-4993-a08d-ce7e2b9601d9"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -582,6 +600,28 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""action"": ""GizmoScale"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""91a21e04-af4b-4031-b0d5-397e6fa3c19a"",
+                    ""path"": ""<Keyboard>/leftShift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Shift"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7d39c905-dc9a-4515-a249-a02b2cdf7dae"",
+                    ""path"": ""<Keyboard>/leftCtrl"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Control"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -609,6 +649,8 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         m_Gameplay_TouchDelta0 = m_Gameplay.FindAction("TouchDelta0", throwIfNotFound: true);
         m_Gameplay_TouchDelta1 = m_Gameplay.FindAction("TouchDelta1", throwIfNotFound: true);
         m_Gameplay_TouchCount = m_Gameplay.FindAction("TouchCount", throwIfNotFound: true);
+        m_Gameplay_Shift = m_Gameplay.FindAction("Shift", throwIfNotFound: true);
+        m_Gameplay_Control = m_Gameplay.FindAction("Control", throwIfNotFound: true);
     }
 
     ~@MADAControls()
@@ -708,6 +750,8 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_TouchDelta0;
     private readonly InputAction m_Gameplay_TouchDelta1;
     private readonly InputAction m_Gameplay_TouchCount;
+    private readonly InputAction m_Gameplay_Shift;
+    private readonly InputAction m_Gameplay_Control;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -796,6 +840,14 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @TouchCount => m_Wrapper.m_Gameplay_TouchCount;
         /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Shift".
+        /// </summary>
+        public InputAction @Shift => m_Wrapper.m_Gameplay_Shift;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Control".
+        /// </summary>
+        public InputAction @Control => m_Wrapper.m_Gameplay_Control;
+        /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
         public InputActionMap Get() { return m_Wrapper.m_Gameplay; }
@@ -878,6 +930,12 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @TouchCount.started += instance.OnTouchCount;
             @TouchCount.performed += instance.OnTouchCount;
             @TouchCount.canceled += instance.OnTouchCount;
+            @Shift.started += instance.OnShift;
+            @Shift.performed += instance.OnShift;
+            @Shift.canceled += instance.OnShift;
+            @Control.started += instance.OnControl;
+            @Control.performed += instance.OnControl;
+            @Control.canceled += instance.OnControl;
         }
 
         /// <summary>
@@ -946,6 +1004,12 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @TouchCount.started -= instance.OnTouchCount;
             @TouchCount.performed -= instance.OnTouchCount;
             @TouchCount.canceled -= instance.OnTouchCount;
+            @Shift.started -= instance.OnShift;
+            @Shift.performed -= instance.OnShift;
+            @Shift.canceled -= instance.OnShift;
+            @Control.started -= instance.OnControl;
+            @Control.performed -= instance.OnControl;
+            @Control.canceled -= instance.OnControl;
         }
 
         /// <summary>
@@ -1119,5 +1183,19 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnTouchCount(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Shift" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnShift(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Control" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnControl(InputAction.CallbackContext context);
     }
 }

@@ -22,7 +22,8 @@ public class GameplayInputHandler : MonoBehaviour
         TouchInputHandler.OnTouchPan += HandleTouchPan;
         TouchInputHandler.OnTouchZoom += HandleTouchZoom;
         TouchInputHandler.OnTouchRotate += HandleTouchRotate;
-
+        InputRouter.OnShiftHeldChanged += HandleShiftKey;
+        InputRouter.OnControlHeldChanged += HandleControlKey;
     }
 
     private void OnDisable()
@@ -41,7 +42,8 @@ public class GameplayInputHandler : MonoBehaviour
         TouchInputHandler.OnTouchPan -= HandleTouchPan;
         TouchInputHandler.OnTouchZoom -= HandleTouchZoom;
         TouchInputHandler.OnTouchRotate -= HandleTouchRotate;
-
+        InputRouter.OnShiftHeldChanged -= HandleShiftKey;
+        InputRouter.OnControlHeldChanged -= HandleControlKey;
     }
     private void HandleTouchPan(Vector2 delta)
     {
@@ -72,5 +74,21 @@ public class GameplayInputHandler : MonoBehaviour
             Vector2 rotateDelta = new Vector2(angleDelta * rotateSensitivity, 0);
             cameraModeManager.HandleRotateIntent(rotateDelta);
         }
+    }
+    
+    private void HandleShiftKey(bool held)
+    {
+        if (held)
+            MobileModifierKeyProxy.SetShiftHeld(true);
+        else if (MobileModifierKeyProxy.IsShiftHeld)
+            MobileModifierKeyProxy.SetShiftHeld(false);
+    }
+
+    private void HandleControlKey(bool held)
+    {
+        if (held)
+            MobileModifierKeyProxy.SetControlHeld(true);
+        else if (MobileModifierKeyProxy.IsControlHeld)
+            MobileModifierKeyProxy.SetControlHeld(false);
     }
 }

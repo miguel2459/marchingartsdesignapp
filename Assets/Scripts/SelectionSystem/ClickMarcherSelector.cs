@@ -139,9 +139,9 @@ public class ClickMarcherSelector : MonoBehaviour
                 Debug.Log("🖱️ Drag detected.");
 
                 // Clear selection ONCE when drag starts, unless holding Shift/Ctrl
-                if (!Input.GetKey(KeyCode.LeftShift) || !MobileModifierKeyProxy.IsShiftHeld && !Input.GetKey(KeyCode.LeftControl) || !MobileModifierKeyProxy.IsControlHeld)
+                if (ModifierInput.NoModifier)
                 {
-                    Debug.Log("🧹 Clearing selection for new drag.");
+                    Debug.Log("🧹 Clearing selection for new drag (no modifier held).");
                     selectedMarchers.ClearSelection();
                 }
             }
@@ -179,13 +179,13 @@ public class ClickMarcherSelector : MonoBehaviour
             {
                 Debug.Log("🖱️ Drag finished.");
                 // Perform selection/deselection based on the drag rect and modifier keys
-                if (Input.GetKey(KeyCode.LeftControl) || MobileModifierKeyProxy.IsControlHeld)
+                if (ModifierInput.ControlHeld)
                 {
                     DeSelectMarchersInDrag();
                 }
                 else
                 {
-                    SelectMarchersInDrag(Input.GetKey(KeyCode.LeftShift) || MobileModifierKeyProxy.IsShiftHeld); // Pass additive flag
+                    SelectMarchersInDrag(ModifierInput.ShiftHeld); // Pass additive flag
                 }
                 //selectedMarchers.UpdateCameraFocus(); // Update camera after potential selection change
             }
@@ -200,7 +200,7 @@ public class ClickMarcherSelector : MonoBehaviour
                 RaycastHit hit;
 
                 // A) Handle Ctrl+Click Deselection (no gizmo check needed, specific action)
-                if (Input.GetKey(KeyCode.LeftControl) || MobileModifierKeyProxy.IsControlHeld)
+                if (ModifierInput.ControlHeld)
                 {
                     // Raycast ONLY for marchers
                     if (Physics.Raycast(ray, out hit, Mathf.Infinity, selectedMarchers.marcherLayer))
@@ -249,7 +249,7 @@ public class ClickMarcherSelector : MonoBehaviour
                     else if (hit.collider != null && selectedMarchers.marcherLayer == (selectedMarchers.marcherLayer | (1 << hit.collider.gameObject.layer)))
                     {
                         GameObject clickedMarcher = hit.collider.gameObject;
-                        if (Input.GetKey(KeyCode.LeftShift) || MobileModifierKeyProxy.IsShiftHeld && selectedMarchers.IsSelected(clickedMarcher))
+                        if (ModifierInput.ShiftHeld && selectedMarchers.IsSelected(clickedMarcher))
                         {
                             Debug.Log("MarcherSelector: Reanchoring gizmo to selected marcher.");
                             transformGizmoManager.ReanchorGizmoToMarcher(clickedMarcher);
@@ -271,7 +271,7 @@ public class ClickMarcherSelector : MonoBehaviour
                         GameObject clicked = hit.collider.gameObject;
                         if (clicked?.GetComponent<Unit>() != null) // Ensure it's a valid marcher unit
                         {
-                            if (Input.GetKey(KeyCode.LeftShift) || MobileModifierKeyProxy.IsShiftHeld) // Additive selection
+                            if (ModifierInput.ShiftHeld) // Additive selection
                             {
                                 if (!selectedMarchers.IsSelected(clicked))
                                 {

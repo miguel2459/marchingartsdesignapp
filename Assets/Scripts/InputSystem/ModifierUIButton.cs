@@ -18,13 +18,12 @@ public class ModifierUIButton : MonoBehaviour, IPointerClickHandler
         if (modifierKey == ModifierType.Shift)
         {
             MobileModifierKeyProxy.ToggleShift();
-            UpdateVisual(MobileModifierKeyProxy.IsShiftHeld);
         }
         else if (modifierKey == ModifierType.Control)
         {
             MobileModifierKeyProxy.ToggleControl();
-            UpdateVisual(MobileModifierKeyProxy.IsControlHeld);
         }
+        // No direct call to UpdateVisual here — OnModifierStateChanged handles it
     }
 
     private void UpdateVisual(bool isActive)
@@ -44,4 +43,23 @@ public class ModifierUIButton : MonoBehaviour, IPointerClickHandler
 
         UpdateVisual(isActive);
     }
+    private void OnEnable()
+    {
+        MobileModifierKeyProxy.OnModifierStateChanged += RefreshVisual;
+    }
+
+    private void OnDisable()
+    {
+        MobileModifierKeyProxy.OnModifierStateChanged -= RefreshVisual;
+    }
+
+    private void RefreshVisual()
+    {
+        bool isActive = modifierKey == ModifierType.Shift
+            ? MobileModifierKeyProxy.IsShiftHeld
+            : MobileModifierKeyProxy.IsControlHeld;
+
+        UpdateVisual(isActive);
+    }
+
 }
