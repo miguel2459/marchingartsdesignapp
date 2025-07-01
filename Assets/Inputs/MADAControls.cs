@@ -128,6 +128,33 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""GizmoPosition"",
+                    ""type"": ""Button"",
+                    ""id"": ""fc779c59-2321-49ca-9043-67fad230ed80"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""GizmoRotate"",
+                    ""type"": ""Button"",
+                    ""id"": ""ce7707f4-a3d4-4cb6-8a8b-6b43e415ea06"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""GizmoScale"",
+                    ""type"": ""Button"",
+                    ""id"": ""da92e1b3-3b7a-485a-b697-d1030626a6d2"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""SnapToGrid"",
                     ""type"": ""Button"",
                     ""id"": ""897a3434-ab85-4c0b-927d-67be34a900e2"",
@@ -522,6 +549,39 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""action"": ""TouchCount"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""13d26783-a869-4c7f-ab32-6113e98f6209"",
+                    ""path"": ""<Keyboard>/w"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""GizmoPosition"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""d877f1c2-1847-455f-adab-0b4c53e60254"",
+                    ""path"": ""<Keyboard>/r"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""GizmoRotate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""d6ee4c71-3400-44d5-b4c4-1731d0dc31cd"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""GizmoScale"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -534,6 +594,9 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         m_Gameplay_DeleteDot = m_Gameplay.FindAction("DeleteDot", throwIfNotFound: true);
         m_Gameplay_DeleteMarcher = m_Gameplay.FindAction("DeleteMarcher", throwIfNotFound: true);
         m_Gameplay_SelectAll = m_Gameplay.FindAction("SelectAll", throwIfNotFound: true);
+        m_Gameplay_GizmoPosition = m_Gameplay.FindAction("GizmoPosition", throwIfNotFound: true);
+        m_Gameplay_GizmoRotate = m_Gameplay.FindAction("GizmoRotate", throwIfNotFound: true);
+        m_Gameplay_GizmoScale = m_Gameplay.FindAction("GizmoScale", throwIfNotFound: true);
         m_Gameplay_SnapToGrid = m_Gameplay.FindAction("SnapToGrid", throwIfNotFound: true);
         m_Gameplay_RespaceToBox = m_Gameplay.FindAction("RespaceToBox", throwIfNotFound: true);
         m_Gameplay_FocusCamera = m_Gameplay.FindAction("FocusCamera", throwIfNotFound: true);
@@ -630,6 +693,9 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_DeleteDot;
     private readonly InputAction m_Gameplay_DeleteMarcher;
     private readonly InputAction m_Gameplay_SelectAll;
+    private readonly InputAction m_Gameplay_GizmoPosition;
+    private readonly InputAction m_Gameplay_GizmoRotate;
+    private readonly InputAction m_Gameplay_GizmoScale;
     private readonly InputAction m_Gameplay_SnapToGrid;
     private readonly InputAction m_Gameplay_RespaceToBox;
     private readonly InputAction m_Gameplay_FocusCamera;
@@ -669,6 +735,18 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/SelectAll".
         /// </summary>
         public InputAction @SelectAll => m_Wrapper.m_Gameplay_SelectAll;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/GizmoPosition".
+        /// </summary>
+        public InputAction @GizmoPosition => m_Wrapper.m_Gameplay_GizmoPosition;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/GizmoRotate".
+        /// </summary>
+        public InputAction @GizmoRotate => m_Wrapper.m_Gameplay_GizmoRotate;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/GizmoScale".
+        /// </summary>
+        public InputAction @GizmoScale => m_Wrapper.m_Gameplay_GizmoScale;
         /// <summary>
         /// Provides access to the underlying input action "Gameplay/SnapToGrid".
         /// </summary>
@@ -755,6 +833,15 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @SelectAll.started += instance.OnSelectAll;
             @SelectAll.performed += instance.OnSelectAll;
             @SelectAll.canceled += instance.OnSelectAll;
+            @GizmoPosition.started += instance.OnGizmoPosition;
+            @GizmoPosition.performed += instance.OnGizmoPosition;
+            @GizmoPosition.canceled += instance.OnGizmoPosition;
+            @GizmoRotate.started += instance.OnGizmoRotate;
+            @GizmoRotate.performed += instance.OnGizmoRotate;
+            @GizmoRotate.canceled += instance.OnGizmoRotate;
+            @GizmoScale.started += instance.OnGizmoScale;
+            @GizmoScale.performed += instance.OnGizmoScale;
+            @GizmoScale.canceled += instance.OnGizmoScale;
             @SnapToGrid.started += instance.OnSnapToGrid;
             @SnapToGrid.performed += instance.OnSnapToGrid;
             @SnapToGrid.canceled += instance.OnSnapToGrid;
@@ -814,6 +901,15 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @SelectAll.started -= instance.OnSelectAll;
             @SelectAll.performed -= instance.OnSelectAll;
             @SelectAll.canceled -= instance.OnSelectAll;
+            @GizmoPosition.started -= instance.OnGizmoPosition;
+            @GizmoPosition.performed -= instance.OnGizmoPosition;
+            @GizmoPosition.canceled -= instance.OnGizmoPosition;
+            @GizmoRotate.started -= instance.OnGizmoRotate;
+            @GizmoRotate.performed -= instance.OnGizmoRotate;
+            @GizmoRotate.canceled -= instance.OnGizmoRotate;
+            @GizmoScale.started -= instance.OnGizmoScale;
+            @GizmoScale.performed -= instance.OnGizmoScale;
+            @GizmoScale.canceled -= instance.OnGizmoScale;
             @SnapToGrid.started -= instance.OnSnapToGrid;
             @SnapToGrid.performed -= instance.OnSnapToGrid;
             @SnapToGrid.canceled -= instance.OnSnapToGrid;
@@ -918,6 +1014,27 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnSelectAll(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "GizmoPosition" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnGizmoPosition(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "GizmoRotate" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnGizmoRotate(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "GizmoScale" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnGizmoScale(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "SnapToGrid" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

@@ -11,7 +11,7 @@ public class TransformGizmoManager : MonoBehaviour
     public LayerMask gizmoLayer;
     public LayerMask marcherLayer;
     private GameObject activeGizmo;
-    private string currentMode = "position"; // Modes: position, rotate, scale
+    private GizmoMode? currentMode = GizmoMode.Position;
     public bool isMoving = false;
     private bool isFreeDraggingGizmo = false;
     private Plane movePlane;
@@ -39,9 +39,9 @@ public class TransformGizmoManager : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.W)) SetMode("position");
-        if (Input.GetKeyDown(KeyCode.R)) SetMode("rotate");
-        if (Input.GetKeyDown(KeyCode.E)) SetMode("scale");
+        if (GizmoInputHandler.IsPositionKeyPressed()) SetMode(GizmoMode.Position);
+        if (GizmoInputHandler.IsRotateKeyPressed()) SetMode(GizmoMode.Rotate);
+        if (GizmoInputHandler.IsScaleKeyPressed()) SetMode(GizmoMode.Scale);
 
         if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))
         {
@@ -74,10 +74,13 @@ public class TransformGizmoManager : MonoBehaviour
                 }
             }
         }
-
-        if (isMoving && activeGizmo != null && selectedMarchers.SelectedCount > 0)
+        
+        // 🔄 Reset free dragging if shift is released mid-drag
+        if (isFreeDraggingGizmo && !Input.GetKey(KeyCode.LeftShift) && !MobileModifierKeyProxy.IsShiftHeld)
         {
-            MoveGizmo();
+            isFreeDraggingGizmo = false;
+            selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
+            Debug.Log("TransformGizmoManager: Shift released — ending freeform reanchoring.");
         }
 
         if (Input.GetMouseButtonUp(0) && isMoving)
@@ -91,7 +94,7 @@ public class TransformGizmoManager : MonoBehaviour
         }
     }
 
-    public void SetMode(string mode)
+    public void SetMode(GizmoMode mode)
     {
         // Toggle off if current mode is active
         if (HasActiveGizmo && currentMode == mode)
@@ -109,7 +112,7 @@ public class TransformGizmoManager : MonoBehaviour
             var behavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
             if (behavior)
             {
-                behavior.SetMode(currentMode);
+                behavior.SetMode(currentMode.Value);
             }
             // 🔄 Notify the UI that a mode was switched via hotkey
             gizmoButtonUI?.UpdateVisualFromExternalMode(mode);
@@ -134,7 +137,7 @@ public class TransformGizmoManager : MonoBehaviour
             newBehavior.cam = cam;
             newBehavior.selectedMarchers = selectedMarchers;
             newBehavior.snapToGrid = snapToGrid;
-            newBehavior.SetMode(currentMode);
+            newBehavior.SetMode(currentMode.Value);
             newBehavior.gizmoManager = this;
             newBehavior.positionHistory = history;
         }
@@ -169,27 +172,7 @@ public class TransformGizmoManager : MonoBehaviour
 
             Destroy(activeGizmo);
             activeGizmo = null;
-        }
-    }
-
-    void MoveGizmo()
-    {
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-        float distance;
-
-        if (movePlane.Raycast(ray, out distance))
-        {
-            Vector3 pointOnPlane = ray.GetPoint(distance) - offset;
-            pointOnPlane.y = activeGizmo.transform.position.y;
-
-            pointOnPlane.x = Mathf.Clamp(pointOnPlane.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
-            pointOnPlane.z = Mathf.Clamp(pointOnPlane.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
-
-            Vector3 finalPosition = Input.GetKey(KeyCode.Q)
-                ? snapToGrid.GetSnappedGizmoPosition(pointOnPlane)
-                : pointOnPlane;
-
-            activeGizmo.transform.position = finalPosition;
+            gizmoButtonUI?.SetVisualGizmoOff();
         }
     }
 

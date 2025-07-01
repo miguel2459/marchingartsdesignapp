@@ -11,7 +11,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     public GameObject rotateVisualizer;
     public GameObject scaleVisualizer;
 
-    private string mode = "position"; // Modes: position, rotate, scale
+    private GizmoMode mode = GizmoMode.Position;
     private Plane movePlane;
     private Vector3 offset;
     private bool isDragging = false;
@@ -32,33 +32,40 @@ public class UnifiedGizmoBehavior : MonoBehaviour
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
-            if (Physics.Raycast(ray, out hit))
+            RaycastHit[] hits = Physics.RaycastAll(ray, 1000f);
+            foreach (var h in hits)
             {
-                if (hit.collider.gameObject == gameObject || hit.collider.transform.IsChildOf(transform))
+                GameObject target = h.collider.gameObject;
+
+                bool isGizmoPart = (target == gameObject || target.transform.IsChildOf(transform));
+                bool isMarcher = target.layer == LayerMask.NameToLayer("Marcher");
+
+                if (isGizmoPart && !isMarcher)
                 {
+                    hit = h; // capture valid gizmo hit
                     isDragging = true;
                     movePlane = new Plane(Vector3.up, transform.position);
-                    float distance;
-                    if (movePlane.Raycast(ray, out distance))
+
+                    if (movePlane.Raycast(ray, out float distance))
                     {
                         offset = ray.GetPoint(distance) - transform.position;
                     }
 
-                    // Cache initial positions for undo tracking ✅
+                    // Cache initial positions for undo
                     initialPositions.Clear();
                     selectedMarchers.ForEachSelected(marcher =>
                     {
                         if (marcher.TryGetComponent(out MarcherPositionsManager posManager))
-                        {
                             initialPositions[posManager] = marcher.transform.position;
-                        }                    
                     });
 
-                    // Determine which axis handle is clicked
-                    string hitName = hit.collider.gameObject.name.ToLower();
+                    // Detect axis handle
+                    string hitName = target.name.ToLower();
                     if (hitName.Contains("handle_x")) activeAxis = "x";
                     else if (hitName.Contains("handle_z")) activeAxis = "z";
                     else activeAxis = "center";
+
+                    break; // stop once valid gizmo hit is found
                 }
             }
         }
@@ -73,7 +80,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                 Vector3 targetPos = ray.GetPoint(distance) - offset;
                 targetPos.y = transform.position.y; // lock Y-axis
 
-                if (mode == "position")
+                if (mode == GizmoMode.Position)
                 {
                     if (Input.GetKey(KeyCode.Q))
                     {
@@ -98,11 +105,12 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     });
                 }
 
-                else if ((mode == "rotate" || mode == "scale") && gizmoManager != null && !gizmoManager.IsFreeDraggingGizmo)
+                else if ((mode == GizmoMode.Rotate || mode == GizmoMode.Scale) && gizmoManager != null && !gizmoManager.IsFreeDraggingGizmo)
                 {
+                    Debug.Log($"🔁 Manipulating mode {mode} with axis {activeAxis} | IsFreeDragging: {gizmoManager.IsFreeDraggingGizmo}");
                     float mouseDelta = Input.GetAxis("Mouse X");
 
-                    if (mode == "rotate")
+                    if (mode == GizmoMode.Rotate)
                     {
                         transform.Rotate(Vector3.up, mouseDelta * 5f);
 
@@ -114,7 +122,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                             marcher.transform.position = pos;
                         });
                     }
-                    else if (mode == "scale")
+                    else if (mode == GizmoMode.Scale)
                     {
                         float scaleFactor = 1 + mouseDelta * 0.05f;
                         scaleFactor = Mathf.Clamp(scaleFactor, 0.5f, 2f);
@@ -166,10 +174,21 @@ public class UnifiedGizmoBehavior : MonoBehaviour
         }
     }
 
-    public void SetMode(string newMode)
+    public void SetMode(GizmoMode newMode)
     {
         mode = newMode;
-        rotateVisualizer.SetActive(mode == "rotate");
-        scaleVisualizer.SetActive(mode == "scale");
+        rotateVisualizer.SetActive(mode == GizmoMode.Rotate);
+        scaleVisualizer.SetActive(mode == GizmoMode.Scale);
     }
+    
+    public GizmoMode GetCurrentMode()
+    {
+        return mode;
+    }
+
+    public string GetActiveAxis()
+    {
+        return activeAxis;
+    }
+
 }

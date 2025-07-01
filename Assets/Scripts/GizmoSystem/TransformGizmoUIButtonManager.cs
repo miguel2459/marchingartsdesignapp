@@ -18,7 +18,7 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
     public Sprite rotateIcon;
     public Sprite scaleIcon;
 
-    private string[] gizmoModes = new[] { "position", "scale", "rotate" };
+    private GizmoMode[] gizmoModes = new[] { GizmoMode.Position, GizmoMode.Scale, GizmoMode.Rotate };
     private int currentModeIndex = 0;
     private bool isGizmoActive = false;
 
@@ -48,7 +48,7 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
         }
     }
 
-    public void ActivateGizmo(string mode)
+    public void ActivateGizmo(GizmoMode mode)
     {
         isGizmoActive = true;
         currentModeIndex = Array.IndexOf(gizmoModes, mode);
@@ -76,7 +76,7 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
         isGizmoActive = false;
     }
     
-    public void UpdateVisualFromExternalMode(string mode)
+    public void UpdateVisualFromExternalMode(GizmoMode mode)
     {
         if (isGizmoActive)
         {
@@ -90,7 +90,7 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
 
     }
 
-    public void ActivateGizmoExternal(string mode)
+    public void ActivateGizmoExternal(GizmoMode mode)
     {
         isGizmoActive = true;
         currentModeIndex = Array.IndexOf(gizmoModes, mode);
@@ -100,12 +100,7 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
     private void UpdateButtonImage()
     {
         if (!buttonImage) return;
-
-        switch (gizmoModes[currentModeIndex])
-        {
-            case "position": buttonImage.sprite = positionIcon; break;
-            case "rotate": buttonImage.sprite = rotateIcon; break;
-            case "scale": buttonImage.sprite = scaleIcon; break;
-        }
+        buttonImage.sprite = gizmoModes[currentModeIndex].ToIcon(this);
     }
+
 }

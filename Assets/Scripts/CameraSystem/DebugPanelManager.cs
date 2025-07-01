@@ -5,9 +5,18 @@ public class DebugPanelManager : MonoBehaviour
 {
     public TextMeshProUGUI debugText;
     public ScrollAndPinch scrollAndPinch;
+    public GameObject debugPanelRoot;
+    [SerializeField] private bool isVisible = true;
 
     void Update()
     {
+        if (!isVisible || debugPanelRoot == null)
+        {
+            if (debugText != null) debugText.text = "";
+            return;
+        }
+        
+        
         if (scrollAndPinch == null || debugText == null) return;
 
         string debugInfo = $" Touch Count: {Input.touchCount}\n";

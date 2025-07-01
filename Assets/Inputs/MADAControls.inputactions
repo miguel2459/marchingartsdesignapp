@@ -42,6 +42,33 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "GizmoPosition",
+                    "type": "Button",
+                    "id": "fc779c59-2321-49ca-9043-67fad230ed80",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "GizmoRotate",
+                    "type": "Button",
+                    "id": "ce7707f4-a3d4-4cb6-8a8b-6b43e415ea06",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "GizmoScale",
+                    "type": "Button",
+                    "id": "da92e1b3-3b7a-485a-b697-d1030626a6d2",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "SnapToGrid",
                     "type": "Button",
                     "id": "897a3434-ab85-4c0b-927d-67be34a900e2",
@@ -434,6 +461,39 @@
                     "processors": "",
                     "groups": "",
                     "action": "TouchCount",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "13d26783-a869-4c7f-ab32-6113e98f6209",
+                    "path": "<Keyboard>/w",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "GizmoPosition",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d877f1c2-1847-455f-adab-0b4c53e60254",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "GizmoRotate",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d6ee4c71-3400-44d5-b4c4-1731d0dc31cd",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "GizmoScale",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

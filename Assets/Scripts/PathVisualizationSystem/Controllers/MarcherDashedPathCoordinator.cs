@@ -39,12 +39,12 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
             return;
         }
 
-        Debug.Log($"🧭 [SetAnchorContext] Initial input → Set: {set}, Count: {count}");
+        // Debug.Log($"🧭 [SetAnchorContext] Initial input → Set: {set}, Count: {count}");
 
         // 🧠 Fallback to previous set’s last count if no count is selected
         if (count <= 0)
         {
-            Debug.Log("🔁 No active count detected — remapping to previous set's last count...");
+            // Debug.Log("🔁 No active count detected — remapping to previous set's last count...");
 
             if (set == 1)
             {
@@ -57,11 +57,11 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
                 set -= 1;
                 bool found = SessionManager.instance.runtimeCacheSO.SetTimingMap.TryGetValue(set, out var timing);
                 count = found ? timing.count : 8;
-                Debug.Log($"🔂 Fallback to Set {set}:Count {count} (Found timing: {found})");
+                // Debug.Log($"🔂 Fallback to Set {set}:Count {count} (Found timing: {found})");
             }
         }
 
-        Debug.Log($"🔧 [SetAnchorContext] Resolved context → Set: {set}, Count: {count}");
+        // Debug.Log($"🔧 [SetAnchorContext] Resolved context → Set: {set}, Count: {count}");
 
         // 🔄 Create interpolator helper to search for confirmed dots
         MarcherInterpolator interpolator = new MarcherInterpolator(
@@ -75,11 +75,11 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         if (interpolator.TryFindLastConfirmedPosition(set, count, out var lastSet, out var lastCount, out Vector3 prevPos))
         {
             previous = prevPos;
-            Debug.Log($"📍 Found previous confirmed → Set {lastSet}, Count {lastCount} @ {prevPos}");
+            // Debug.Log($"📍 Found previous confirmed → Set {lastSet}, Count {lastCount} @ {prevPos}");
         }
         else
         {
-            Debug.Log("⚠️ No previous confirmed position found — using current transform.position");
+            // Debug.Log("⚠️ No previous confirmed position found — using current transform.position");
         }
 
         // 🔜 Get next confirmed dot
@@ -87,11 +87,11 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         if (interpolator.TryFindNextConfirmedPosition(set, count, out var nextSet, out var nextCount, out Vector3 nextPos))
         {
             next = nextPos;
-            Debug.Log($"📍 Found next confirmed → Set {nextSet}, Count {nextCount} @ {nextPos}");
+            // Debug.Log($"📍 Found next confirmed → Set {nextSet}, Count {nextCount} @ {nextPos}");
         }
         else
         {
-            Debug.Log("⚠️ No next confirmed position found");
+            // Debug.Log("⚠️ No next confirmed position found");
         }
 
         // 🧷 Determine anchor dot
@@ -100,29 +100,29 @@ public class MarcherDashedPathCoordinator : MonoBehaviour
         if (set == 0 && count == 0 && marcherPosManager.HasPositionAtCount(0, 0))
         {
             active = marcherPosManager.GetPositionAtCount(0, 0);
-            Debug.Log($"✅ Anchor confirmed at Set 0:Count 0 → {active.Value}");
+            // Debug.Log($"✅ Anchor confirmed at Set 0:Count 0 → {active.Value}");
         }
         else if (marcherPosManager.HasPositionAtCount(set, count))
         {
             string tag = marcherPosManager.GetTagForCount(set, count);
-            Debug.Log($"🧾 Dot at Set {set}, Count {count} has tag '{tag}'");
+            // Debug.Log($"🧾 Dot at Set {set}, Count {count} has tag '{tag}'");
 
             if (tag == "march" || tag == "inferred")
             {
                 active = marcherPosManager.GetPositionAtCount(set, count);
-                Debug.Log($"✅ Anchor confirmed at Set {set}:Count {count} → {active.Value}");
+                // Debug.Log($"✅ Anchor confirmed at Set {set}:Count {count} → {active.Value}");
             }
             else
             {
-                Debug.Log("⚠️ Dot exists but is not a confirmed or inferred dot — no anchor set");
+                // Debug.Log("⚠️ Dot exists but is not a confirmed or inferred dot — no anchor set");
             }
         }
         else
         {
-            Debug.Log("⚠️ No dot found at resolved set/count for anchor");
+            // Debug.Log("⚠️ No dot found at resolved set/count for anchor");
         }
 
-        Debug.Log($"📦 [SetAnchorContext] Final cache → Prev: {previous}, Next: {next?.ToString() ?? "null"}, Anchor: {active?.ToString() ?? "null"}");
+        // Debug.Log($"📦 [SetAnchorContext] Final cache → Prev: {previous}, Next: {next?.ToString() ?? "null"}, Anchor: {active?.ToString() ?? "null"}");
 
         CacheAnchors(previous, next, active);
     }
