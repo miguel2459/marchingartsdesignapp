@@ -81,6 +81,21 @@ public class ClickMarcherSelector : MonoBehaviour
         {
             return;
         }
+        
+        // ❌ BLOCK: Disable all selection while gizmo is active
+        if (transformGizmoManager.HasActiveGizmo)
+        {
+            Debug.Log("⛔ Selection blocked while gizmo is active.");
+    
+            if (Input.GetMouseButtonUp(0)) // Even if blocked, still clean up drag visuals
+            {
+                isDragging = false;
+                ResetSelectionBox();
+            }
+
+            return; // Full lockout
+        }
+
 
         // 🖱️ Standard desktop UI check (for mouse-over UI elements)
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
@@ -128,7 +143,7 @@ public class ClickMarcherSelector : MonoBehaviour
 
         // --- Mouse Button Held Down (Drag Update) ---
         // Only update drag logic if the gizmo is NOT active
-        if (Input.GetMouseButton(0) && !Input.GetKey(KeyCode.LeftAlt) && !transformGizmoManager.HasActiveGizmo)
+        if (Input.GetMouseButton(0) && !Input.GetKey(KeyCode.LeftAlt))
         {
             endMousePos = Input.mousePosition; // Keep updating endPos
 
@@ -175,7 +190,7 @@ public class ClickMarcherSelector : MonoBehaviour
             }
             // --- Case 1: We WERE dragging ---
             // Process drag end ONLY if gizmo wasn't active during the drag
-            if (isDragging && !transformGizmoManager.HasActiveGizmo)
+            if (isDragging)
             {
                 Debug.Log("🖱️ Drag finished.");
                 // Perform selection/deselection based on the drag rect and modifier keys
