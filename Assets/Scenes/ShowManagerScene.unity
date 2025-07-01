@@ -7368,7 +7368,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &198974907
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8608,7 +8608,7 @@ MonoBehaviour:
   debugText: {fileID: 1074220515}
   scrollAndPinch: {fileID: 218049298}
   debugPanelRoot: {fileID: 198974906}
-  isVisible: 1
+  isVisible: 0
 --- !u!1 &219078349
 GameObject:
   m_ObjectHideFlags: 0
@@ -11316,7 +11316,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330292861}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 04245f160c3972949b93bc8cd57c7e40, type: 3}
   m_Name: 
@@ -16766,7 +16766,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &515834181
 RectTransform:
   m_ObjectHideFlags: 0
@@ -55520,8 +55520,8 @@ MonoBehaviour:
   maxRatio: 0.22
   minHeight: 301.3
   maxHeight: 299.9
-  currentAspect: 0.5625626
-  currentRatio: 0.1813597
+  currentAspect: 0.562753
+  currentRatio: 0.18137652
   currentHeight: 301.3
 --- !u!1 &1632353107
 GameObject:
