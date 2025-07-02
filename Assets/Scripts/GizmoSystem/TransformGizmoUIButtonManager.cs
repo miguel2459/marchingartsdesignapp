@@ -44,7 +44,7 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
         }
         else
         {
-            CycleGizmoMode();
+            CycleOrTurnOffGizmo();
         }
     }
 
@@ -56,12 +56,25 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
         SetVisualGizmoOn();
     }
 
-    private void CycleGizmoMode()
+    private void CycleOrTurnOffGizmo()
     {
-        currentModeIndex = (currentModeIndex + 1) % gizmoModes.Length;
-        gizmoManager.SetMode(gizmoModes[currentModeIndex]);
-        UpdateButtonImage();
+        currentModeIndex++;
+
+        if (currentModeIndex >= gizmoModes.Length)
+        {
+            // Completed the cycle — turn off
+            gizmoManager.HideTransformGizmo();
+            SetVisualGizmoOff();
+            currentModeIndex = 0; // Reset to position for next use
+        }
+        else
+        {
+            // Cycle to next mode
+            gizmoManager.SetMode(gizmoModes[currentModeIndex]);
+            UpdateButtonImage();
+        }
     }
+
 
     private void SetVisualGizmoOn()
     {

@@ -122,10 +122,10 @@ public class TransformGizmoManager : MonoBehaviour
             }
         }
 
-        if (!Input.GetKey(KeyCode.LeftAlt))
-        {
-            TryHideGizmoIfClickAway();
-        }
+        // if (!Input.GetKey(KeyCode.LeftAlt))
+        // {
+        //     TryHideGizmoIfClickAway();
+        // }
     }
 
     // ========================================================

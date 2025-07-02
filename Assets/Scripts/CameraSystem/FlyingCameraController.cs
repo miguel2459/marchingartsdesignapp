@@ -10,8 +10,8 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     public float pivotDistance = 5f;
     
     [Header("Zoom Sensitivity")]
-    [SerializeField] private float desktopZoomMultiplier = 1f;
-    [SerializeField] private float touchZoomMultiplier = 0.25f;
+    [SerializeField] public float desktopZoomMultiplier = 1f;
+    [SerializeField] public float touchZoomMultiplier = 0.25f;
     
     public float focusSpeed = 5f;
     public float zoomMultiplier = 1.5f;
