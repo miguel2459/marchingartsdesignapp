@@ -173,6 +173,17 @@ public class UnifiedGizmoBehavior : MonoBehaviour
             activeAxis = "center";
         }
     }
+    
+    public void ForceHandleUpdate()
+    {
+        // Force Unity to recalculate collider transforms
+        foreach (BoxCollider col in GetComponentsInChildren<BoxCollider>())
+        {
+            col.enabled = false;
+            col.enabled = true;
+        }
+    }
+
 
     public void SetMode(GizmoMode newMode)
     {
