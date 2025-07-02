@@ -1,32 +1,36 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 public class TransformGizmoManager : MonoBehaviour
 {
+    [Header("Dependencies")]
     public GameObject unifiedGizmoPrefab;
     public Camera cam;
     public SelectedMarchers selectedMarchers;
     public SnapToGridLines snapToGrid;
     public MarcherPositionHistory history;
+    [SerializeField] private TransformGizmoUIButtonManager gizmoButtonUI;
+
+    [Header("Layer Masks")]
     public LayerMask gizmoLayer;
     public LayerMask marcherLayer;
+
+    // Internal State
     private GameObject activeGizmo;
     private GizmoMode? currentMode = GizmoMode.Position;
-    public bool isMoving = false;
-    private bool isFreeDraggingGizmo = false;
     private Plane movePlane;
     private Vector3 offset;
+    private bool isMoving = false;
+    private bool isFreeDraggingGizmo = false;
+
+    // Public Properties
     public bool HasActiveGizmo => activeGizmo != null;
     public GameObject transformGizmo => activeGizmo;
     public bool IsFreeDraggingGizmo => isFreeDraggingGizmo;
-    [SerializeField] private TransformGizmoUIButtonManager gizmoButtonUI;
+    public bool IsGizmoMoving => isMoving;
 
-
-    public bool IsGizmoActive()
-    {
-        return activeGizmo != null;
-    }
-
+    // ========================================================
+    // 🔁 Unity Lifecycle
+    // ========================================================
     void Update()
     {
         if (selectedMarchers.SelectedCount == 0)
@@ -39,77 +43,96 @@ public class TransformGizmoManager : MonoBehaviour
             return;
         }
 
+        HandleHotkeyToggle();
+        HandleMouseDown();
+        HandleShiftRelease();
+        HandleMouseUp();
+    }
+
+    // ========================================================
+    // 🔁 Event Handlers
+    // ========================================================
+    private void HandleHotkeyToggle()
+    {
         if (GizmoInputHandler.IsPositionKeyPressed()) SetMode(GizmoMode.Position);
         if (GizmoInputHandler.IsRotateKeyPressed()) SetMode(GizmoMode.Rotate);
         if (GizmoInputHandler.IsScaleKeyPressed()) SetMode(GizmoMode.Scale);
+    }
 
-        if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))
+    private void HandleMouseDown()
+    {
+        if (!Input.GetMouseButtonDown(0) || Input.GetKey(KeyCode.LeftAlt)) return;
+
+        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+
+        // ✅ Clicked gizmo: initiate drag
+        if (HasActiveGizmo && Physics.Raycast(ray, out hit, 1000f, gizmoLayer))
         {
-            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if (activeGizmo != null && Physics.Raycast(ray, out hit, 1000f, gizmoLayer))
+            if (ModifierInput.ShiftHeld)
             {
-                float distance;
+                Debug.Log("TransformGizmoManager: Shift+Clicked gizmo - initiating freeform drag.");
+                isFreeDraggingGizmo = true;
 
-                if (Input.GetKey(KeyCode.LeftShift) || MobileModifierKeyProxy.IsShiftHeld)
-                {
-                    Debug.Log("TransformGizmoManager: Shift+Clicked gizmo - initiating freeform drag.");
-                    isFreeDraggingGizmo = true;
+                movePlane = new Plane(Vector3.up, hit.point);
+                if (movePlane.Raycast(ray, out float distance))
+                    offset = ray.GetPoint(distance) - activeGizmo.transform.position;
 
-                    movePlane = new Plane(Vector3.up, hit.point);
-
-                    if (movePlane.Raycast(ray, out distance))
-                    {
-                        offset = ray.GetPoint(distance) - activeGizmo.transform.position;
-                    }
-
-                    selectedMarchers.ForEachSelected(m => m.transform.SetParent(null));
-                    return;
-                }
-                if (!Input.GetKey(KeyCode.LeftShift) || !MobileModifierKeyProxy.IsShiftHeld)
-                {
-                    Debug.Log("TransformGizmoManager: Regular gizmo click - initiating standard drag.");
-                    isMoving = true;
-                }
+                selectedMarchers.ForEachSelected(m => m.transform.SetParent(null));
+                return;
             }
-            
-            // ✅ Check for reanchor attempt (marcher layer)
-            if (Physics.Raycast(ray, out hit, 1000f, marcherLayer))
-            {
-                if (TryReanchorGizmoIfApplicable(hit))
-                {
-                    return; // Skip remaining drag logic if we reanchored
-                }
-            }
+
+            Debug.Log("TransformGizmoManager: Regular gizmo click - initiating standard drag.");
+            isMoving = true;
+            return;
         }
-        
-        // 🔄 Reset free dragging if shift is released mid-drag
-        if (isFreeDraggingGizmo && !Input.GetKey(KeyCode.LeftShift) && !MobileModifierKeyProxy.IsShiftHeld)
+
+        // ✅ Clicked marcher: try to reanchor
+        if (Physics.Raycast(ray, out hit, 1000f, marcherLayer))
+        {
+            if (TryReanchorGizmoIfApplicable(hit))
+                return;
+        }
+    }
+
+    private void HandleShiftRelease()
+    {
+        if (!isFreeDraggingGizmo) return;
+
+        if (!ModifierInput.ShiftHeld)
         {
             isFreeDraggingGizmo = false;
             selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
             Debug.Log("TransformGizmoManager: Shift released — ending freeform reanchoring.");
         }
+    }
 
-        if (Input.GetMouseButtonUp(0) && isMoving)
+    private void HandleMouseUp()
+    {
+        if (!Input.GetMouseButtonUp(0)) return;
+
+        if (isMoving)
         {
             isMoving = false;
+
             if (isFreeDraggingGizmo)
             {
                 isFreeDraggingGizmo = false;
                 selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
             }
         }
-        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt))
+
+        if (!Input.GetKey(KeyCode.LeftAlt))
         {
             TryHideGizmoIfClickAway();
         }
     }
 
+    // ========================================================
+    // 🧠 Public API
+    // ========================================================
     public void SetMode(GizmoMode mode)
     {
-        // Toggle off if current mode is active
         if (HasActiveGizmo && currentMode == mode)
         {
             HideTransformGizmo();
@@ -119,20 +142,15 @@ public class TransformGizmoManager : MonoBehaviour
 
         currentMode = mode;
 
-        // === If gizmo already exists, just switch mode without moving ===
-        if (activeGizmo)
+        if (HasActiveGizmo)
         {
             var behavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
-            if (behavior)
-            {
-                behavior.SetMode(currentMode.Value);
-            }
-            // 🔄 Notify the UI that a mode was switched via hotkey
+            behavior?.SetMode(currentMode.Value);
             gizmoButtonUI?.UpdateVisualFromExternalMode(mode);
             return;
         }
 
-        // === If no gizmo exists, create it at center of selected marchers ===
+        // 🧠 Spawn new gizmo
         Vector3 center = Vector3.zero;
         int count = 0;
         selectedMarchers.ForEachSelected(m =>
@@ -140,8 +158,7 @@ public class TransformGizmoManager : MonoBehaviour
             center += m.transform.position;
             count++;
         });
-        center /= Mathf.Max(1, count); // Avoid divide by zero
-
+        center /= Mathf.Max(1, count);
 
         activeGizmo = Instantiate(unifiedGizmoPrefab, center, Quaternion.identity, transform);
         var newBehavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
@@ -156,13 +173,13 @@ public class TransformGizmoManager : MonoBehaviour
         }
 
         selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
-        selectedMarchers.ReCacheAnchorsForSelected(); // ensures anchor state is up-to-date
-        gizmoButtonUI?.UpdateVisualFromExternalMode(mode); 
+        selectedMarchers.ReCacheAnchorsForSelected();
+        gizmoButtonUI?.UpdateVisualFromExternalMode(mode);
     }
 
     public void ReanchorGizmoToMarcher(GameObject marcher)
     {
-        if (!activeGizmo || !marcher) return;
+        if (!HasActiveGizmo || marcher == null) return;
 
         selectedMarchers.ForEachSelected(m => m.transform.SetParent(null));
 
@@ -175,21 +192,20 @@ public class TransformGizmoManager : MonoBehaviour
 
     public void HideTransformGizmo()
     {
-        if (activeGizmo != null)
+        if (!HasActiveGizmo) return;
+
+        Transform ensembleParent = selectedMarchers.director.transform;
+
+        selectedMarchers.ForEachSelected(m =>
         {
-            Transform ensembleParent = selectedMarchers.director.transform; // 👈 Get reference to EnsembleDirector2
+            if (m != null) m.transform.SetParent(ensembleParent);
+        });
 
-            selectedMarchers.ForEachSelected(m =>
-            {
-                if (m != null) m.transform.SetParent(ensembleParent);
-            });
-
-            Destroy(activeGizmo);
-            activeGizmo = null;
-            gizmoButtonUI?.SetVisualGizmoOff();
-        }
+        Destroy(activeGizmo);
+        activeGizmo = null;
+        gizmoButtonUI?.SetVisualGizmoOff();
     }
-    
+
     public bool TryReanchorGizmoIfApplicable(RaycastHit hit)
     {
         if (!HasActiveGizmo || hit.collider == null) return false;
@@ -205,17 +221,22 @@ public class TransformGizmoManager : MonoBehaviour
 
         return false;
     }
-    
+
     public void TryHideGizmoIfClickAway()
     {
         if (!HasActiveGizmo) return;
+
+        // ⛔ Block click-away from hiding if UI is active
+        if (UIInteractionBlocker.BlockSceneInputThisFrame || UIInteractionBlocker.IsTouchOverUI())
+        {
+            Debug.Log("🛑 Gizmo hide skipped due to UI interaction.");
+            return;
+        }
 
         var behavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
         if (behavior != null && behavior.IsDragging()) return;
 
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
-        // If click hits neither a marcher nor a gizmo
         if (!Physics.Raycast(ray, out _, Mathf.Infinity, marcherLayer | gizmoLayer))
         {
             Debug.Log("TransformGizmoManager: Click-away detected — hiding gizmo.");
@@ -223,20 +244,17 @@ public class TransformGizmoManager : MonoBehaviour
         }
     }
 
-
-
     public void SetActiveCamera(Camera activeCam)
     {
         cam = activeCam;
 
-        if (activeGizmo != null)
+        if (HasActiveGizmo)
         {
-            UnifiedGizmoBehavior behavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
+            var behavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
             if (behavior != null)
             {
                 behavior.cam = activeCam;
             }
         }
     }
-
 }

@@ -24,6 +24,8 @@ public class GameplayInputHandler : MonoBehaviour
         TouchInputHandler.OnTouchRotate += HandleTouchRotate;
         InputRouter.OnShiftHeldChanged += HandleShiftKey;
         InputRouter.OnControlHeldChanged += HandleControlKey;
+        //InputRouter.OnAltHeldChanged += HandleAltKey;
+
     }
 
     private void OnDisable()
@@ -44,7 +46,15 @@ public class GameplayInputHandler : MonoBehaviour
         TouchInputHandler.OnTouchRotate -= HandleTouchRotate;
         InputRouter.OnShiftHeldChanged -= HandleShiftKey;
         InputRouter.OnControlHeldChanged -= HandleControlKey;
+        //InputRouter.OnAltHeldChanged -= HandleAltKey;
+
     }
+    void Update()
+    {
+        MobileModifierKeyProxy.TickTime();
+        HandleAltStickyInput();
+    }
+
     private void HandleTouchPan(Vector2 delta)
     {
         // Only send to camera if no modifier gesture is blocking
@@ -90,5 +100,32 @@ public class GameplayInputHandler : MonoBehaviour
             MobileModifierKeyProxy.SetControlHeld(true);
         else if (MobileModifierKeyProxy.IsControlHeld)
             MobileModifierKeyProxy.SetControlHeld(false);
+    }
+    
+    private void HandleAltStickyInput()
+    {
+        bool isAltPhysicallyDown = UnityEngine.Input.GetKey(KeyCode.LeftAlt);
+        bool isMouseDown = UnityEngine.Input.GetMouseButton(0);
+        bool isAltStuck = ModifierInput.AltHeld;
+
+        if (isAltPhysicallyDown)
+        {
+            MobileModifierKeyProxy.SetAltHeld(true);
+        }
+        else
+        {
+            if (!isMouseDown && isAltStuck)
+            {
+                // Alt was released and mouse is also up → unstick immediately
+                Debug.Log("🔓 Alt immediately released (no mouse down).");
+                MobileModifierKeyProxy.ForceAltRelease(delayed: false);
+            }
+            else if (isMouseDown && isAltStuck)
+            {
+                // Alt released but mouse is still down → delay release
+                Debug.Log("⏳ Alt will release after mouse-up + delay.");
+                MobileModifierKeyProxy.ForceAltRelease(delayed: true);
+            }
+        }
     }
 }

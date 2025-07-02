@@ -279,6 +279,15 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Alt"",
+                    ""type"": ""Button"",
+                    ""id"": ""0c432750-6dac-47de-930c-76708dd0f5d3"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -622,6 +631,17 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""action"": ""Control"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4f9be170-0e19-4551-9218-534e669fd711"",
+                    ""path"": ""<Keyboard>/leftAlt"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Alt"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -651,6 +671,7 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         m_Gameplay_TouchCount = m_Gameplay.FindAction("TouchCount", throwIfNotFound: true);
         m_Gameplay_Shift = m_Gameplay.FindAction("Shift", throwIfNotFound: true);
         m_Gameplay_Control = m_Gameplay.FindAction("Control", throwIfNotFound: true);
+        m_Gameplay_Alt = m_Gameplay.FindAction("Alt", throwIfNotFound: true);
     }
 
     ~@MADAControls()
@@ -752,6 +773,7 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_TouchCount;
     private readonly InputAction m_Gameplay_Shift;
     private readonly InputAction m_Gameplay_Control;
+    private readonly InputAction m_Gameplay_Alt;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -848,6 +870,10 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Control => m_Wrapper.m_Gameplay_Control;
         /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Alt".
+        /// </summary>
+        public InputAction @Alt => m_Wrapper.m_Gameplay_Alt;
+        /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
         public InputActionMap Get() { return m_Wrapper.m_Gameplay; }
@@ -936,6 +962,9 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @Control.started += instance.OnControl;
             @Control.performed += instance.OnControl;
             @Control.canceled += instance.OnControl;
+            @Alt.started += instance.OnAlt;
+            @Alt.performed += instance.OnAlt;
+            @Alt.canceled += instance.OnAlt;
         }
 
         /// <summary>
@@ -1010,6 +1039,9 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @Control.started -= instance.OnControl;
             @Control.performed -= instance.OnControl;
             @Control.canceled -= instance.OnControl;
+            @Alt.started -= instance.OnAlt;
+            @Alt.performed -= instance.OnAlt;
+            @Alt.canceled -= instance.OnAlt;
         }
 
         /// <summary>
@@ -1197,5 +1229,12 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnControl(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Alt" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnAlt(InputAction.CallbackContext context);
     }
 }

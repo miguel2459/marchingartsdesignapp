@@ -18,6 +18,7 @@ public class InputRouter : MonoBehaviour
     public static event Action<Vector2> OnPivot;
     public static event Action<bool> OnShiftHeldChanged;
     public static event Action<bool> OnControlHeldChanged;
+    //public static event Action<bool> OnAltHeldChanged;
 
 
     private void Awake()
@@ -62,9 +63,10 @@ public class InputRouter : MonoBehaviour
         };
         controls.Gameplay.Shift.performed += ctx => OnShiftHeldChanged?.Invoke(true);
         controls.Gameplay.Shift.canceled += ctx => OnShiftHeldChanged?.Invoke(false);
-
         controls.Gameplay.Control.performed += ctx => OnControlHeldChanged?.Invoke(true);
         controls.Gameplay.Control.canceled += ctx => OnControlHeldChanged?.Invoke(false);
+        //controls.Gameplay.Alt.performed += ctx => OnAltHeldChanged?.Invoke(true);
+        //controls.Gameplay.Alt.canceled += ctx => OnAltHeldChanged?.Invoke(false);
 
     }
 

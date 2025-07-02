@@ -144,8 +144,6 @@ public class CameraModeManager : MonoBehaviour
             flyingCamera?.ApplyPivot(delta);
     }
 
-
-
     public void ReapplyActiveCameraMode()
     {
         if (topDownCamComponent.gameObject.activeSelf)

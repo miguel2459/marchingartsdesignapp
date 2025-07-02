@@ -26,7 +26,7 @@ public class UndoManager : MonoBehaviour
 
                 // 🧹 Clear selection and gizmo BEFORE undo
                 selectedMarchers?.ClearSelection();
-                if (transformGizmoManager.IsGizmoActive())
+                if (transformGizmoManager.HasActiveGizmo)
                 {
                     transformGizmoManager.HideTransformGizmo();
                     Debug.Log("🔧 Gizmo hidden after undo.");
@@ -63,7 +63,7 @@ public class UndoManager : MonoBehaviour
                 positionHistory.Redo();
             }
 
-            if (transformGizmoManager.IsGizmoActive())
+            if (transformGizmoManager.HasActiveGizmo)
             {
                 transformGizmoManager.HideTransformGizmo();
                 Debug.Log("🔧 Gizmo hidden after redo.");

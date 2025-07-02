@@ -132,7 +132,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         Vector3 targetFocus;
         float targetDistance;
 
-        if (gizmoManager != null && gizmoManager.IsGizmoActive())
+        if (gizmoManager != null && gizmoManager.HasActiveGizmo)
         {
             targetFocus = gizmoManager.transformGizmo.transform.position;
             targetDistance = targetFocusDistance;

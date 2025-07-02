@@ -25,6 +25,12 @@ public class ScrollAndPinch : MonoBehaviour
 
     private void Update()
     {
+        if (Input.touchCount >= 2 && !MobileModifierKeyProxy.IsAltHeld)
+        {
+            Debug.Log("🤚 Activating Alt via touch gesture.");
+            MobileModifierKeyProxy.SetAltHeld(true);
+        }
+
         if (Input.touchCount == 2)
         {
             Touch touch0 = Input.GetTouch(0);
@@ -100,6 +106,11 @@ public class ScrollAndPinch : MonoBehaviour
                 Camera.transform.RotateAround(mid, Plane.normal, angle);
                 Debug.Log($"🔄 Rotate angle: {angle:F2} degrees");
             }
+        }
+        if (Input.touchCount == 0 && MobileModifierKeyProxy.IsAltHeld)
+        {
+            Debug.Log("🧼 Touch ended — scheduling Alt unstick.");
+            MobileModifierKeyProxy.ForceAltRelease(delayed: true);
         }
     }
 

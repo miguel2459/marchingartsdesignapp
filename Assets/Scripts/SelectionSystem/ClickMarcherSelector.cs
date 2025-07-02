@@ -93,7 +93,7 @@ public class ClickMarcherSelector : MonoBehaviour
         // ===============================
         // 👇 Mouse Button Down
         // ===============================
-        if (Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftAlt))
+        if (Input.GetMouseButtonDown(0) && !ModifierInput.AltHeld)
         {
             startMousePos = Input.mousePosition;
             isDragging = false;
@@ -109,7 +109,7 @@ public class ClickMarcherSelector : MonoBehaviour
         // ===============================
         // ✏️ Mouse Held (Drag)
         // ===============================
-        if (Input.GetMouseButton(0) && !Input.GetKey(KeyCode.LeftAlt))
+        if (Input.GetMouseButton(0) && !ModifierInput.AltHeld)
         {
             endMousePos = Input.mousePosition;
 
@@ -140,7 +140,7 @@ public class ClickMarcherSelector : MonoBehaviour
         // ===============================
         // 🖱️ Mouse Button Up (Click or Drag End)
         // ===============================
-        if (Input.GetMouseButtonUp(0) && !Input.GetKey(KeyCode.LeftAlt))
+        if (Input.GetMouseButtonUp(0) && !ModifierInput.AltHeld)
         {
             if (dragSelectorLocked)
             {

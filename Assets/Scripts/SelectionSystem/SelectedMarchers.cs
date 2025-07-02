@@ -36,7 +36,7 @@ public class SelectedMarchers : MonoBehaviour
     }
     private void Update()
     {
-        if (SelectedCount > 0 && transformGizmoManager != null && transformGizmoManager.isMoving)
+        if (SelectedCount > 0 && transformGizmoManager != null && transformGizmoManager.IsGizmoMoving)
         {
             //Debug.Log($"[Update] SelectedCount={SelectedCount}, IsMoving={transformGizmoManager?.isMoving}");
             dashedPathPreviewManager?.UpdatePreviewCycle();
@@ -89,8 +89,6 @@ public class SelectedMarchers : MonoBehaviour
     public void ClearSelection()
     {
         selectionManager.ClearAndResetVisuals(); // includes ClearAll()
-        transformGizmoManager?.HideTransformGizmo();
-        transformGizmoManager.isMoving = false;
 
         Debug.Log("SelectedMarchers: 🧹 Selection cleared and marchers recolored to progress state.");
     }

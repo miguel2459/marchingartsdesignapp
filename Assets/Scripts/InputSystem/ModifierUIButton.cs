@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class ModifierUIButton : MonoBehaviour, IPointerClickHandler
 {
-    public enum ModifierType { Shift, Control }
+    public enum ModifierType { Shift, Control, Alt }
     public ModifierType modifierKey = ModifierType.Shift;
 
     [Header("Optional Visuals")]
@@ -23,7 +23,10 @@ public class ModifierUIButton : MonoBehaviour, IPointerClickHandler
         {
             MobileModifierKeyProxy.ToggleControl();
         }
-        // No direct call to UpdateVisual here — OnModifierStateChanged handles it
+        else if (modifierKey == ModifierType.Alt)
+        {
+            MobileModifierKeyProxy.ToggleAlt();
+        }
     }
 
     private void UpdateVisual(bool isActive)
@@ -57,8 +60,10 @@ public class ModifierUIButton : MonoBehaviour, IPointerClickHandler
     {
         bool isActive = modifierKey == ModifierType.Shift
             ? MobileModifierKeyProxy.IsShiftHeld
-            : MobileModifierKeyProxy.IsControlHeld;
-
+            : modifierKey == ModifierType.Control
+                ? MobileModifierKeyProxy.IsControlHeld
+                : MobileModifierKeyProxy.IsAltHeld;
+        
         UpdateVisual(isActive);
     }
 
