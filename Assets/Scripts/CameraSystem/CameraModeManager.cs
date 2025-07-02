@@ -103,19 +103,19 @@ public class CameraModeManager : MonoBehaviour
 
     	Debug.Log($"📸 Camera focus updated to {(selected.SelectedCount > 0 ? "selected" : "all")} marchers.");
 	}
-
     public void HandleZoomIntent(float delta)
+    {
+        HandleZoomIntent(delta, isTouch: false);
+    }
+    
+    public void HandleZoomIntent(float delta, bool isTouch)
     {
         if (IsInputBlocked()) return;
 
         if (isTopDownActive)
-        {
-            topDownCamera?.ApplyZoom(delta);
-        }
+            topDownCamera?.ApplyZoom(delta, isTouch);
         else
-        {
-            flyingCamera?.ApplyZoom(delta);
-        }
+            flyingCamera?.ApplyZoom(delta, isTouch); // still unchanged
     }
 
     public void HandlePanIntent(Vector2 delta)

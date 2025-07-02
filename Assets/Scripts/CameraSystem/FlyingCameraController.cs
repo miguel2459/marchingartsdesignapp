@@ -9,6 +9,10 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     public float panSpeed = 0.3f;
     public float pivotDistance = 5f;
     
+    [Header("Zoom Sensitivity")]
+    [SerializeField] private float desktopZoomMultiplier = 1f;
+    [SerializeField] private float touchZoomMultiplier = 0.25f;
+    
     public float focusSpeed = 5f;
     public float zoomMultiplier = 1.5f;
     public float additionalDistanceFactor = 1.2f;
@@ -47,13 +51,12 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     void Update()
     {
         if (!isActive) return;
-        if (isMobile) return; // 🚫 Skip keyboard/mouse input on mobile
-
         if (isFocusing)
         {
             if (HandleUserInputInterrupt()) isFocusing = false;
             else MoveCameraToFocus();
         }
+        if (isMobile) return; // 🚫 Skip keyboard/mouse input on mobile
     }
 
     public void Enable() => isActive = true;
@@ -79,9 +82,12 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         //Debug.Log($"[FlyingCameraController] 🧭 SetInitialTransform — Position: {transform.position}, Rotation: {transform.rotation}");
     }
 
-    public void ApplyZoom(float delta)
+    public void ApplyZoom(float delta, bool isTouch)
     {
-        transform.position += transform.forward * delta * zoomSpeed * Time.deltaTime;
+        float multiplier = isTouch ? touchZoomMultiplier : desktopZoomMultiplier;
+        float adjustedDelta = delta * zoomSpeed * multiplier * Time.deltaTime;
+
+        transform.position += transform.forward * adjustedDelta;
         ClampPositionToBounds();
     }
 

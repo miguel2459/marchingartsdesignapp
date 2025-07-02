@@ -104,8 +104,8 @@ public class GameplayInputHandler : MonoBehaviour
     
     private void HandleAltStickyInput()
     {
-        bool isAltPhysicallyDown = UnityEngine.Input.GetKey(KeyCode.LeftAlt);
-        bool isMouseDown = UnityEngine.Input.GetMouseButton(0);
+        bool isAltPhysicallyDown = Input.GetKey(KeyCode.LeftAlt);
+        bool isMouseDown = Input.GetMouseButton(0);
         bool isAltStuck = ModifierInput.AltHeld;
 
         if (isAltPhysicallyDown)
@@ -117,13 +117,13 @@ public class GameplayInputHandler : MonoBehaviour
             if (!isMouseDown && isAltStuck)
             {
                 // Alt was released and mouse is also up → unstick immediately
-                Debug.Log("🔓 Alt immediately released (no mouse down).");
+                // Debug.Log("🔓 Alt immediately released (no mouse down).");
                 MobileModifierKeyProxy.ForceAltRelease(delayed: false);
             }
             else if (isMouseDown && isAltStuck)
             {
                 // Alt released but mouse is still down → delay release
-                Debug.Log("⏳ Alt will release after mouse-up + delay.");
+                // Debug.Log("⏳ Alt will release after mouse-up + delay.");
                 MobileModifierKeyProxy.ForceAltRelease(delayed: true);
             }
         }

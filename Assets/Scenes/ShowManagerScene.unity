@@ -7368,7 +7368,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &198974907
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8587,6 +8587,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   zoomMode: 0
+  cameraModeManager: {fileID: 218049296}
   Camera: {fileID: 963194227}
   Rotate: 1
   DecreaseCameraPanSpeed: 1
@@ -8608,7 +8609,7 @@ MonoBehaviour:
   debugText: {fileID: 1074220515}
   scrollAndPinch: {fileID: 218049298}
   debugPanelRoot: {fileID: 198974906}
-  isVisible: 0
+  isVisible: 1
 --- !u!1 &219078349
 GameObject:
   m_ObjectHideFlags: 0
@@ -11315,7 +11316,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330292861}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 04245f160c3972949b93bc8cd57c7e40, type: 3}
   m_Name: 
@@ -16901,7 +16902,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &515834181
 RectTransform:
   m_ObjectHideFlags: 0
@@ -70631,6 +70632,8 @@ MonoBehaviour:
   maxOrthoSize: 30
   zoomSpeed: 1500
   panSpeed: 20
+  desktopZoomMultiplier: 1
+  touchZoomMultiplier: 0.01
   yHeightMultiplier: 1.5
   minX: 0
   maxX: 53
@@ -75238,6 +75241,8 @@ MonoBehaviour:
   zoomSpeed: 1000
   panSpeed: 0.1
   pivotDistance: 5
+  desktopZoomMultiplier: 1
+  touchZoomMultiplier: 0.01
   focusSpeed: 5
   zoomMultiplier: 1.5
   additionalDistanceFactor: 1.2

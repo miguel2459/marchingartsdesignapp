@@ -11,6 +11,10 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
     public float maxOrthoSize = 30f;
     public float zoomSpeed = 100f;
     public float panSpeed = 0.3f;
+    
+    [Header("Zoom Sensitivity")]
+    public float desktopZoomMultiplier = 1f;
+    public float touchZoomMultiplier = 0.2f;
 
     [Header("Initial Fallback Height Logic")]
     public float yHeightMultiplier = 1.5f;
@@ -122,12 +126,14 @@ public class TopDownCameraController : MonoBehaviour, ICameraFocusHandler
         currentOrthoSize = orthoSize;
     }
     
-    public void ApplyZoom(float delta)
+    public void ApplyZoom(float delta, bool isTouch)
     {
-        currentOrthoSize -= delta * zoomSpeed * Time.deltaTime;
+        float multiplier = isTouch ? touchZoomMultiplier : desktopZoomMultiplier;
+        float adjustedDelta = delta * zoomSpeed * multiplier * Time.deltaTime;
+
+        currentOrthoSize -= adjustedDelta;
         currentOrthoSize = Mathf.Clamp(currentOrthoSize, minOrthoSize, maxOrthoSize);
-        if (cam != null)
-            cam.orthographicSize = currentOrthoSize;
+        cam.orthographicSize = currentOrthoSize;
     }
 
     public void ApplyPan(Vector2 delta)

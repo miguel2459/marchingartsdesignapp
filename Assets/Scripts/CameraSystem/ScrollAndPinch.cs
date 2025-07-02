@@ -4,6 +4,7 @@ public class ScrollAndPinch : MonoBehaviour
 {
     public enum ZoomMode { Forward, Vertical }
     public ZoomMode zoomMode = ZoomMode.Forward;
+    [SerializeField] private CameraModeManager cameraModeManager;
 
     public Camera Camera;
     public bool Rotate;
@@ -65,37 +66,45 @@ public class ScrollAndPinch : MonoBehaviour
             float deltaMagnitudeDiff = currentTouchDeltaMag - prevTouchDeltaMag;
 
             Vector3 camBeforeZoom = Camera.transform.position;
-
+            
             // === Determine Zoom Direction ===
             Vector3 zoomDirection = zoomMode == ZoomMode.Vertical
                 ? Vector3.up
                 : Camera.transform.forward;
 
-            Camera.transform.position += zoomDirection * (deltaMagnitudeDiff * zoomSensitivity);
-
-            float y = Camera.transform.position.y;
-            float baseY = cameraStartPosition.y;
-
-            Debug.Log($"🔍 Zoom DeltaMag: {deltaMagnitudeDiff:F4}, Cam Y: {y:F2}");
-
-            // === Clamp zoom bounds ===
-            if (zoomMode == ZoomMode.Vertical)
+            if (cameraModeManager != null)
             {
-                if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
-                {
-                    Debug.LogWarning($"⛔ Zoom clamped: Y={y:F2} (allowed: {baseY - CameraLowerHeightBound:F2} to {baseY + CameraUpperHeightBound:F2})");
-                    Camera.transform.position = camBeforeZoom;
-                }
+                Debug.Log($"📲 Calling HandleZoomIntent with delta: {deltaMagnitudeDiff}");
+                cameraModeManager.HandleZoomIntent(deltaMagnitudeDiff, isTouch: true);
             }
-            else
+
+            Debug.Log($"🔍 Zoom DeltaMag: {deltaMagnitudeDiff:F4}, Cam Y: {Camera.transform.position.y:F2}");
+
+            // === Clamp zoom bounds — only for non-top-down 3D camera ===
+            if (!cameraModeManager.IsTopDown())
             {
-                float camDistanceToCenter = Vector3.Distance(Camera.transform.position, new Vector3(26.25f, Camera.transform.position.y, 60f)); // center of field
-                float startDistance = Vector3.Distance(cameraStartPosition, new Vector3(26.25f, cameraStartPosition.y, 60f));
-                if (camDistanceToCenter > startDistance + CameraUpperHeightBound ||
-                    camDistanceToCenter < startDistance - CameraLowerHeightBound)
+                if (zoomMode == ZoomMode.Vertical)
                 {
-                    Debug.LogWarning($"⛔ Zoom clamped: Distance={camDistanceToCenter:F2} (allowed: {startDistance - CameraLowerHeightBound:F2} to {startDistance + CameraUpperHeightBound:F2})");
-                    Camera.transform.position = camBeforeZoom;
+                    float y = Camera.transform.position.y;
+                    float baseY = cameraStartPosition.y;
+
+                    if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
+                    {
+                        Debug.LogWarning($"⛔ Zoom clamped: Y={y:F2} (allowed: {baseY - CameraLowerHeightBound:F2} to {baseY + CameraUpperHeightBound:F2})");
+                        Camera.transform.position = camBeforeZoom;
+                    }
+                }
+                else
+                {
+                    float camDistanceToCenter = Vector3.Distance(Camera.transform.position, new Vector3(26.25f, Camera.transform.position.y, 60f));
+                    float startDistance = Vector3.Distance(cameraStartPosition, new Vector3(26.25f, cameraStartPosition.y, 60f));
+
+                    if (camDistanceToCenter > startDistance + CameraUpperHeightBound ||
+                        camDistanceToCenter < startDistance - CameraLowerHeightBound)
+                    {
+                        Debug.LogWarning($"⛔ Zoom clamped: Distance={camDistanceToCenter:F2} (allowed: {startDistance - CameraLowerHeightBound:F2} to {startDistance + CameraUpperHeightBound:F2})");
+                        Camera.transform.position = camBeforeZoom;
+                    }
                 }
             }
 
