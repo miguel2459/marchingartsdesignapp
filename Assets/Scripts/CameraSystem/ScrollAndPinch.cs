@@ -20,7 +20,7 @@ public class ScrollAndPinch : MonoBehaviour
     public float maxZoomOutDistance = 30f;
     public float maxZoomInDistance = 10f;
 
-    private Plane Plane;
+    private Plane plane;
     private Vector3 cameraStartPosition;
 
     private void Awake()
@@ -33,9 +33,10 @@ public class ScrollAndPinch : MonoBehaviour
 
     private void Update()
     {
+        //Turn on Alt modifier once two or more fingers are on screen. To avoid interacting with SelectedMarchers
         if (Input.touchCount >= 2 && !MobileModifierKeyProxy.IsAltHeld)
         {
-            Debug.Log("🤚 Activating Alt via touch gesture.");
+            //Debug.Log("🤚 Activating Alt via touch gesture.");
             MobileModifierKeyProxy.SetAltHeld(true);
         }
 
@@ -44,7 +45,7 @@ public class ScrollAndPinch : MonoBehaviour
             Touch touch0 = Input.GetTouch(0);
             Touch touch1 = Input.GetTouch(1);
 
-            Plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0.1f, 0));
+            plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0.1f, 0));
 
             Vector2 touch0PrevPos = touch0.position - touch0.deltaPosition;
             Vector2 touch1PrevPos = touch1.position - touch1.deltaPosition;
@@ -84,8 +85,8 @@ public class ScrollAndPinch : MonoBehaviour
             // === Rotate ===
             if (Rotate && pos1Prev != pos1)
             {
-                float angle = Vector3.SignedAngle(pos1 - pos0, pos1Prev - pos0Prev, Plane.normal);
-                Camera.transform.RotateAround(mid, Plane.normal, angle * touchRotateSpeed);
+                float angle = Vector3.SignedAngle(pos1 - pos0, pos1Prev - pos0Prev, plane.normal);
+                Camera.transform.RotateAround(mid, plane.normal, angle * touchRotateSpeed);
                 Debug.Log($"🔄 Rotate angle: {angle:F2} degrees");
             }
         }
@@ -113,7 +114,7 @@ public class ScrollAndPinch : MonoBehaviour
     protected Vector3 PlanePosition(Vector2 screenPos)
     {
         Ray ray = Camera.ScreenPointToRay(screenPos);
-        if (Plane.Raycast(ray, out float enter))
+        if (plane.Raycast(ray, out float enter))
         {
             Vector3 hit = ray.GetPoint(enter);
             Debug.Log($"✅ Ray hit at: {hit}");
@@ -126,7 +127,7 @@ public class ScrollAndPinch : MonoBehaviour
 
     public Vector3 DebugPlanePosition(Vector2 screenPos)
     {
-        Plane.SetNormalAndPosition(Vector3.up, Vector3.zero);
+        plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0.1f, 0));
         return PlanePosition(screenPos);
     }
 

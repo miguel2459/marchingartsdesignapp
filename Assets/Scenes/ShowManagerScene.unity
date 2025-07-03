@@ -8788,8 +8788,8 @@ MonoBehaviour:
   Camera: {fileID: 963194227}
   Rotate: 1
   touchPanSpeed: 1
-  touchZoomSensitivity: 1
-  touchRotateSpeed: 1
+  touchZoomSensitivity: 0.01
+  touchRotateSpeed: 0.5
   maxZoomOutDistance: 30
   maxZoomInDistance: 10
 --- !u!114 &218049299
