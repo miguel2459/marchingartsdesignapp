@@ -80,39 +80,63 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                 Vector3 targetPos = ray.GetPoint(distance) - offset;
                 targetPos.y = transform.position.y; // lock Y-axis
 
+                // Compute mouse drag projected onto screen-space axis
+                Vector2 mouseDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
+                Vector3 axisWorld = activeAxis switch
+                {
+                    "x" => transform.right,
+                    "z" => transform.forward,
+                    _ => Vector3.zero
+                };
+
+                Vector3 screenStart = cam.WorldToScreenPoint(transform.position);
+                Vector3 screenEnd = cam.WorldToScreenPoint(transform.position + axisWorld);
+                Vector2 axisScreenDir = (screenEnd - screenStart).normalized;
+
+                float projectedDelta = (activeAxis == "center") ? 0f : Vector2.Dot(mouseDelta, axisScreenDir);
+
                 if (mode == GizmoMode.Position)
                 {
                     if (Input.GetKey(KeyCode.Q))
-                    {
                         targetPos = snapToGrid.GetSnappedGizmoPosition(targetPos);
-                    }
 
                     Vector3 newPos = transform.position;
-                    if (activeAxis == "x" || activeAxis == "center")
+
+                    if (activeAxis == "x")
+                    {
+                        newPos.x += projectedDelta * 0.1f;
+                        newPos.x = Mathf.Clamp(newPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
+                    }
+                    else if (activeAxis == "z")
+                    {
+                        newPos.z += projectedDelta * 0.1f;
+                        newPos.z = Mathf.Clamp(newPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
+                    }
+                    else // center: use targetPos directly
+                    {
                         newPos.x = Mathf.Clamp(targetPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
-                    if (activeAxis == "z" || activeAxis == "center")
                         newPos.z = Mathf.Clamp(targetPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
+                    }
 
                     transform.position = newPos;
 
-                    // Clamp each marcher to field bounds (post-move)
                     selectedMarchers.ForEachSelected(marcher =>
                     {
                         Vector3 pos = marcher.transform.position;
                         pos.x = Mathf.Clamp(pos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
                         pos.z = Mathf.Clamp(pos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
-                        marcher.transform.position = pos;               
+                        marcher.transform.position = pos;
                     });
                 }
 
                 else if ((mode == GizmoMode.Rotate || mode == GizmoMode.Scale) && gizmoManager != null && !gizmoManager.IsFreeDraggingGizmo)
                 {
-                    Debug.Log($"🔁 Manipulating mode {mode} with axis {activeAxis} | IsFreeDragging: {gizmoManager.IsFreeDraggingGizmo}");
-                    float mouseDelta = Input.GetAxis("Mouse X");
+                    float effectiveDelta = (activeAxis == "center") ? mouseDelta.x : projectedDelta;
+                    Debug.Log($"🔁 Manipulating mode {mode} with axis {activeAxis} | Δscreen: {effectiveDelta}");
 
                     if (mode == GizmoMode.Rotate)
                     {
-                        transform.Rotate(Vector3.up, mouseDelta * 5f);
+                        transform.Rotate(Vector3.up, effectiveDelta * 5f);
 
                         selectedMarchers.ForEachSelected(marcher =>
                         {
@@ -124,7 +148,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     }
                     else if (mode == GizmoMode.Scale)
                     {
-                        float scaleFactor = 1 + mouseDelta * 0.05f;
+                        float scaleFactor = 1 + effectiveDelta * 0.05f;
                         scaleFactor = Mathf.Clamp(scaleFactor, 0.5f, 2f);
 
                         Vector3 gizmoPos = transform.position;
@@ -151,6 +175,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                 }
             }
         }
+
 
         if (Input.GetMouseButtonUp(0) && isDragging)
         {

@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System;
 
-public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
+public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
 {
     [Header("Dependencies")]
     public TransformGizmoManager gizmoManager;
@@ -22,15 +22,40 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
     private int currentModeIndex = 0;
     private bool isGizmoActive = false;
 
-
+    // Hold detection
+    private float holdDuration = 0.4f;
+    private float holdTimer = 0f;
+    private bool isPointerDown = false;
+    private bool hasTriggeredHold = false;
     void Start()
     {
         SetVisualGizmoOff();
         gizmoUIButton.interactable = true; // Always interactable
     }
+    
+    void Update()
+    {
+        if (isPointerDown)
+        {
+            holdTimer += Time.unscaledDeltaTime;
+
+            if (!hasTriggeredHold && holdTimer >= holdDuration)
+            {
+                if (isGizmoActive)
+                {
+                    gizmoManager.HideTransformGizmo();
+                    SetVisualGizmoOff();
+                    hasTriggeredHold = true;
+                    Debug.Log("📴 Gizmo turned OFF by holding button.");
+                }
+            }
+        }
+    }
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (hasTriggeredHold) return;
+        
         if (!isGizmoActive)
         {
             if (selectedMarchers.SelectedCount > 0)
@@ -44,8 +69,20 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
         }
         else
         {
-            CycleOrTurnOffGizmo();
+            CycleToNextMode();
         }
+    }
+    
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        isPointerDown = true;
+        holdTimer = 0f;
+        hasTriggeredHold = false;
+    }
+
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        isPointerDown = false;
     }
 
     public void ActivateGizmo(GizmoMode mode)
@@ -56,23 +93,11 @@ public class TransformGizmoUIButtonManager : MonoBehaviour, IPointerClickHandler
         SetVisualGizmoOn();
     }
 
-    private void CycleOrTurnOffGizmo()
+    private void CycleToNextMode()
     {
-        currentModeIndex++;
-
-        if (currentModeIndex >= gizmoModes.Length)
-        {
-            // Completed the cycle — turn off
-            gizmoManager.HideTransformGizmo();
-            SetVisualGizmoOff();
-            currentModeIndex = 0; // Reset to position for next use
-        }
-        else
-        {
-            // Cycle to next mode
-            gizmoManager.SetMode(gizmoModes[currentModeIndex]);
-            UpdateButtonImage();
-        }
+        currentModeIndex = (currentModeIndex + 1) % gizmoModes.Length;
+        gizmoManager.SetMode(gizmoModes[currentModeIndex]);
+        UpdateButtonImage();
     }
 
 
