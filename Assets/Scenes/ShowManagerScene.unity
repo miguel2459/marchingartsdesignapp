@@ -9379,11 +9379,8 @@ MonoBehaviour:
   Camera: {fileID: 963194227}
   Rotate: 0
   touchPanSpeed: 1.5
-  touchZoomSensitivity: 0.002
-  touchYawSpeed: 0.1
-  touchPitchSpeed: 0
-  minPitchClamp: 20
-  maxPitchClamp: 80
+  touchZoomSensitivity: 0.001
+  touchRotateSpeed: 0.3
 --- !u!114 &218049299
 MonoBehaviour:
   m_ObjectHideFlags: 0
