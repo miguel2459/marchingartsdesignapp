@@ -43,21 +43,25 @@ public class CameraTunerUIBuilder : EditorWindow
     {
         Undo.RegisterFullObjectHierarchyUndo(panelRoot, "Generate Camera Tuner Fields");
 
+        // ✈️ Flying Camera (Desktop)
         AddField("FlyingCam: rotationSpeed", flyingCam.rotationSpeed.ToString("F2"));
         AddField("FlyingCam: zoomSpeed", flyingCam.zoomSpeed.ToString("F2"));
+        AddField("FlyingCam: zoomMultiplier", flyingCam.zoomMultiplier.ToString("F2"));
         AddField("FlyingCam: panSpeed", flyingCam.panSpeed.ToString("F2"));
-        AddField("FlyingCam: desktopZoomMultiplier", flyingCam.desktopZoomMultiplier.ToString("F2"));
-        AddField("FlyingCam: touchZoomMultiplier", flyingCam.touchZoomMultiplier.ToString("F2"));
 
+        // 🛰 TopDown Camera (Desktop)
         AddField("TopDownCam: zoomSpeed", topDownCam.zoomSpeed.ToString("F2"));
+        AddField("TopDownCam: zoomMultiplier", topDownCam.zoomMultiplier.ToString("F2"));
         AddField("TopDownCam: panSpeed", topDownCam.panSpeed.ToString("F2"));
-        AddField("TopDownCam: desktopZoomMultiplier", topDownCam.desktopZoomMultiplier.ToString("F2"));
-        AddField("TopDownCam: touchZoomMultiplier", topDownCam.touchZoomMultiplier.ToString("F2"));
 
-        AddField("ScrollAndPinch: zoomSensitivity", scrollAndPinch.zoomSensitivity.ToString("F2"));
-        AddField("ScrollAndPinch: CameraUpperHeightBound", scrollAndPinch.CameraUpperHeightBound.ToString("F2"));
-        AddField("ScrollAndPinch: CameraLowerHeightBound", scrollAndPinch.CameraLowerHeightBound.ToString("F2"));
-        AddField("ScrollAndPinch: DecreaseCameraPanSpeed", scrollAndPinch.DecreaseCameraPanSpeed.ToString("F2"));
+        // 🤏 Scroll & Pinch (Touch Controls)
+        AddField("Touch: Pan Speed", scrollAndPinch.touchPanSpeed.ToString("F2"));
+        AddField("Touch: Zoom Sensitivity", scrollAndPinch.touchZoomSensitivity.ToString("F2"));
+        AddField("Touch: Rotate Speed", scrollAndPinch.touchRotateSpeed.ToString("F2"));
+
+        // 🚫 Zoom Clamp Bounds
+        AddField("Touch: Max Zoom Out Distance", scrollAndPinch.maxZoomOutDistance.ToString("F2"));
+        AddField("Touch: Max Zoom In Distance", scrollAndPinch.maxZoomInDistance.ToString("F2"));
 
         Debug.Log("✅ Camera tuning fields generated in UI panel.");
     }

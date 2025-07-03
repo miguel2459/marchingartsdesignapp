@@ -4,16 +4,23 @@ public class ScrollAndPinch : MonoBehaviour
 {
     public enum ZoomMode { Forward, Vertical }
     public ZoomMode zoomMode = ZoomMode.Forward;
+
     [SerializeField] private CameraModeManager cameraModeManager;
 
+    [Header("Camera Reference")]
     public Camera Camera;
     public bool Rotate;
-    protected Plane Plane;
-    public float DecreaseCameraPanSpeed = 1;
-    public float CameraUpperHeightBound;
-    public float CameraLowerHeightBound;
-    public float zoomSensitivity = 0.01f;
 
+    [Header("Touch Pan, Zoom, Rotate")]
+    public float touchPanSpeed = 1f;
+    public float touchZoomSensitivity = 1f;
+    public float touchRotateSpeed = 1f;
+
+    [Header("Zoom Clamps (relative to start)")]
+    public float maxZoomOutDistance = 30f;
+    public float maxZoomInDistance = 10f;
+
+    private Plane Plane;
     private Vector3 cameraStartPosition;
 
     private void Awake()
@@ -39,14 +46,9 @@ public class ScrollAndPinch : MonoBehaviour
 
             Plane.SetNormalAndPosition(Vector3.up, new Vector3(0, 0.1f, 0));
 
-            // === Capture Previous and Current Finger Positions ===
             Vector2 touch0PrevPos = touch0.position - touch0.deltaPosition;
             Vector2 touch1PrevPos = touch1.position - touch1.deltaPosition;
 
-            Debug.Log($"🖐 Touch0 pos: {touch0.position}, delta: {touch0.deltaPosition}");
-            Debug.Log($"🖐 Touch1 pos: {touch1.position}, delta: {touch1.deltaPosition}");
-
-            // === Project to Plane ===
             Vector3 pos0 = PlanePosition(touch0.position);
             Vector3 pos1 = PlanePosition(touch1.position);
             Vector3 pos0Prev = PlanePosition(touch0PrevPos);
@@ -55,67 +57,39 @@ public class ScrollAndPinch : MonoBehaviour
             // === Pan ===
             Vector3 mid = (pos0 + pos1) * 0.5f;
             Vector3 midPrev = (pos0Prev + pos1Prev) * 0.5f;
-            Vector3 panDelta = (midPrev - mid) / DecreaseCameraPanSpeed;
+            Vector3 panDelta = (midPrev - mid) * touchPanSpeed;
             Camera.transform.Translate(panDelta, Space.World);
-
             Debug.Log($"📦 Pan applied: {panDelta}");
 
-            // === Zoom (Screen Distance) ===
-            float prevTouchDeltaMag = (touch0PrevPos - touch1PrevPos).magnitude;
-            float currentTouchDeltaMag = (touch0.position - touch1.position).magnitude;
-            float deltaMagnitudeDiff = currentTouchDeltaMag - prevTouchDeltaMag;
+            // === Zoom ===
+            float prevDist = (touch0PrevPos - touch1PrevPos).magnitude;
+            float currDist = (touch0.position - touch1.position).magnitude;
+            float deltaMagnitudeDiff = (currDist - prevDist) * touchZoomSensitivity;
 
             Vector3 camBeforeZoom = Camera.transform.position;
-            
-            // === Determine Zoom Direction ===
-            Vector3 zoomDirection = zoomMode == ZoomMode.Vertical
-                ? Vector3.up
-                : Camera.transform.forward;
 
             if (cameraModeManager != null)
             {
                 Debug.Log($"📲 Calling HandleZoomIntent with delta: {deltaMagnitudeDiff}");
-                cameraModeManager.HandleZoomIntent(deltaMagnitudeDiff, isTouch: true);
+                cameraModeManager.HandleZoomIntent(deltaMagnitudeDiff);
             }
 
-            Debug.Log($"🔍 Zoom DeltaMag: {deltaMagnitudeDiff:F4}, Cam Y: {Camera.transform.position.y:F2}");
+            Debug.Log($"🔍 Zoom deltaMag: {deltaMagnitudeDiff:F4}, Cam Y: {Camera.transform.position.y:F2}");
 
-            // === Clamp zoom bounds — only for non-top-down 3D camera ===
             if (!cameraModeManager.IsTopDown())
             {
-                if (zoomMode == ZoomMode.Vertical)
-                {
-                    float y = Camera.transform.position.y;
-                    float baseY = cameraStartPosition.y;
-
-                    if (y > baseY + CameraUpperHeightBound || y < baseY - CameraLowerHeightBound || y <= 1f)
-                    {
-                        Debug.LogWarning($"⛔ Zoom clamped: Y={y:F2} (allowed: {baseY - CameraLowerHeightBound:F2} to {baseY + CameraUpperHeightBound:F2})");
-                        Camera.transform.position = camBeforeZoom;
-                    }
-                }
-                else
-                {
-                    float camDistanceToCenter = Vector3.Distance(Camera.transform.position, new Vector3(26.25f, Camera.transform.position.y, 60f));
-                    float startDistance = Vector3.Distance(cameraStartPosition, new Vector3(26.25f, cameraStartPosition.y, 60f));
-
-                    if (camDistanceToCenter > startDistance + CameraUpperHeightBound ||
-                        camDistanceToCenter < startDistance - CameraLowerHeightBound)
-                    {
-                        Debug.LogWarning($"⛔ Zoom clamped: Distance={camDistanceToCenter:F2} (allowed: {startDistance - CameraLowerHeightBound:F2} to {startDistance + CameraUpperHeightBound:F2})");
-                        Camera.transform.position = camBeforeZoom;
-                    }
-                }
+                ClampZoom(camBeforeZoom);
             }
 
             // === Rotate ===
             if (Rotate && pos1Prev != pos1)
             {
                 float angle = Vector3.SignedAngle(pos1 - pos0, pos1Prev - pos0Prev, Plane.normal);
-                Camera.transform.RotateAround(mid, Plane.normal, angle);
+                Camera.transform.RotateAround(mid, Plane.normal, angle * touchRotateSpeed);
                 Debug.Log($"🔄 Rotate angle: {angle:F2} degrees");
             }
         }
+
         if (Input.touchCount == 0 && MobileModifierKeyProxy.IsAltHeld)
         {
             Debug.Log("🧼 Touch ended — scheduling Alt unstick.");
@@ -123,14 +97,27 @@ public class ScrollAndPinch : MonoBehaviour
         }
     }
 
+    private void ClampZoom(Vector3 camBeforeZoom)
+    {
+        float currentY = Camera.transform.position.y;
+        float startY = cameraStartPosition.y;
+
+        float deltaY = currentY - startY;
+        if (deltaY > maxZoomOutDistance || deltaY < -maxZoomInDistance || currentY <= 1f)
+        {
+            Debug.LogWarning($"⛔ Zoom clamped: Y={currentY:F2} (allowed: {startY - maxZoomInDistance} to {startY + maxZoomOutDistance})");
+            Camera.transform.position = camBeforeZoom;
+        }
+    }
+
     protected Vector3 PlanePosition(Vector2 screenPos)
     {
-        var rayNow = Camera.ScreenPointToRay(screenPos);
-        if (Plane.Raycast(rayNow, out var enterNow))
+        Ray ray = Camera.ScreenPointToRay(screenPos);
+        if (Plane.Raycast(ray, out float enter))
         {
-            Vector3 hitPoint = rayNow.GetPoint(enterNow);
-            Debug.Log($"✅ Ray hit at: {hitPoint}");
-            return hitPoint;
+            Vector3 hit = ray.GetPoint(enter);
+            Debug.Log($"✅ Ray hit at: {hit}");
+            return hit;
         }
 
         Debug.LogWarning($"❌ Ray did not hit plane at screenPos: {screenPos}");

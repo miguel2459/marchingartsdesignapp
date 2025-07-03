@@ -5,23 +5,20 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
 
 {
     public float rotationSpeed = 3f;
-    public float zoomSpeed = 50f;
+
     public float panSpeed = 0.3f;
     public float pivotDistance = 5f;
     
-    [Header("Zoom Sensitivity")]
-    [SerializeField] public float desktopZoomMultiplier = 1f;
-    [SerializeField] public float touchZoomMultiplier = 0.25f;
+    [Header("Desktop Zoom Settings")]
+    public float zoomSpeed = 50f;
+    public float zoomMultiplier = 1f;
     
     public float focusSpeed = 5f;
-    public float zoomMultiplier = 1.5f;
     public float additionalDistanceFactor = 1.2f;
     public float targetFocusDistance = 5f;
-    private Camera topDownCam;
     private float yaw = 0f;
     private float pitch = 0f;
-
-    private Vector3 focusPoint;
+    
     private Vector3 initialCameraPosition;
     private List<GameObject> selectedMarchers = new List<GameObject>();
     private bool isFocusing = false;
@@ -82,11 +79,9 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         //Debug.Log($"[FlyingCameraController] 🧭 SetInitialTransform — Position: {transform.position}, Rotation: {transform.rotation}");
     }
 
-    public void ApplyZoom(float delta, bool isTouch)
+    public void ApplyZoom(float delta)
     {
-        float multiplier = isTouch ? touchZoomMultiplier : desktopZoomMultiplier;
-        float adjustedDelta = delta * zoomSpeed * multiplier * Time.deltaTime;
-
+        float adjustedDelta = delta * zoomSpeed * zoomMultiplier * Time.deltaTime;
         transform.position += transform.forward * adjustedDelta;
         ClampPositionToBounds();
     }
@@ -214,8 +209,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         }
 
         Debug.Log($"📸 Focus triggered on {selectedMarchers.Count} selected marcher(s). Focal point = {focalPoint}");
-
-        focusPoint = focalPoint;
+        
         initialCameraPosition = transform.position;
         isFocusing = true;
 

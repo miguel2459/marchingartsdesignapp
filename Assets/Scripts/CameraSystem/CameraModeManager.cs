@@ -113,9 +113,9 @@ public class CameraModeManager : MonoBehaviour
         if (IsInputBlocked()) return;
 
         if (isTopDownActive)
-            topDownCamera?.ApplyZoom(delta, isTouch);
+            topDownCamera?.ApplyZoom(delta);
         else
-            flyingCamera?.ApplyZoom(delta, isTouch); // still unchanged
+            flyingCamera?.ApplyZoom(delta); 
     }
 
     public void HandlePanIntent(Vector2 delta)
