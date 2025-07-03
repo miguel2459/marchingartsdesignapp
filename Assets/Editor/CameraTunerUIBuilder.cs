@@ -57,12 +57,7 @@ public class CameraTunerUIBuilder : EditorWindow
         // 🤏 Scroll & Pinch (Touch Controls)
         AddField("Touch: Pan Speed", scrollAndPinch.touchPanSpeed.ToString("F2"));
         AddField("Touch: Zoom Sensitivity", scrollAndPinch.touchZoomSensitivity.ToString("F2"));
-        AddField("Touch: Rotate Speed", scrollAndPinch.touchRotateSpeed.ToString("F2"));
-
-        // 🚫 Zoom Clamp Bounds
-        AddField("Touch: Max Zoom Out Distance", scrollAndPinch.maxZoomOutDistance.ToString("F2"));
-        AddField("Touch: Max Zoom In Distance", scrollAndPinch.maxZoomInDistance.ToString("F2"));
-
+        
         Debug.Log("✅ Camera tuning fields generated in UI panel.");
     }
 

@@ -12,13 +12,9 @@ public class ScrollAndPinch : MonoBehaviour
     public bool Rotate;
 
     [Header("Touch Pan, Zoom, Rotate")]
-    public float touchPanSpeed = 1f;
-    public float touchZoomSensitivity = 1f;
-    public float touchRotateSpeed = 1f;
-
-    [Header("Zoom Clamps (relative to start)")]
-    public float maxZoomOutDistance = 30f;
-    public float maxZoomInDistance = 10f;
+    public float touchPanSpeed = 1.5f;
+    public float touchZoomSensitivity = .001f;
+    public float touchRotateSpeed = .2f;
 
     private Plane plane;
     private Vector3 cameraStartPosition;
@@ -77,11 +73,6 @@ public class ScrollAndPinch : MonoBehaviour
 
             Debug.Log($"🔍 Zoom deltaMag: {deltaMagnitudeDiff:F4}, Cam Y: {Camera.transform.position.y:F2}");
 
-            if (!cameraModeManager.IsTopDown())
-            {
-                ClampZoom(camBeforeZoom);
-            }
-
             // === Rotate ===
             if (Rotate && pos1Prev != pos1)
             {
@@ -95,19 +86,6 @@ public class ScrollAndPinch : MonoBehaviour
         {
             Debug.Log("🧼 Touch ended — scheduling Alt unstick.");
             MobileModifierKeyProxy.ForceAltRelease(delayed: true);
-        }
-    }
-
-    private void ClampZoom(Vector3 camBeforeZoom)
-    {
-        float currentY = Camera.transform.position.y;
-        float startY = cameraStartPosition.y;
-
-        float deltaY = currentY - startY;
-        if (deltaY > maxZoomOutDistance || deltaY < -maxZoomInDistance || currentY <= 1f)
-        {
-            Debug.LogWarning($"⛔ Zoom clamped: Y={currentY:F2} (allowed: {startY - maxZoomInDistance} to {startY + maxZoomOutDistance})");
-            Camera.transform.position = camBeforeZoom;
         }
     }
 

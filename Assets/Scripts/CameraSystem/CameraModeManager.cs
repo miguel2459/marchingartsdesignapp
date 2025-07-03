@@ -78,7 +78,7 @@ public class CameraModeManager : MonoBehaviour
         //Debug.Log($"[CameraModeManager] 🔵 ActivateFlyingMode — Position: {transform.position}, Rotation: {transform.rotation}");
         flyingCamera.SetInitialTransform(
             new Vector3(-10f, 20f, 60f),
-            new Quaternion(0.2418447f, 0.664463f, -0.2418447f, 0.664463f)
+            new Quaternion(0.353553414f, 0.612372458f, -0.353553414f, 0.612372458f)
         );
         director.GetComponent<MarcherManager>().OnMarchersReady -= ActivateFlyingMode;
     }

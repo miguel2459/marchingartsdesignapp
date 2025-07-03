@@ -21,7 +21,12 @@ public class MobileCameraTuner : MonoBehaviour
     public ScrollAndPinch scrollAndPinch;
     public TMP_InputField touchPanSpeedInput;
     public TMP_InputField touchZoomSensitivityInput;
-    public TMP_InputField touchRotateSpeedInput;
+    public TMP_InputField touchYawSpeedInput;
+    public TMP_InputField touchPitchSpeedInput;
+
+    [Header("Scroll And Pinch (Pitch Clamp Limits)")]
+    public TMP_InputField minPitchClampInput;
+    public TMP_InputField maxPitchClampInput;
 
     [Header("Scroll And Pinch (Zoom Clamp Bounds)")]
     public TMP_InputField maxZoomOutDistanceInput;
@@ -45,14 +50,11 @@ public class MobileCameraTuner : MonoBehaviour
         float.TryParse(tdZoomMultiplierInput.text, out topdownCam.zoomMultiplier);
         float.TryParse(tdPanSpeedInput.text, out topdownCam.panSpeed);
 
-        // Scroll & Pinch – Touch Gestures
+        // Scroll & Pinch – Touch Movement
         float.TryParse(touchPanSpeedInput.text, out scrollAndPinch.touchPanSpeed);
         float.TryParse(touchZoomSensitivityInput.text, out scrollAndPinch.touchZoomSensitivity);
-        float.TryParse(touchRotateSpeedInput.text, out scrollAndPinch.touchRotateSpeed);
 
-        // Scroll & Pinch – Clamp Bounds
-        float.TryParse(maxZoomOutDistanceInput.text, out scrollAndPinch.maxZoomOutDistance);
-        float.TryParse(maxZoomInDistanceInput.text, out scrollAndPinch.maxZoomInDistance);
+        
     }
 
     void ApplyInitialValues()
@@ -68,13 +70,10 @@ public class MobileCameraTuner : MonoBehaviour
         tdZoomMultiplierInput.text = topdownCam.zoomMultiplier.ToString("F2");
         tdPanSpeedInput.text = topdownCam.panSpeed.ToString("F2");
 
-        // Scroll & Pinch – Touch Gestures
+        // Scroll & Pinch – Touch Movement
         touchPanSpeedInput.text = scrollAndPinch.touchPanSpeed.ToString("F2");
         touchZoomSensitivityInput.text = scrollAndPinch.touchZoomSensitivity.ToString("F2");
-        touchRotateSpeedInput.text = scrollAndPinch.touchRotateSpeed.ToString("F2");
 
-        // Scroll & Pinch – Clamp Bounds
-        maxZoomOutDistanceInput.text = scrollAndPinch.maxZoomOutDistance.ToString("F2");
-        maxZoomInDistanceInput.text = scrollAndPinch.maxZoomInDistance.ToString("F2");
+        
     }
 }
