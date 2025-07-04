@@ -98,29 +98,34 @@ public class TransformGizmoManager : MonoBehaviour
     private void HandleShiftRelease()
     {
         if (!isFreeDraggingGizmo) return;
-
+        
         if (!ModifierInput.ShiftHeld)
         {
             isFreeDraggingGizmo = false;
             selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
             Debug.Log("TransformGizmoManager: Shift released — ending freeform reanchoring.");
-            MobileModifierKeyProxy.SetShiftHeld(false);
+            
         }
+        
     }
 
     private void HandleMouseUp()
     {
         if (!Input.GetMouseButtonUp(0)) return;
 
+        // 🟢 End standard drag
         if (isMoving)
         {
             isMoving = false;
+        }
 
-            if (isFreeDraggingGizmo)
-            {
-                isFreeDraggingGizmo = false;
-                selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
-            }
+        // 🔴 End free drag — this can happen even if isMoving is false
+        if (isFreeDraggingGizmo)
+        {
+            MobileModifierKeyProxy.SetShiftHeld(false); // ✅ Force clear Shift
+            isFreeDraggingGizmo = false;
+            selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
+            Debug.Log("TransformGizmoManager: Freeform gizmo drag ended. Shift cleared.");
         }
     }
 
