@@ -104,6 +104,7 @@ public class TransformGizmoManager : MonoBehaviour
             isFreeDraggingGizmo = false;
             selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
             Debug.Log("TransformGizmoManager: Shift released — ending freeform reanchoring.");
+            MobileModifierKeyProxy.SetShiftHeld(false);
         }
     }
 
@@ -121,11 +122,6 @@ public class TransformGizmoManager : MonoBehaviour
                 selectedMarchers.ForEachSelected(m => m.transform.SetParent(activeGizmo.transform));
             }
         }
-
-        // if (!Input.GetKey(KeyCode.LeftAlt))
-        // {
-        //     TryHideGizmoIfClickAway();
-        // }
     }
 
     // ========================================================
@@ -216,32 +212,11 @@ public class TransformGizmoManager : MonoBehaviour
         {
             Debug.Log("TransformGizmoManager: Reanchoring gizmo to selected marcher via Shift+click.");
             ReanchorGizmoToMarcher(hitObject);
+            MobileModifierKeyProxy.SetShiftHeld(false);
             return true;
         }
 
         return false;
-    }
-
-    public void TryHideGizmoIfClickAway()
-    {
-        if (!HasActiveGizmo) return;
-
-        // ⛔ Block click-away from hiding if UI is active
-        if (UIInteractionBlocker.BlockSceneInputThisFrame || UIInteractionBlocker.IsTouchOverUI())
-        {
-            Debug.Log("🛑 Gizmo hide skipped due to UI interaction.");
-            return;
-        }
-
-        var behavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();
-        if (behavior != null && behavior.IsDragging()) return;
-
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-        if (!Physics.Raycast(ray, out _, Mathf.Infinity, marcherLayer | gizmoLayer))
-        {
-            Debug.Log("TransformGizmoManager: Click-away detected — hiding gizmo.");
-            HideTransformGizmo();
-        }
     }
 
     public void SetActiveCamera(Camera activeCam)

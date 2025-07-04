@@ -18,6 +18,12 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     public TransformGizmoManager gizmoManager;
     private string activeAxis = "center"; // center, x, z
     private Dictionary<MarcherPositionsManager, Vector3> initialPositions = new Dictionary<MarcherPositionsManager, Vector3>();
+    private Quaternion originalRotation;
+    
+    private Renderer activeHandleRenderer;
+    private Color originalHandleColor;
+    private readonly Color highlightRed = new Color(1f, 0.5f, 0.5f);
+    private readonly Color highlightBlue = new Color(0.5f, 0.7f, 1f);
 
     public bool IsDragging()
     {
@@ -64,7 +70,18 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     if (hitName.Contains("handle_x")) activeAxis = "x";
                     else if (hitName.Contains("handle_z")) activeAxis = "z";
                     else activeAxis = "center";
-
+                    
+                    // 🟡 Highlight the active handle if it has a renderer
+                    activeHandleRenderer = target.GetComponent<Renderer>();
+                    if (activeHandleRenderer != null)
+                    {
+                        originalHandleColor = activeHandleRenderer.material.GetColor("_Color");
+                        if (activeAxis == "x")
+                            activeHandleRenderer.material.SetColor("_Color", highlightRed);
+                        else if (activeAxis == "z")
+                            activeHandleRenderer.material.SetColor("_Color", highlightBlue);
+                    }
+                    
                     break; // stop once valid gizmo hit is found
                 }
             }
@@ -104,12 +121,12 @@ public class UnifiedGizmoBehavior : MonoBehaviour
 
                     if (activeAxis == "x")
                     {
-                        newPos.x += projectedDelta * 0.1f;
+                        newPos.x += projectedDelta * 0.15f;
                         newPos.x = Mathf.Clamp(newPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
                     }
                     else if (activeAxis == "z")
                     {
-                        newPos.z += projectedDelta * 0.1f;
+                        newPos.z += projectedDelta * 0.15f;
                         newPos.z = Mathf.Clamp(newPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
                     }
                     else // center: use targetPos directly
@@ -136,7 +153,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
 
                     if (mode == GizmoMode.Rotate)
                     {
-                        transform.Rotate(Vector3.up, effectiveDelta * 5f);
+                        transform.Rotate(Vector3.up, effectiveDelta * 7f);
 
                         selectedMarchers.ForEachSelected(marcher =>
                         {
@@ -196,6 +213,29 @@ public class UnifiedGizmoBehavior : MonoBehaviour
             });
             positionHistory.EndBatch();
             activeAxis = "center";
+            
+            if (mode == GizmoMode.Rotate)
+            {
+                // ✅ Temporarily unparent marchers
+                selectedMarchers.ForEachSelected(m => m.transform.SetParent(null));
+
+                // ✅ Reset gizmo rotation
+                transform.rotation = originalRotation;
+                Debug.Log("🔁 Gizmo rotation reset after drag.");
+
+                // ✅ Reparent marchers back to gizmo
+                selectedMarchers.ForEachSelected(m => m.transform.SetParent(transform));
+
+                // 🔄 Optional: Update handles
+                ForceHandleUpdate();
+            }
+            
+            // 🔙 Restore original handle color
+            if (activeHandleRenderer != null)
+            {
+                activeHandleRenderer.material.SetColor("_Color", originalHandleColor);
+                activeHandleRenderer = null;
+            }
         }
     }
     
@@ -209,12 +249,15 @@ public class UnifiedGizmoBehavior : MonoBehaviour
         }
     }
 
-
     public void SetMode(GizmoMode newMode)
     {
         mode = newMode;
         rotateVisualizer.SetActive(mode == GizmoMode.Rotate);
         scaleVisualizer.SetActive(mode == GizmoMode.Scale);
+        if (mode == GizmoMode.Rotate)
+        {
+            originalRotation = transform.rotation;
+        }
     }
     
     public GizmoMode GetCurrentMode()
