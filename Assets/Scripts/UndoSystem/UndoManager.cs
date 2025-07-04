@@ -76,6 +76,6 @@ public class UndoManager : MonoBehaviour
     {
         yield return null; // Wait one frame
         selectedMarchers.ReCacheAnchorsForSelected();
-        selectedMarchers.dashedPathPreviewManager?.UpdatePreviewCycle();
+        selectedMarchers.dashedPathPreviewManager?.UpdatePreviewCycle(forceRefresh: true);
     }
 }

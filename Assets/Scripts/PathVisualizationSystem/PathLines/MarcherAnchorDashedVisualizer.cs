@@ -1,70 +1,30 @@
 using UnityEngine;
 
-/// <summary>
-/// Render-only anchor dashed line between current position and anchor (confirmed) dot.
-/// </summary>
-[RequireComponent(typeof(LineRenderer))]
-public class MarcherAnchorDashedVisualizer : MonoBehaviour
+public class MarcherAnchorDashedVisualizer : DashedPathVisualizerBase
 {
-    private LineRenderer lineRenderer;
+    [SerializeField] private Color anchorColor = new Color(0f, 0.2f, 0f, 1f);
+    [SerializeField] private float lineWidth = 0.1f; // Thinner line width
 
-    private void Awake()
+    protected override void Awake()
     {
-        lineRenderer = GetComponent<LineRenderer>();
-
-        if (lineRenderer == null)
+        base.Awake();
+        
+        // Set the line width for the anchor line
+        if (lineRenderer != null)
         {
-            Debug.LogError($"[AnchorDashedVisualizer] {gameObject.name} is missing LineRenderer!");
-            return;
+            lineRenderer.startWidth = lineWidth;
+            lineRenderer.endWidth = lineWidth;
         }
-
-        lineRenderer.enabled = false;
     }
 
-    /// <summary>
-    /// Show the anchor line from marcher to confirmed dot.
-    /// </summary>
-    public void SetPath(Vector3 start, Vector3 end)
+    protected override void ApplyDefaultColor()
     {
-        if (lineRenderer == null) return;
-
-        lineRenderer.enabled = true;
-        lineRenderer.positionCount = 2;
-
-        Vector3[] positions = new Vector3[]
-        {
-            FlattenY(start),
-            FlattenY(end)
-        };
-
-        lineRenderer.SetPositions(positions);
-        SetColor(); // Uses fixed color for anchors
-    }
-
-    /// <summary>
-    /// Hide the anchor dashed line.
-    /// </summary>
-    public void Hide()
-    {
-        if (lineRenderer == null) return;
-        lineRenderer.enabled = false;
-        lineRenderer.positionCount = 0;
-    }
-
-    /// <summary>
-    /// Set fixed visual color for anchor line.
-    /// </summary>
-    private void SetColor()
-    {
-        if (lineRenderer == null) return;
-
-        Color anchorColor = new Color(0.2f, 0.4f, 0.2f, 1f); // dark earthy green
         lineRenderer.startColor = anchorColor;
         lineRenderer.endColor = anchorColor;
     }
 
-    private Vector3 FlattenY(Vector3 original)
+    protected override float GetTilingValue(float distance)
     {
-        return new Vector3(original.x, 0.01f, original.z);
+        return 0.6f; // Fixed tiling value as requested
     }
 }

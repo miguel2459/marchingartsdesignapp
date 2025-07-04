@@ -39,7 +39,7 @@ public class SelectedMarchers : MonoBehaviour
         if (SelectedCount > 0 && transformGizmoManager != null && transformGizmoManager.IsGizmoMoving)
         {
             //Debug.Log($"[Update] SelectedCount={SelectedCount}, IsMoving={transformGizmoManager?.isMoving}");
-            dashedPathPreviewManager?.UpdatePreviewCycle();
+            dashedPathPreviewManager?.UpdatePreviewCycle(forceRefresh: true);
         }        
     }
 

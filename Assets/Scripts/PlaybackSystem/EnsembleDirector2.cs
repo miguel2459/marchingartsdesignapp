@@ -155,7 +155,7 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
     public void RefreshDashedPreviewForSelected()
     {
         selectedMarchers?.ReCacheAnchorsForSelected();
-        dashedPreview?.UpdatePreviewCycle();
+        dashedPreview?.UpdatePreviewCycle(forceRefresh: true);
     }
 
     public void VisualizePathsForSet(int setNumber)

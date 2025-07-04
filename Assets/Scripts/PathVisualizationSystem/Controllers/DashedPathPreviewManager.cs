@@ -14,7 +14,7 @@ public class DashedPathPreviewManager : MonoBehaviour
 
         int set = int.Parse(SessionManager.instance.showStateSO.LastSet);
         int countIndex = EnsembleDirector2.instance.counts?.GetActiveCountIndex() ?? -1;
-        int count = (countIndex >= 0) ? countIndex + 1 : 1;
+        int count = (countIndex >= 0) ? countIndex + 1 : 0;
 
         foreach (var marcher in selected)
         {
@@ -22,14 +22,14 @@ public class DashedPathPreviewManager : MonoBehaviour
             {
                 activeCoordinators.Add(coord);
                 coord.SetInitialPosition(marcher.transform.position);
-                //coord.SetAnchorContext(set, count); // Optionally inject set/count context again here if needed
+                coord.SetAnchorContext(set, count); // Optionally inject set/count context again here if needed
                 coord.EnableDashedPreview(); // ✅ KEY LINE
                 coord.StartPreview();        // ✅ Show anchor + lines immediately
             }
         }
     }
 
-    public void UpdatePreviewCycle()
+    public void UpdatePreviewCycle(bool forceRefresh = false)
     {
         if (activeCoordinators.Count == 0)
         {
@@ -39,10 +39,9 @@ public class DashedPathPreviewManager : MonoBehaviour
 
         foreach (var coord in activeCoordinators)
         {
-            coord.UpdateDashedPreview(coord.transform.position);
+            coord.UpdateDashedPreview(coord.transform.position, forceRefresh);
         }
     }
-
 
     public void RemoveFromPreview(GameObject marcher)
     {

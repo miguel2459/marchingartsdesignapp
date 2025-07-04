@@ -515,6 +515,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b664a06977628504195e3794a491986f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  forwardColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &4128135036290196898
 GameObject:
   m_ObjectHideFlags: 0
@@ -667,6 +668,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8e2d2281ea8da440ba2670c8e8687a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  backwardColor: {r: 0.9, g: 0.9, b: 0.9, a: 1}
 --- !u!1 &5783072409151532751
 GameObject:
   m_ObjectHideFlags: 0
@@ -773,6 +775,7 @@ MonoBehaviour:
   forwardDashedVisualizer: {fileID: 6442428145249062552}
   backwardDashedVisualizer: {fileID: 2269628949096530244}
   anchorDashedVisualizer: {fileID: 6635807525733495964}
+  minUpdateInterval: 0.05
 --- !u!114 &6534475666943112014
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -936,7 +939,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: dd2322a7e17dd10488052bb10faa7632, type: 2}
+  - {fileID: 2100000, guid: 8dfdd6d81fb2a274e98397805ea6e810, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1031,6 +1034,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62f6068df287df3459d98fb0f9f73db7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  anchorColor: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+  lineWidth: 0.05
 --- !u!1 &9149806225578285091
 GameObject:
   m_ObjectHideFlags: 0
