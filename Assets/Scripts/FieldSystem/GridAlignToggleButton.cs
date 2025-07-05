@@ -16,15 +16,6 @@ public class GridAlignToggleButton : MonoBehaviour, IPointerDownHandler, IPointe
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (GridAlignProxy.IsGridLockActive)
-        {
-            // Already locked — clicking disables immediately
-            Debug.Log("🔓 Unlocking Grid Lock");
-            GridAlignProxy.SetGridLock(false);
-            inputRouter.TriggerLockToGridFromUI();
-            return;
-        }
-
         pressStartTime = Time.time;
         isPressing = true;
         hasTriggeredHold = false;
@@ -33,27 +24,38 @@ public class GridAlignToggleButton : MonoBehaviour, IPointerDownHandler, IPointe
     public void OnPointerUp(PointerEventData eventData)
     {
         if (!isPressing) return;
+        isPressing = false;
 
-        if (!hasTriggeredHold)
+        // 🔒 Just held to lock — do nothing else
+        if (hasTriggeredHold)
         {
-            // Regular tap: snap only
-            Debug.Log("🧲 Snap to grid (tap)");
-            inputRouter.TriggerSnapToGridFromUI();
+            Debug.Log("✅ Hold-to-lock completed. No further action.");
+            return;
         }
 
-        isPressing = false;
+        if (GridAlignProxy.IsGridLockActive)
+        {
+            // 🔓 Tap to unlock
+            Debug.Log("🔓 UI: Unlocking grid lock");
+            GridAlignProxy.SetGridLock(false);
+        }
+        else
+        {
+            // 🧲 Tap to snap (only if not locked)
+            Debug.Log("🧲 UI: Snap to grid (tap)");
+            inputRouter.TriggerSnapToGridFromUI();
+        }
     }
 
     private void Update()
     {
-        if (isPressing && !hasTriggeredHold)
+        if (isPressing && !hasTriggeredHold && !GridAlignProxy.IsGridLockActive)
         {
             if (Time.time - pressStartTime >= HOLD_THRESHOLD)
             {
                 hasTriggeredHold = true;
-                Debug.Log("🔒 Activated Grid Lock (hold)");
+                Debug.Log("🔒 UI: Activating grid lock via hold");
                 GridAlignProxy.SetGridLock(true);
-                inputRouter.TriggerLockToGridFromUI();
             }
         }
     }

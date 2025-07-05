@@ -34,7 +34,7 @@ public class InputRouter : MonoBehaviour
         controls.Gameplay.DeleteDot.performed += ctx => OnDeleteDot?.Invoke();
         controls.Gameplay.DeleteMarcher.performed += ctx => OnDeleteMarcher?.Invoke();
         controls.Gameplay.SelectAll.performed += ctx => OnSelectAll?.Invoke();
-        controls.Gameplay.LockToGrid.performed += ctx => OnLockToGrid?.Invoke();
+        controls.Gameplay.LockToGrid.performed += ctx => HandleLockToGridFromKeyboard();
         controls.Gameplay.SnapToGrid.performed += ctx => OnSnapToGrid?.Invoke();
         controls.Gameplay.RespaceToBox.performed += ctx => OnRespaceToBox?.Invoke();
         controls.Gameplay.FocusCamera.performed += ctx => OnFocusCamera?.Invoke();
@@ -89,8 +89,12 @@ public class InputRouter : MonoBehaviour
     
     public void TriggerSnapToGridFromUI() => OnSnapToGrid?.Invoke();
 
-
     public void TriggerLockToGridFromUI() => OnLockToGrid?.Invoke();
+    private void HandleLockToGridFromKeyboard()
+    {
+        Debug.Log("🧠 LockToGrid triggered via keyboard (Q)");
+        OnLockToGrid?.Invoke();
+    }
 
 
 }
