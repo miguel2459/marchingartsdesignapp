@@ -26,8 +26,9 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     private readonly Color highlightBlue = new Color(0.5f, 0.7f, 1f);
     private float cumulativeDeltaX = 0f;
     private float cumulativeDeltaZ = 0f;
-    private const float FREE_DRAG_MULTIPLIER = 0.4f;
-    private const float LOCKED_DRAG_MULTIPLIER = .5f;  // increases the speed of "stepping" across snap points
+    private float FreeDragMultiplier => Application.isMobilePlatform ? 0.25f : 0.4f;
+    private float LockedDragMultiplier => Application.isMobilePlatform ? 0.35f : 0.5f;
+
     private const float SNAP_THRESHOLD = 0.25f;       // threshold to trigger a snap movement
 
 
@@ -122,7 +123,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                 {
                     Vector3 newPos = transform.position;
 
-                    float multiplier = GridAlignProxy.IsGridLockActive ? LOCKED_DRAG_MULTIPLIER : FREE_DRAG_MULTIPLIER;
+                    float multiplier = GridAlignProxy.IsGridLockActive ? LockedDragMultiplier : FreeDragMultiplier;
                     float delta = projectedDelta * multiplier;
 
                     if (activeAxis == "x")
