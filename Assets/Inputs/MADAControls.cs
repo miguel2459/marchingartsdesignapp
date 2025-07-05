@@ -155,6 +155,15 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""LockToGrid"",
+                    ""type"": ""Button"",
+                    ""id"": ""fc14ba5e-6657-4db8-807c-d271133ce30f"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""SnapToGrid"",
                     ""type"": ""Button"",
                     ""id"": ""897a3434-ab85-4c0b-927d-67be34a900e2"",
@@ -642,6 +651,17 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
                     ""action"": ""Alt"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""0ba86ce2-ac05-41f0-af47-7df69c941022"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""LockToGrid"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -657,6 +677,7 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         m_Gameplay_GizmoPosition = m_Gameplay.FindAction("GizmoPosition", throwIfNotFound: true);
         m_Gameplay_GizmoRotate = m_Gameplay.FindAction("GizmoRotate", throwIfNotFound: true);
         m_Gameplay_GizmoScale = m_Gameplay.FindAction("GizmoScale", throwIfNotFound: true);
+        m_Gameplay_LockToGrid = m_Gameplay.FindAction("LockToGrid", throwIfNotFound: true);
         m_Gameplay_SnapToGrid = m_Gameplay.FindAction("SnapToGrid", throwIfNotFound: true);
         m_Gameplay_RespaceToBox = m_Gameplay.FindAction("RespaceToBox", throwIfNotFound: true);
         m_Gameplay_FocusCamera = m_Gameplay.FindAction("FocusCamera", throwIfNotFound: true);
@@ -759,6 +780,7 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_GizmoPosition;
     private readonly InputAction m_Gameplay_GizmoRotate;
     private readonly InputAction m_Gameplay_GizmoScale;
+    private readonly InputAction m_Gameplay_LockToGrid;
     private readonly InputAction m_Gameplay_SnapToGrid;
     private readonly InputAction m_Gameplay_RespaceToBox;
     private readonly InputAction m_Gameplay_FocusCamera;
@@ -813,6 +835,10 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/GizmoScale".
         /// </summary>
         public InputAction @GizmoScale => m_Wrapper.m_Gameplay_GizmoScale;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/LockToGrid".
+        /// </summary>
+        public InputAction @LockToGrid => m_Wrapper.m_Gameplay_LockToGrid;
         /// <summary>
         /// Provides access to the underlying input action "Gameplay/SnapToGrid".
         /// </summary>
@@ -920,6 +946,9 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @GizmoScale.started += instance.OnGizmoScale;
             @GizmoScale.performed += instance.OnGizmoScale;
             @GizmoScale.canceled += instance.OnGizmoScale;
+            @LockToGrid.started += instance.OnLockToGrid;
+            @LockToGrid.performed += instance.OnLockToGrid;
+            @LockToGrid.canceled += instance.OnLockToGrid;
             @SnapToGrid.started += instance.OnSnapToGrid;
             @SnapToGrid.performed += instance.OnSnapToGrid;
             @SnapToGrid.canceled += instance.OnSnapToGrid;
@@ -997,6 +1026,9 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
             @GizmoScale.started -= instance.OnGizmoScale;
             @GizmoScale.performed -= instance.OnGizmoScale;
             @GizmoScale.canceled -= instance.OnGizmoScale;
+            @LockToGrid.started -= instance.OnLockToGrid;
+            @LockToGrid.performed -= instance.OnLockToGrid;
+            @LockToGrid.canceled -= instance.OnLockToGrid;
             @SnapToGrid.started -= instance.OnSnapToGrid;
             @SnapToGrid.performed -= instance.OnSnapToGrid;
             @SnapToGrid.canceled -= instance.OnSnapToGrid;
@@ -1131,6 +1163,13 @@ public partial class @MADAControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnGizmoScale(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "LockToGrid" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnLockToGrid(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "SnapToGrid" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

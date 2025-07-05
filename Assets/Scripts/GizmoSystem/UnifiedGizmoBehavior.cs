@@ -24,6 +24,12 @@ public class UnifiedGizmoBehavior : MonoBehaviour
     private Color originalHandleColor;
     private readonly Color highlightRed = new Color(1f, 0.5f, 0.5f);
     private readonly Color highlightBlue = new Color(0.5f, 0.7f, 1f);
+    private float cumulativeDeltaX = 0f;
+    private float cumulativeDeltaZ = 0f;
+    private const float FREE_DRAG_MULTIPLIER = 0.4f;
+    private const float LOCKED_DRAG_MULTIPLIER = .5f;  // increases the speed of "stepping" across snap points
+    private const float SNAP_THRESHOLD = 0.25f;       // threshold to trigger a snap movement
+
 
     public bool IsDragging()
     {
@@ -114,27 +120,64 @@ public class UnifiedGizmoBehavior : MonoBehaviour
 
                 if (mode == GizmoMode.Position)
                 {
-                    if (Input.GetKey(KeyCode.Q))
-                        targetPos = snapToGrid.GetSnappedGizmoPosition(targetPos);
-
                     Vector3 newPos = transform.position;
+
+                    float multiplier = GridAlignProxy.IsGridLockActive ? LOCKED_DRAG_MULTIPLIER : FREE_DRAG_MULTIPLIER;
+                    float delta = projectedDelta * multiplier;
 
                     if (activeAxis == "x")
                     {
-                        newPos.x += projectedDelta * 0.15f;
-                        newPos.x = Mathf.Clamp(newPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
+                        if (GridAlignProxy.IsGridLockActive)
+                        {
+                            cumulativeDeltaX += delta;
+                            if (Mathf.Abs(cumulativeDeltaX) >= SNAP_THRESHOLD)
+                            {
+                                float step = Mathf.Sign(cumulativeDeltaX) * (5f / 8f); // 8-to-5 step
+                                Vector3 snapTarget = newPos;
+                                snapTarget.x += step;
+                                Vector3 snapped = snapToGrid.GetAxisSnappedPosition(snapTarget, "x");
+                                newPos.x = snapped.x;
+                                cumulativeDeltaX = 0f;
+                            }
+                        }
+                        else
+                        {
+                            newPos.x += delta;
+                        }
                     }
                     else if (activeAxis == "z")
                     {
-                        newPos.z += projectedDelta * 0.15f;
-                        newPos.z = Mathf.Clamp(newPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
+                        if (GridAlignProxy.IsGridLockActive)
+                        {
+                            cumulativeDeltaZ += delta;
+                            if (Mathf.Abs(cumulativeDeltaZ) >= SNAP_THRESHOLD)
+                            {
+                                float step = Mathf.Sign(cumulativeDeltaZ) * (5f / 8f);
+                                Vector3 snapTarget = newPos;
+                                snapTarget.z += step;
+                                Vector3 snapped = snapToGrid.GetAxisSnappedPosition(snapTarget, "z");
+                                newPos.z = snapped.z;
+                                cumulativeDeltaZ = 0f;
+                            }
+                        }
+                        else
+                        {
+                            newPos.z += delta;
+                        }
                     }
-                    else // center: use targetPos directly
+                    else // center drag
                     {
-                        newPos.x = Mathf.Clamp(targetPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
-                        newPos.z = Mathf.Clamp(targetPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
+                        newPos.x = targetPos.x;
+                        newPos.z = targetPos.z;
+
+                        if (GridAlignProxy.IsGridLockActive)
+                        {
+                            newPos = snapToGrid.GetAxisSnappedPosition(newPos, "center");
+                        }
                     }
 
+                    newPos.x = Mathf.Clamp(newPos.x, snapToGrid.currentFieldMin.x, snapToGrid.currentFieldMax.x);
+                    newPos.z = Mathf.Clamp(newPos.z, snapToGrid.currentFieldMin.y, snapToGrid.currentFieldMax.y);
                     transform.position = newPos;
 
                     selectedMarchers.ForEachSelected(marcher =>
@@ -146,6 +189,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                     });
                 }
 
+
                 else if ((mode == GizmoMode.Rotate || mode == GizmoMode.Scale) && gizmoManager != null && !gizmoManager.IsFreeDraggingGizmo)
                 {
                     float effectiveDelta = (activeAxis == "center") ? mouseDelta.x : projectedDelta;
@@ -153,7 +197,7 @@ public class UnifiedGizmoBehavior : MonoBehaviour
 
                     if (mode == GizmoMode.Rotate)
                     {
-                        transform.Rotate(Vector3.up, effectiveDelta * 7f);
+                        transform.Rotate(Vector3.up, effectiveDelta * 5f);
 
                         selectedMarchers.ForEachSelected(marcher =>
                         {
@@ -236,6 +280,9 @@ public class UnifiedGizmoBehavior : MonoBehaviour
                 activeHandleRenderer.material.SetColor("_Color", originalHandleColor);
                 activeHandleRenderer = null;
             }
+            
+            cumulativeDeltaX = 0f;
+            cumulativeDeltaZ = 0f;
         }
     }
     

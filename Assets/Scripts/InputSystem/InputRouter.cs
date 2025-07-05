@@ -9,6 +9,7 @@ public class InputRouter : MonoBehaviour
     public static event Action OnDeleteDot;
     public static event Action OnDeleteMarcher;
     public static event Action OnSelectAll;
+    public static event Action OnLockToGrid;
     public static event Action OnSnapToGrid;
     public static event Action OnRespaceToBox;
     public static event Action OnFocusCamera;
@@ -33,6 +34,7 @@ public class InputRouter : MonoBehaviour
         controls.Gameplay.DeleteDot.performed += ctx => OnDeleteDot?.Invoke();
         controls.Gameplay.DeleteMarcher.performed += ctx => OnDeleteMarcher?.Invoke();
         controls.Gameplay.SelectAll.performed += ctx => OnSelectAll?.Invoke();
+        controls.Gameplay.LockToGrid.performed += ctx => OnLockToGrid?.Invoke();
         controls.Gameplay.SnapToGrid.performed += ctx => OnSnapToGrid?.Invoke();
         controls.Gameplay.RespaceToBox.performed += ctx => OnRespaceToBox?.Invoke();
         controls.Gameplay.FocusCamera.performed += ctx => OnFocusCamera?.Invoke();
@@ -84,4 +86,11 @@ public class InputRouter : MonoBehaviour
     {
         OnDeleteDot?.Invoke(); // behaves like pressing Backspace
     }
+    
+    public void TriggerSnapToGridFromUI() => OnSnapToGrid?.Invoke();
+
+
+    public void TriggerLockToGridFromUI() => OnLockToGrid?.Invoke();
+
+
 }

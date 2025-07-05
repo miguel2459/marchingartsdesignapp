@@ -150,6 +150,29 @@ public class SnapToGridLines : MonoBehaviour
         }
     }
     
+    public Vector3 GetAxisSnappedPosition(Vector3 current, string axis)
+    {
+        float x = current.x;
+        float z = current.z;
+
+        if (axis == "x")
+        {
+            x = FindClosestPosition(current.x, xPositions8_5);
+        }
+        else if (axis == "z")
+        {
+            z = FindClosestPosition(current.z, zPositions8_5);
+        }
+        else // center or unknown — snap both
+        {
+            x = FindClosestPosition(current.x, xPositions8_5);
+            z = FindClosestPosition(current.z, zPositions8_5);
+        }
+
+        x = Mathf.Clamp(x, currentFieldMin.x, currentFieldMax.x);
+        z = Mathf.Clamp(z, currentFieldMin.y, currentFieldMax.y);
+        return new Vector3(x, 0.76f, z);
+    }
 }
 
 

@@ -12,6 +12,7 @@ public class GameplayInputHandler : MonoBehaviour
         InputRouter.OnDeleteDot += marcherEditActions.DeleteConfirmedDot;
         InputRouter.OnDeleteMarcher += marcherEditActions.PromptDeleteMarchers;
         InputRouter.OnFocusCamera += cameraModeManager.UpdateCameraFocus;
+        InputRouter.OnLockToGrid += HandleLockToGrid;
         InputRouter.OnSnapToGrid += selectedMarchers.InvokeSnapToGrid;
         InputRouter.OnRespaceToBox += selectedMarchers.SnapAndRespaceSmartReviewed;
         InputRouter.OnSelectAll += selectedMarchers.SelectAllMarchers;
@@ -34,6 +35,7 @@ public class GameplayInputHandler : MonoBehaviour
         InputRouter.OnDeleteDot -= marcherEditActions.DeleteConfirmedDot;
         InputRouter.OnDeleteMarcher -= marcherEditActions.PromptDeleteMarchers;
         InputRouter.OnFocusCamera -= cameraModeManager.UpdateCameraFocus;
+        InputRouter.OnLockToGrid -= HandleLockToGrid;
         InputRouter.OnSnapToGrid -= selectedMarchers.InvokeSnapToGrid;
         InputRouter.OnRespaceToBox -= selectedMarchers.SnapAndRespaceSmartReviewed;
         InputRouter.OnSelectAll -= selectedMarchers.SelectAllMarchers;
@@ -84,6 +86,11 @@ public class GameplayInputHandler : MonoBehaviour
             Vector2 rotateDelta = new Vector2(angleDelta * rotateSensitivity, 0);
             cameraModeManager.HandleRotateIntent(rotateDelta);
         }
+    }
+    
+    private void HandleLockToGrid()
+    {
+        GridAlignProxy.ToggleGridLockWithNotify();
     }
     
     private void HandleShiftKey(bool held)

@@ -69,6 +69,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "LockToGrid",
+                    "type": "Button",
+                    "id": "fc14ba5e-6657-4db8-807c-d271133ce30f",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "SnapToGrid",
                     "type": "Button",
                     "id": "897a3434-ab85-4c0b-927d-67be34a900e2",
@@ -554,6 +563,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Alt",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "0ba86ce2-ac05-41f0-af47-7df69c941022",
+                    "path": "<Keyboard>/q",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "LockToGrid",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
