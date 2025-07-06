@@ -55,6 +55,8 @@ public class CameraModeManager : MonoBehaviour
             scrollAndPinch.Camera = topDownCamComponent;
             scrollAndPinch.Rotate = false;
         }
+        
+        FocusCurrentCamera();
     }
 
     private void ActivateFlyingMode()
@@ -75,12 +77,7 @@ public class CameraModeManager : MonoBehaviour
             scrollAndPinch.Rotate = true;
         }
 
-        //Debug.Log($"[CameraModeManager] 🔵 ActivateFlyingMode — Position: {transform.position}, Rotation: {transform.rotation}");
-        flyingCamera.SetInitialTransform(
-            new Vector3(-10f, 20f, 60f),
-            new Quaternion(0.353553414f, 0.612372458f, -0.353553414f, 0.612372458f)
-        );
-        director.GetComponent<MarcherManager>().OnMarchersReady -= ActivateFlyingMode;
+        FocusCurrentCamera();
     }
 
 
@@ -180,6 +177,19 @@ public class CameraModeManager : MonoBehaviour
         selected.cam = activeCam;
         selected.transformGizmoManager?.SetActiveCamera(activeCam);
     }
+    
+    private void FocusCurrentCamera()
+    {
+        var targets = selected.SelectedCount > 0
+            ? selected.GetSelectionCopy()
+            : director.MarcherObjects;
+
+        var center = SmartReshapeService.GetFocalPoint(targets);
+
+        selected.cameraFocusHandler?.SetSelectedMarchers(targets);
+        selected.cameraFocusHandler?.FocusOnSelection(center);
+    }
+
     
     public void BlockInput(bool blocked)
     {

@@ -13,13 +13,11 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
     public float zoomSpeed = 50f;
     public float zoomMultiplier = 1f;
     
-    public float focusSpeed = 5f;
-    public float additionalDistanceFactor = 1.2f;
-    public float targetFocusDistance = 5f;
+    public float focusSpeed;
+    public float additionalDistanceFactor;
     private float yaw = 0f;
     private float pitch = 0f;
     
-    private Vector3 initialCameraPosition;
     private List<GameObject> selectedMarchers = new List<GameObject>();
     private bool isFocusing = false;
     private bool isActive = true;
@@ -36,6 +34,13 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
 
     public TransformGizmoManager gizmoManager;
     [SerializeField] private CameraModeManager cameraModeManager;
+    [Range(0.5f, 1f)]
+    [SerializeField] private float visibleVerticalPercent = 0.75f;
+    private const float focusPitchAngle = 60f; // degrees
+    
+    [Header("UI Panels (for accurate viewport)")]
+    [SerializeField] private RectTransform portraitPanel;
+    [SerializeField] private RectTransform landscapePanel;
 
     void Awake()
     {
@@ -68,15 +73,6 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
                Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.X) ||
                Input.GetMouseButton(1) || Input.GetMouseButton(2) ||
                Input.GetAxis("Mouse ScrollWheel") != 0;
-    }
-
-    public void SetInitialTransform(Vector3 pos, Quaternion rot)
-    {
-        transform.position = pos;
-        transform.rotation = rot;
-        yaw = transform.eulerAngles.y;
-        pitch = transform.eulerAngles.x;
-        //Debug.Log($"[FlyingCameraController] 🧭 SetInitialTransform — Position: {transform.position}, Rotation: {transform.rotation}");
     }
 
     public void ApplyZoom(float delta)
@@ -136,7 +132,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
         if (gizmoManager != null && gizmoManager.HasActiveGizmo)
         {
             targetFocus = gizmoManager.transformGizmo.transform.position;
-            targetDistance = targetFocusDistance;
+            targetDistance = 5f;
             Debug.Log($"🎯 Focusing on Gizmo at {targetFocus} with fixed distance {targetDistance}");
         }
         else if (selectedMarchers.Count > 0)
@@ -144,17 +140,21 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
             if (selectedMarchers.Count == 1)
             {
                 targetFocus = selectedMarchers[0].transform.position;
-                targetDistance = targetFocusDistance;
+                targetDistance = 5f;
                 Debug.Log($"🎯 Focusing on single marcher at {targetFocus} with fixed distance {targetDistance}");
             }
             else
             {
-                Vector3 totalPosition = Vector3.zero;
+                Bounds bounds = new Bounds(selectedMarchers[0].transform.position, Vector3.zero);
                 foreach (var marcher in selectedMarchers)
-                    totalPosition += marcher.transform.position;
+                    bounds.Encapsulate(marcher.transform.position);
 
-                targetFocus = totalPosition / selectedMarchers.Count;
+                targetFocus = bounds.center;
                 targetDistance = CalculateRequiredDistanceToFit();
+
+                float uiClipPercent = 1f - CalculateVisibleVerticalPercent();
+                Vector3 cameraUp = Quaternion.Euler(focusPitchAngle, yaw, 0f) * Vector3.up;
+                targetFocus -= cameraUp * bounds.size.z * 0.5f * uiClipPercent;
 
                 Debug.Log($"🎯 Focusing on center of {selectedMarchers.Count} marchers at {targetFocus} with dynamic distance {targetDistance}");
             }
@@ -166,36 +166,56 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
             return;
         }
 
-        Vector3 directionToFocus = (targetFocus - initialCameraPosition).normalized;
-        Vector3 finalPosition = targetFocus - directionToFocus * targetDistance;
+        pitch = focusPitchAngle;
+        yaw = 90f;
 
-        Debug.DrawLine(initialCameraPosition, finalPosition, Color.cyan); // Visual line in Scene view
-
-        Debug.Log($"📸 Moving camera from {transform.position} → {finalPosition} (direction {directionToFocus})");
+        Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 direction = rot * Vector3.forward;
+        Vector3 finalPosition = targetFocus - direction * targetDistance;
 
         transform.position = Vector3.Lerp(transform.position, finalPosition, focusSpeed * Time.deltaTime);
-        transform.LookAt(targetFocus);
+        transform.rotation = Quaternion.Lerp(transform.rotation, rot, focusSpeed * Time.deltaTime);
 
-        float distanceToTarget = Vector3.Distance(transform.position, finalPosition);
-        Debug.Log($"📏 Distance to target: {distanceToTarget}");
-
-        if (distanceToTarget < 0.1f)
+        if (Vector3.Distance(transform.position, finalPosition) < 0.1f)
         {
-            Debug.Log("✅ Focus complete — camera arrived at target.");
             isFocusing = false;
         }
     }
     float CalculateRequiredDistanceToFit()
     {
         if (selectedMarchers.Count == 1)
-            return targetFocusDistance;
+            return 5f;
 
         Bounds bounds = new Bounds(selectedMarchers[0].transform.position, Vector3.zero);
         foreach (var marcher in selectedMarchers)
             bounds.Encapsulate(marcher.transform.position);
 
-        return bounds.size.magnitude * zoomMultiplier * additionalDistanceFactor;
+        float verticalSize = bounds.size.z;
+        float halfHeight = verticalSize * 0.5f;
+        float angleRad = focusPitchAngle * Mathf.Deg2Rad;
+        float distance = halfHeight / Mathf.Tan(angleRad);
+
+        distance = distance / CalculateVisibleVerticalPercent();
+        return distance * additionalDistanceFactor;
     }
+
+    private float CalculateVisibleVerticalPercent()
+    {
+        float screenHeight = Screen.height;
+        float uiHeight = 0f;
+
+        if (portraitPanel != null && portraitPanel.gameObject.activeSelf)
+            uiHeight = portraitPanel.rect.height;
+        else if (landscapePanel != null && landscapePanel.gameObject.activeSelf)
+            uiHeight = landscapePanel.rect.height;
+
+        float visiblePixels = screenHeight - uiHeight;
+        float percent = Mathf.Clamp01(visiblePixels / screenHeight);
+    
+        Debug.Log($"📐 Visible viewport: {percent * 100:F1}% of screen height after subtracting UI panel ({uiHeight}px)");
+        return percent;
+    }
+
     public void SetSelectedMarchers(List<GameObject> marchers)
     {
         selectedMarchers = marchers;
@@ -210,7 +230,6 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
 
         Debug.Log($"📸 Focus triggered on {selectedMarchers.Count} selected marcher(s). Focal point = {focalPoint}");
         
-        initialCameraPosition = transform.position;
         isFocusing = true;
 
         MoveCameraToFocus();
