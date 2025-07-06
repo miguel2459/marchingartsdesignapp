@@ -15,6 +15,10 @@ public class ScrollAndPinch : MonoBehaviour
     public float touchPanSpeed = 1.5f;
     public float touchZoomSensitivity = .001f;
     public float touchRotateSpeed = .2f;
+    
+    private float currentPitch = 0f;
+    [SerializeField] private float minPitch = -89f;
+    [SerializeField] private float maxPitch = 89f;
 
     private Plane plane;
     private Vector3 cameraStartPosition;
@@ -25,6 +29,7 @@ public class ScrollAndPinch : MonoBehaviour
             Camera = Camera.main;
 
         cameraStartPosition = Camera.transform.position;
+        currentPitch = Camera.transform.eulerAngles.x;
     }
 
     private void Update()
@@ -77,8 +82,26 @@ public class ScrollAndPinch : MonoBehaviour
             if (Rotate && pos1Prev != pos1)
             {
                 float angle = Vector3.SignedAngle(pos1 - pos0, pos1Prev - pos0Prev, plane.normal);
-                Camera.transform.RotateAround(mid, plane.normal, angle * touchRotateSpeed);
-                Debug.Log($"🔄 Rotate angle: {angle:F2} degrees");
+
+                if (MobileModifierKeyProxy.IsControlHeld)
+                {
+                    Vector3 pitchAxis = Camera.transform.right;
+                    float intendedPitch = currentPitch + angle * touchRotateSpeed;
+
+                    // Clamp and compute delta
+                    float clampedPitch = Mathf.Clamp(intendedPitch, minPitch, maxPitch);
+                    float deltaPitch = clampedPitch - currentPitch;
+
+                    Camera.transform.RotateAround(mid, pitchAxis, deltaPitch);
+                    currentPitch = clampedPitch;
+
+                    Debug.Log($"🎯 Clamped Pitch Rotate: Δ={deltaPitch:F2}°, CurrentPitch={currentPitch:F2}°");
+                }
+                else
+                {
+                    Camera.transform.RotateAround(mid, Vector3.up, angle * touchRotateSpeed);
+                    Debug.Log($"🔄 Yaw Rotate (Default): {angle:F2}°");
+                }
             }
         }
 
