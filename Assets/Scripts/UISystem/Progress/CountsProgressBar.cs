@@ -221,7 +221,44 @@ public class CountsProgressBar : MonoBehaviour
             ensemble.selectedMarchers.ReCacheAnchorsForSelected();
         }        
     }
+    /// <summary>
+    /// Scrolls the count bar to ensure the given count is visible.
+    /// </summary>
+    public void ScrollToMakeCountVisible(int countIndex)
+    {
+        if (countButtons == null || countButtons.Count == 0) return;
+        if (countIndex < 0 || countIndex >= countButtons.Count) return;
 
+        RectTransform buttonRect = countButtons[countIndex].buttonObj.GetComponent<RectTransform>();
+        RectTransform contentRect = contentArea;
+        RectTransform viewportRect = contentArea.parent.GetComponent<RectTransform>();
+
+        float buttonStartX = buttonRect.localPosition.x;
+        float buttonEndX = buttonStartX + buttonRect.rect.width;
+
+        float contentWidth = contentRect.rect.width;
+        float viewportWidth = viewportRect.rect.width;
+
+        // Current scroll offset (how far right the content is shifted)
+        float currentOffsetX = -contentRect.anchoredPosition.x;
+
+        // Check if button is off the right edge
+        if (buttonEndX > currentOffsetX + viewportWidth)
+        {
+            // Scroll to bring this count to the left edge of the viewport
+            float scrollX = buttonStartX;
+            scrollX = Mathf.Clamp(scrollX, 0f, contentWidth - viewportWidth);
+            contentRect.anchoredPosition = new Vector2(-scrollX, contentRect.anchoredPosition.y);
+        }
+
+        // Optionally: scroll left if it somehow fell behind
+        else if (buttonStartX < currentOffsetX)
+        {
+            float scrollX = buttonStartX;
+            scrollX = Mathf.Clamp(scrollX, 0f, contentWidth - viewportWidth);
+            contentRect.anchoredPosition = new Vector2(-scrollX, contentRect.anchoredPosition.y);
+        }
+    }
 
     /// <summary>
     /// Clears all count buttons.

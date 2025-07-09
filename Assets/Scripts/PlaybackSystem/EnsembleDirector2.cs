@@ -41,6 +41,9 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
     [SerializeField] private MarcherPositionHistory positionHistory;
     [SerializeField] private MarcherPositionService marcherService;
     [SerializeField] private DashedPathPreviewManager dashedPreview;
+    [SerializeField] private TransformGizmoManager transformGizmoManager;
+
+    public TransformGizmoManager TransformGizmoManager => transformGizmoManager;
 
     [Header("Marcher Progress Colors")]
     public Color fullProgressColor = Color.white;

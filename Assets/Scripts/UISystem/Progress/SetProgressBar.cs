@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using TMPro;
+using System.Collections;
 
 public class SetProgressBar : MonoBehaviour
 {
@@ -130,7 +130,14 @@ public class SetProgressBar : MonoBehaviour
 
         // ✨ Highlight currently selected set
         HighlightSet(lastSet);
+        StartCoroutine(DeferCenterOnSet(lastSet));
     }
+    private IEnumerator DeferCenterOnSet(int setIndex)
+    {
+        yield return null; // ⏱️ Wait one frame for layout to complete
+        CenterOnSetButton(setIndex);
+    }
+
 
 
     private void LoadLastSet()
@@ -223,6 +230,7 @@ public class SetProgressBar : MonoBehaviour
         }
 
         HighlightSet(setNumber);
+        CenterOnSetButton(setNumber);
 
         var map = director.SessionLoader.RuntimeCache.SetTimingMap;
         if (map.TryGetValue(setNumber, out var timing))
@@ -256,6 +264,34 @@ public class SetProgressBar : MonoBehaviour
         }
     }
 
+    public void CenterOnSetButton(int setIndex)
+    {
+        if (scrollRect == null || setButtonWrappers.Count == 0) return;
+
+        int index = Mathf.Clamp(setIndex - 1, 0, setButtonWrappers.Count - 1);
+        var wrapper = setButtonWrappers[index];
+        if (wrapper?.button == null) return;
+
+        RectTransform buttonRect = wrapper.button.GetComponent<RectTransform>();
+        RectTransform contentRect = scrollRect.content;
+        RectTransform viewportRect = scrollRect.viewport;
+
+        // Button center relative to content
+        Vector2 localPos = buttonRect.localPosition;
+        float buttonCenterX = localPos.x + (buttonRect.rect.width / 2f);
+
+        // Target scroll position: shift content so button center aligns with viewport center
+        float viewportWidth = viewportRect.rect.width;
+        float contentWidth = contentRect.rect.width;
+        float targetScrollX = buttonCenterX - (viewportWidth / 2f);
+
+        // Clamp so we don't scroll beyond bounds
+        float maxScrollX = Mathf.Max(0f, contentWidth - viewportWidth);
+        targetScrollX = Mathf.Clamp(targetScrollX, 0f, maxScrollX);
+
+        // Snap the scroll position (negated because anchoredPosition moves *content*)
+        contentRect.anchoredPosition = new Vector2(-targetScrollX, contentRect.anchoredPosition.y);
+    }
 
     private void HandleCountEdit(string value)
     {

@@ -60,6 +60,14 @@ public class Metronome2 : MonoBehaviour
             controller.InitializeMarcher(runtimeCache, marcher);
             controller.ResetMarcher(startSet);
         }
+        
+        // 🧼 Auto-hide transform gizmo before metronome playback
+        if (director.TransformGizmoManager != null && director.TransformGizmoManager.HasActiveGizmo)
+        {
+            director.TransformGizmoManager.HideTransformGizmo();
+            Debug.Log("🧽 Transform Gizmo hidden for clean metronome playback.");
+        }
+
 
         if (!isRunning)
         {
@@ -129,6 +137,7 @@ public class Metronome2 : MonoBehaviour
             counterText.text = count.ToString();
             audioSource.Play();
             countsProgressBar?.HighlightCount(count - 1);
+            countsProgressBar?.ScrollToMakeCountVisible(count - 1);
 
             yield return new WaitForSeconds(beatInterval);
 
@@ -143,6 +152,7 @@ public class Metronome2 : MonoBehaviour
                 setProgressBar?.HighlightSet(cycleCount);
                 setProgressBar?.UpdateTimingInputsForSet(cycleCount);
                 countsProgressBar?.ResetHighlight();
+                setProgressBar?.CenterOnSetButton(cycleCount);
 
                 director.VisualizePathsForSet(cycleCount);
 
