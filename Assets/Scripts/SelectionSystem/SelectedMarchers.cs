@@ -80,11 +80,30 @@ public class SelectedMarchers : MonoBehaviour
     
     public void InvokeSnapToGrid()
     {
-        MarcherSnapper.SnapSelectionToGrid(
-            this.selectionManager,
-            this.transformGizmoManager.snapToGrid
-        );
+        var snapToGrid = this.transformGizmoManager.snapToGrid;
+
+        // ✅ Temporarily unparent marchers if gizmo is active
+        if (transformGizmoManager.HasActiveGizmo)
+        {
+            ForEachSelected(m => m.transform.SetParent(null)); // unparent
+        }
+
+        // ✅ Snap selected marchers in world space
+        MarcherSnapper.SnapSelectionToGrid(this.selectionManager, snapToGrid);
+
+        // ✅ Snap the gizmo (after marchers are free)
+        if (transformGizmoManager.HasActiveGizmo)
+        {
+            Transform gizmoTransform = transformGizmoManager.transformGizmo.transform;
+            Vector3 snapped = snapToGrid.GetSnappedGizmoPosition(gizmoTransform.position);
+            gizmoTransform.position = snapped;
+            Debug.Log($"🧲 Gizmo snapped to grid at {snapped}");
+
+            // ✅ Reparent marchers under the gizmo again
+            ForEachSelected(m => m.transform.SetParent(gizmoTransform));
+        }
     }
+
 
     public void ClearSelection()
     {

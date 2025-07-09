@@ -160,6 +160,22 @@ public class TransformGizmoManager : MonoBehaviour
             count++;
         });
         center /= Mathf.Max(1, count);
+        
+        // Optional: snap gizmo center to any overlapping marcher
+        float snapDistanceThreshold = 0.25f; // About half a step
+        foreach (var marcher in selectedMarchers.GetSelectionCopy())
+        {
+            if (marcher == null) continue;
+
+            Vector3 marcherPos = marcher.transform.position;
+            float distance = Vector3.Distance(center, marcherPos);
+            if (distance <= snapDistanceThreshold)
+            {
+                center = marcherPos; // snap gizmo center to marcher
+                Debug.Log($"📎 Gizmo center snapped to marcher '{marcher.name}' at {marcherPos} (Δ={distance})");
+                break;
+            }
+        }
 
         activeGizmo = Instantiate(unifiedGizmoPrefab, center, Quaternion.identity, transform);
         var newBehavior = activeGizmo.GetComponent<UnifiedGizmoBehavior>();

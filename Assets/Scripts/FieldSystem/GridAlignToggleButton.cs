@@ -26,39 +26,34 @@ public class GridAlignToggleButton : MonoBehaviour, IPointerDownHandler, IPointe
         if (!isPressing) return;
         isPressing = false;
 
-        // 🔒 Just held to lock — do nothing else
         if (hasTriggeredHold)
         {
-            Debug.Log("✅ Hold-to-lock completed. No further action.");
+            // ✅ Hold toggles grid lock (ON or OFF)
+            bool newLockState = !GridAlignProxy.IsGridLockActive;
+            GridAlignProxy.SetGridLock(newLockState);
+            Debug.Log(newLockState ? "🔒 Grid lock enabled (via hold)" : "🔓 Grid lock disabled (via hold)");
             return;
         }
 
-        if (GridAlignProxy.IsGridLockActive)
-        {
-            // 🔓 Tap to unlock
-            Debug.Log("🔓 UI: Unlocking grid lock");
-            GridAlignProxy.SetGridLock(false);
-        }
-        else
-        {
-            // 🧲 Tap to snap (only if not locked)
-            Debug.Log("🧲 UI: Snap to grid (tap)");
-            inputRouter.TriggerSnapToGridFromUI();
-        }
+        // ✅ Always snap to grid on tap
+        Debug.Log("🧲 UI: Snap to grid (tap)");
+        inputRouter.TriggerSnapToGridFromUI();
     }
+
 
     private void Update()
     {
-        if (isPressing && !hasTriggeredHold && !GridAlignProxy.IsGridLockActive)
+        if (isPressing && !hasTriggeredHold)
         {
             if (Time.time - pressStartTime >= HOLD_THRESHOLD)
             {
                 hasTriggeredHold = true;
-                Debug.Log("🔒 UI: Activating grid lock via hold");
-                GridAlignProxy.SetGridLock(true);
+                // 👇 No direct lock-on here — we toggle in OnPointerUp
+                Debug.Log("⏳ Hold duration met. Will toggle lock on release.");
             }
         }
     }
+
 
     private void OnEnable()
     {
