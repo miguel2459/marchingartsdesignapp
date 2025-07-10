@@ -91,6 +91,11 @@ public class JsonBackendService
     {
         coroutineHost.StartCoroutine(DownloadJsonCoroutine(showId, jsonType, onComplete));
     }
+    
+    public void RequestDownloadJsonWithMetadata(string showId, string jsonType, Action<CachedJsonMetadata> onComplete)
+    {
+        coroutineHost.StartCoroutine(DownloadJsonWithMetadataCoroutine(showId, jsonType, onComplete));
+    }
 
     private IEnumerator DownloadJsonCoroutine(string showId, string jsonType, Action<string> onComplete)
     {
@@ -125,6 +130,56 @@ public class JsonBackendService
             string rawResponse = request.downloadHandler?.text ?? "(no body)";
             Debug.LogError($"❌ Failed to download {jsonType} JSON for {showId}: {request.error}");
             Debug.LogError($"🔍 {jsonType} JSON for {showId}: Raw server response: {rawResponse}");
+            onComplete?.Invoke(null);
+        }
+
+        request.Dispose();
+    }
+    
+    private IEnumerator DownloadJsonWithMetadataCoroutine(string showId, string jsonType, Action<CachedJsonMetadata> onComplete)
+    {
+        string action = jsonType == MARCHER_TYPE ? "getMarcherJson" : "getTimingJson";
+        string baseUrl = backendURL;
+
+        var uriBuilder = new System.UriBuilder(baseUrl);
+        var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        query["action"] = action;
+        query["showId"] = showId;
+        query["accountSheetId"] = accountSheetId;
+        uriBuilder.Query = query.ToString();
+
+        string finalUrl = uriBuilder.ToString();
+        Debug.Log($"📥 Requesting {jsonType} JSON metadata for {showId} from: {finalUrl}");
+
+        UnityWebRequest request = UnityWebRequest.Get(finalUrl);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("User-Agent", "UnityWebRequest");
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            string result = request.downloadHandler?.text ?? "";
+            try
+            {
+                var root = JSON.Parse(result);
+                string jsonContent = root["data"].ToString();  // Serialize back to string
+                string timestampStr = root["timestamp"];
+                DateTime timestamp = DateTime.TryParse(timestampStr, out var parsedTime)
+                    ? parsedTime : DateTime.UtcNow;
+
+                Debug.Log($"✅ Received {jsonType} JSON with timestamp: {timestamp:O}");
+                onComplete?.Invoke(new CachedJsonMetadata(jsonContent, timestamp));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"❌ Failed to parse metadata response: {e.Message}\n{result}");
+                onComplete?.Invoke(null);
+            }
+        }
+        else
+        {
+            Debug.LogError($"❌ Request failed: {request.error}, Response: {request.downloadHandler?.text ?? "(empty)"}");
             onComplete?.Invoke(null);
         }
 

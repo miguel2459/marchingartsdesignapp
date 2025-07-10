@@ -30,25 +30,32 @@ public class JsonCoordinatorService
     public void GetJson(string showId, string jsonType, Action<string> onResult)
     {
         string cached = cacheService.LoadJsonFromLocalCache(showId, jsonType);
+        DateTime? localTimestamp = JsonTimestampService.LoadTimestamp(showId, jsonType);
 
-        if (!string.IsNullOrEmpty(cached))
+        backendService.RequestDownloadJsonWithMetadata(showId, jsonType, metadata =>
         {
-            Debug.Log($"JsonCoordinatorService: ✅ Loaded {jsonType} JSON from local cache for {showId}.");
-            onResult?.Invoke(cached);
-        }
-        else
-        {
-            Debug.Log($"JsonCoordinatorService: ❌  For {showId}: Cache miss for {jsonType}. Downloading from backend");
-            backendService.RequestDownloadJson(showId, jsonType, downloaded =>
+            if (metadata == null)
             {
-                if (!string.IsNullOrEmpty(downloaded))
-                {
-                    cacheService.SaveJsonToLocalCache(showId, jsonType, downloaded);
-                    Debug.Log($"JsonCoordinatorService: ✅ Downloaded and cached {jsonType} JSON for {showId}");
-                }
-                onResult?.Invoke(downloaded);
-            });
-        }
+                Debug.LogWarning($"⚠️ JsonCoordinatorService: Failed to download metadata. Falling back to cache.");
+                onResult?.Invoke(cached);
+                return;
+            }
+
+            bool isCloudNewer = !localTimestamp.HasValue || metadata.serverTimestamp > localTimestamp.Value;
+
+            if (isCloudNewer)
+            {
+                Debug.Log($"☁️ Cloud version is newer. Updating local cache for {jsonType} of {showId}.");
+                cacheService.SaveJsonToLocalCache(showId, jsonType, metadata.jsonContent);
+                JsonTimestampService.SaveTimestamp(showId, jsonType, metadata.serverTimestamp);
+                onResult?.Invoke(metadata.jsonContent);
+            }
+            else
+            {
+                Debug.Log($"📂 Using cached {jsonType} JSON for {showId}, already up to date.");
+                onResult?.Invoke(cached);
+            }
+        });
     }
 
     /// <summary>

@@ -19,29 +19,50 @@ public class SessionBootstrapper : MonoBehaviour
     private IEnumerator Start()
     {
         Debug.Log("🚀 SessionBootstrapper starting...");
-        
-        // 1. Wait until ShowSelectionManager has written the raw JSON strings.
-        yield return new WaitUntil(() =>
-               sessionManager.runtimeCacheSO != null
-            && !string.IsNullOrEmpty(sessionManager.runtimeCacheSO.CachedMarcherJSON)
-            && !string.IsNullOrEmpty(sessionManager.runtimeCacheSO.CachedTimingJSON)
-            && jsonService != null);
+
+        string showId = sessionManager.showStateSO.CurrentShowID;
+        if (string.IsNullOrEmpty(showId))
+        {
+            Debug.LogError("❌ SessionBootstrapper: Show ID is missing in ShowStateSO.");
+            yield break;
+        }
+
+        bool marcherDone = false;
+        bool timingDone = false;
+
+        string marcherJson = null;
+        string timingJson = null;
+
+        // Request marcher JSON
+        jsonService.GetJson(showId, "marcher", json =>
+        {
+            marcherJson = json;
+            marcherDone = true;
+        });
+
+        // Request timing JSON
+        jsonService.GetJson(showId, "timing", json =>
+        {
+            timingJson = json;
+            timingDone = true;
+        });
+
+        // Wait for both async callbacks
+        yield return new WaitUntil(() => marcherDone && timingDone);
+
+        // Cache them into RuntimeCacheSO
+        sessionManager.runtimeCacheSO.CachedMarcherJSON = marcherJson;
+        sessionManager.runtimeCacheSO.CachedTimingJSON = timingJson;
 
         Debug.Log("SessionBootstrapper: 📦 Raw JSON ready — parsing…");
 
-       // Parse both marcher positions and identities
-        jsonService.ParseMarcherStateJSON(
-            sessionManager.runtimeCacheSO.CachedMarcherJSON,
-            out var countData,
-            out var identityData);
-
+        jsonService.ParseMarcherStateJSON(marcherJson, out var countData, out var identityData);
         sessionManager.runtimeCacheSO.ParsedCountPositions = countData;
         sessionManager.runtimeCacheSO.ParsedIdentities = identityData;
 
-        sessionManager.runtimeCacheSO.SetTimingMap =
-            jsonService.ParseSetTimingMapJSON(sessionManager.runtimeCacheSO.CachedTimingJSON);
+        sessionManager.runtimeCacheSO.SetTimingMap = jsonService.ParseSetTimingMapJSON(timingJson);
 
-        // (Optional sanity checks)
+        // Sanity check
         if (sessionManager.runtimeCacheSO.ParsedCountPositions == null ||
             sessionManager.runtimeCacheSO.SetTimingMap == null)
         {
@@ -52,4 +73,5 @@ public class SessionBootstrapper : MonoBehaviour
         Debug.Log("SessionBootstrapper: ✅ Parsing complete. Raising OnSessionReady.");
         OnSessionReady.Invoke();
     }
+
 }

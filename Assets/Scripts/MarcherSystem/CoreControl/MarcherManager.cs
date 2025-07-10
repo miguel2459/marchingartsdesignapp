@@ -76,6 +76,7 @@ public class MarcherManager : MonoBehaviour
         }
 
         bool usedSaved = false;
+        List<MarcherPositionsManager> fallbackMarchers = new List<MarcherPositionsManager>();
 
         foreach (var m in Marchers)
         {
@@ -97,12 +98,12 @@ public class MarcherManager : MonoBehaviour
                 }
             }
 
-            // Try restoring last known confirmed position
-            var interpolator = new MarcherInterpolator(
-                m,
-                setIndex => sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(setIndex, out var timing) ? timing.count : 8,
-                () => m.transform.position
-            );
+            // // Try restoring last known confirmed position
+            // var interpolator = new MarcherInterpolator(
+            //     m,
+            //     setIndex => sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(setIndex, out var timing) ? timing.count : 8,
+            //     () => m.transform.position
+            // );
 
             if (TryFindLatestConfirmedPositionAcrossSets(m, sessionLoader.LastSet, out int latestSet, out int latestCount, out Vector3 latestPos))
             {
@@ -110,6 +111,7 @@ public class MarcherManager : MonoBehaviour
                 if (latestPos == Vector3.zero)
                 {
                     Debug.LogWarning($"⚠️ {m.name} has confirmed position at Set {latestSet}, Count {latestCount}, but it's still (0,0,0). Ignoring.");
+                    fallbackMarchers.Add(m);
                 }
                 else
                 {
@@ -130,6 +132,11 @@ public class MarcherManager : MonoBehaviour
             }
 
             Debug.Log("🔳 Fallback: arranged all marchers in square and confirmed Set 0, Count 0.");
+        }
+        
+        if (fallbackMarchers.Count > 0)
+        {
+            FallbackLineupOnBackSideline(fallbackMarchers);
         }
     }
 
@@ -192,6 +199,32 @@ public class MarcherManager : MonoBehaviour
             objs
         );
     }
+    
+    private void FallbackLineupOnBackSideline(List<MarcherPositionsManager> fallbackMarchers)
+    {
+        if (fallbackMarchers == null || fallbackMarchers.Count == 0)
+            return;
+
+        float startX = 52.5f;
+        float startZ = 70f;
+        float spacing = 1.25f;
+        float fixedY = 0.76f;
+
+        for (int i = 0; i < fallbackMarchers.Count; i++)
+        {
+            var m = fallbackMarchers[i];
+            float z = startZ - (i * spacing);
+            Vector3 pos = new Vector3(startX, fixedY, z);
+
+            m.transform.position = pos;
+            marcherPositionService?.ConfirmMarcherPosition(m, 0, 0, pos);
+
+            Debug.Log($"🟪 Fallback: {m.name} placed at ({pos.x}, {pos.y}, {pos.z}) on back sideline.");
+        }
+
+        Debug.Log($"🔁 FallbackLineupOnBackSideline: Positioned and confirmed {fallbackMarchers.Count} marcher(s).");
+    }
+
 
     public void SetMarchersList(IReadOnlyList<MarcherPositionsManager> updatedList)
     {
