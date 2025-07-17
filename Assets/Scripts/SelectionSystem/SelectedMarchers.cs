@@ -28,6 +28,12 @@ public class SelectedMarchers : MonoBehaviour
     // 🧠 Selection Logic
     private MarcherSelectionManager selectionManager;
     public int SelectedCount => selectionManager.SelectedMarchers.Count;
+    public static SelectedMarchers instance;
+
+    private void Awake()
+    {
+        instance = this;
+    }
 
     private void Start()
     {

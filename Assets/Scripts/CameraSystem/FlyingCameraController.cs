@@ -157,7 +157,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
                 foreach (var m in selectedMarchers) bounds.Encapsulate(m.transform.position);
                 targetFocus = bounds.center;
                 targetDistance = CalculateRequiredDistanceToFit();
-                Debug.Log($"🎯 Focusing on {selectedMarchers.Count} marchers center at {targetFocus} with dynamic distance {targetDistance}");
+                // Debug.Log($"🎯 Focusing on {selectedMarchers.Count} marchers center at {targetFocus} with dynamic distance {targetDistance}");
             }
         }
         else
@@ -244,7 +244,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
 
         float visiblePixels = screenHeight - uiHeight;
         float percent = Mathf.Clamp01(visiblePixels / screenHeight);
-        Debug.Log($"📐 Visible viewport: {percent * 100:F1}% of screen height");
+        // Debug.Log($"📐 Visible viewport: {percent * 100:F1}% of screen height");
         return percent;
     }
 
@@ -261,7 +261,7 @@ public class FlyingCameraController : MonoBehaviour, ICameraFocusHandler
             return;
         }
 
-        Debug.Log($"📸 Focus triggered on {selectedMarchers.Count} selected marcher(s). Focal point = {focalPoint}");
+        // Debug.Log($"📸 Focus triggered on {selectedMarchers.Count} selected marcher(s). Focal point = {focalPoint}");
         isFocusing = true;
         MoveCameraToFocus();
     }

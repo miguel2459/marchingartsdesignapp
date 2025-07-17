@@ -79,7 +79,7 @@ public class EnsembleUIController : MonoBehaviour
         // 4) Force‐highlight + load timing inputs for the last set
         setsBar.HighlightSet(last);
         setsBar.UpdateTimingInputsForSet(last);
-        director.VisualizePathsForSet(last);
+        //director.VisualizePathsForSet(last);
 
         // 5) Counts‐bar: ensure defaults, then fill in subtexts & colors
         countsBar.EnsureSetTimingDefaults(director.numberOfSets);

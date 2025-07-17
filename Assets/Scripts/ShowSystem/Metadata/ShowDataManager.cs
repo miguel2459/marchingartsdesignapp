@@ -161,9 +161,11 @@ public class ShowDataManager
             numberOfMarchers = showStateSO.NumberOfMarchers,
             numberOfSets = showStateSO.NumberOfSets,
             numberOfProps = showStateSO.NumberOfProps,
-            lastModified = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+            lastModified = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             lastSet = showStateSO.LastSet,
-            showSheetId = SessionManager.instance.selectedShow?.showSheetID
+            showSheetId = SessionManager.instance.selectedShow?.showSheetID,
+            accountSheetId = userStateSO.AccountSheetID,
+            showID = showStateSO.CurrentShowID
         };
 
         string json = JsonUtility.ToJson(payload);
@@ -193,13 +195,15 @@ public class ShowDataManager
     [Serializable]
     public class ShowDetailsUpdatePayload
     {
-        public string action = "UpdateShowDetails";
+        public string action = "updateshowdetails";
         public int numberOfMarchers;
         public int numberOfSets;
         public int numberOfProps;
         public string lastModified;
         public string lastSet;
         public string showSheetId;
+        public string accountSheetId;
+        public string showID;
     }
 
     private IEnumerator UploadMarcherJSON(string path)

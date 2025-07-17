@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 
 [ExecuteInEditMode]
@@ -92,10 +93,16 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         progressTracker.OnSetPercentChanged += setBar.UpdateSetProgressColor;
         UpdateInspectorSetProgress();
         UIController.InitializeCountsBar();
-        VisualizePathsForSet(lastSet); // Show current set's paths on load
+        StartCoroutine(DelayedVisualizePaths());
         UndoPositionCaseHandlers.Initialize(marcherService, this);
         RedoPositionCaseHandlers.Initialize(marcherService, this);
     }
+    private IEnumerator DelayedVisualizePaths()
+    {
+        yield return new WaitUntil(() => SelectedMarchers.instance != null);
+        VisualizePathsForSet(lastSet);
+    }
+
 
     public List<GameObject> MarcherObjects =>
     new List<GameObject>(Marchers.Select(m => m.gameObject));

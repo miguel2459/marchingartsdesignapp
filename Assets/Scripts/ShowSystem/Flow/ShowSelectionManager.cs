@@ -322,6 +322,9 @@ public class ShowSelectionManager : MonoBehaviour
             if (!string.IsNullOrEmpty(result))
             {
                 session.runtimeCacheSO.CachedMarcherJSON = result; // Store result in the Runtime Cache SO
+                session.JsonService.ParseMarcherStateJSON(result, out var countPos, out var ids);
+                session.runtimeCacheSO.ParsedCountPositions = countPos;
+                session.runtimeCacheSO.ParsedIdentities = ids;
                 marcherLoadSuccess = true;
                 Debug.Log("✅ Marcher JSON loaded/cached successfully.");
             }
@@ -338,7 +341,8 @@ public class ShowSelectionManager : MonoBehaviour
         {
              if (!string.IsNullOrEmpty(result))
             {
-                session.runtimeCacheSO.CachedTimingJSON = result; // Store result in the Runtime Cache SO
+                session.runtimeCacheSO.CachedTimingJSON = result;
+                session.runtimeCacheSO.SetTimingMap = session.JsonService.ParseSetTimingMapJSON(result);
                 timingLoadSuccess = true;
                 Debug.Log("✅ Timing JSON loaded/cached successfully.");
             }

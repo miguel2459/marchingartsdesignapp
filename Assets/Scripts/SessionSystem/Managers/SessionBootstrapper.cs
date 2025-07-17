@@ -27,51 +27,16 @@ public class SessionBootstrapper : MonoBehaviour
             yield break;
         }
 
-        bool marcherDone = false;
-        bool timingDone = false;
-
-        string marcherJson = null;
-        string timingJson = null;
-
-        // Request marcher JSON
-        jsonService.GetJson(showId, "marcher", json =>
+        // ✅ Early exit if already parsed (Scene 3 handled it)
+        if (sessionManager.runtimeCacheSO.ParsedCountPositions != null &&
+            sessionManager.runtimeCacheSO.SetTimingMap != null)
         {
-            marcherJson = json;
-            marcherDone = true;
-        });
-
-        // Request timing JSON
-        jsonService.GetJson(showId, "timing", json =>
-        {
-            timingJson = json;
-            timingDone = true;
-        });
-
-        // Wait for both async callbacks
-        yield return new WaitUntil(() => marcherDone && timingDone);
-
-        // Cache them into RuntimeCacheSO
-        sessionManager.runtimeCacheSO.CachedMarcherJSON = marcherJson;
-        sessionManager.runtimeCacheSO.CachedTimingJSON = timingJson;
-
-        Debug.Log("SessionBootstrapper: 📦 Raw JSON ready — parsing…");
-
-        jsonService.ParseMarcherStateJSON(marcherJson, out var countData, out var identityData);
-        sessionManager.runtimeCacheSO.ParsedCountPositions = countData;
-        sessionManager.runtimeCacheSO.ParsedIdentities = identityData;
-
-        sessionManager.runtimeCacheSO.SetTimingMap = jsonService.ParseSetTimingMapJSON(timingJson);
-
-        // Sanity check
-        if (sessionManager.runtimeCacheSO.ParsedCountPositions == null ||
-            sessionManager.runtimeCacheSO.SetTimingMap == null)
-        {
-            Debug.LogError("SessionBootstrapper: ❌ Parsing failed, aborting bootstrap.");
+            Debug.Log("⏩ Parsed session data already exists. Skipping JSON load.");
+            OnSessionReady.Invoke();
             yield break;
         }
 
-        Debug.Log("SessionBootstrapper: ✅ Parsing complete. Raising OnSessionReady.");
-        OnSessionReady.Invoke();
+        Debug.LogWarning("⚠️ JSON not yet parsed. You likely bypassed Scene 3. Aborting load.");
+        yield break; // Optional: avoid silent errors
     }
-
 }
