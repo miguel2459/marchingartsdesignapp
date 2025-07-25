@@ -15,11 +15,7 @@ public class SnapToGridLines : MonoBehaviour
     public Vector2 currentFieldMax;
 
     public static event Action OnGridReady; // Event to notify when the grid is ready
-
-    void Start()
-    {
-        //SetFieldBoundaries(gridManager.currentFieldType);
-    }
+    
 
     /// <summary>
     /// Retrieves and sets field boundaries based on the selected field type from FieldGridManager.

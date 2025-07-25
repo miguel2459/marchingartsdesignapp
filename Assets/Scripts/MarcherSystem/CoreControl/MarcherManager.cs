@@ -28,7 +28,7 @@ public class MarcherManager : MonoBehaviour
 
     // ─────────────────────────────────────────────────────────────────────────────
 
-    private void Awake()
+    public void MarcherManagerInit()
     {
         if (sessionLoader == null) sessionLoader = GetComponent<EnsembleSessionLoader>();
         if (marcherFactory == null) marcherFactory = GetComponent<MarcherFactory>();
@@ -86,7 +86,7 @@ public class MarcherManager : MonoBehaviour
             if (sessionLoader.RuntimeCache.ParsedCountPositions.TryGetValue(m.name, out var restored))
             {
                 m.LoadPositions(restored);
-                Debug.Log($"📦 Loaded saved positions for {m.name}");
+                // Debug.Log($"📦 Loaded saved positions for {m.name}");
             }
 
             // Try restoring identity data
@@ -117,7 +117,7 @@ public class MarcherManager : MonoBehaviour
                 {
                     m.transform.position = latestPos;
                     usedSaved = true;
-                    Debug.Log($"✅ {m.name} positioned at Set {latestSet}, Count {latestCount} → {latestPos}");
+                    //Debug.Log($"✅ {m.name} positioned at Set {latestSet}, Count {latestCount} → {latestPos}");
                 }
             }
         }

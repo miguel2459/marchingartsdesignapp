@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using SimpleJSON;
@@ -149,4 +150,21 @@ public class JsonParserService
         Debug.Log($"✅ JsonParserService: Parsed timing map with {map.Count} entries.");
         return map;
     }
+    
+    public IEnumerator ParseMarcherStateJSONAsync(string jsonText, Action<Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>, Dictionary<string, MarcherIdentity>> onComplete)
+    {
+        yield return null; // allow async behavior
+
+        ParseMarcherStateJSON(jsonText, out var countPositions, out var identities);
+        onComplete?.Invoke(countPositions, identities);
+    }
+
+    public IEnumerator ParseSetTimingMapJSONAsync(string jsonText, Action<Dictionary<int, RuntimeCacheSO.SetTimingData>> onComplete)
+    {
+        yield return null; // async yield
+
+        var timingMap = ParseSetTimingMapJSON(jsonText);
+        onComplete?.Invoke(timingMap);
+    }
+
 }

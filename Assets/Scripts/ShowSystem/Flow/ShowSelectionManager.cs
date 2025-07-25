@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -58,7 +59,7 @@ public class ShowSelectionManager : MonoBehaviour
         PopulateShowSelection();
 
         // Start pre-fetching JSON data for existing shows in the background
-        StartCoroutine(PreFetchAndCacheAllJSONs());
+        _ = PreFetchAndCacheAllJSONsAsync(); // fire and forget
     }
 
      /// <summary>
@@ -165,8 +166,6 @@ public class ShowSelectionManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"Selected Show: {show.showTitle} (ID: {show.showID})");
-
         // Ensure required managers are available
         if (session == null || SceneController.instance == null)
         {
@@ -179,6 +178,7 @@ public class ShowSelectionManager : MonoBehaviour
         {
             session.selectedShow = show;
             // Start the process by fetching the detailed metadata from the show's specific Google Sheet
+            Debug.Log($"Selected Show: {show.showTitle} (ID: {show.showID})");
             StartCoroutine(FetchShowDetails(show.showSheetID));
         } else {
              Debug.LogWarning("Scene 4 (ShowManagerScene) is already loading, skipping OnShowSelected action.");
@@ -213,8 +213,6 @@ public class ShowSelectionManager : MonoBehaviour
         {
             // Set User-Agent header, good practice for web requests
             request.SetRequestHeader("User-Agent", "UnityWebRequest");
-            // Optional: Add timeout
-            // request.timeout = 30; // 30 seconds
 
             yield return request.SendWebRequest();
 
@@ -297,83 +295,71 @@ public class ShowSelectionManager : MonoBehaviour
     /// This handles checking the local cache first, then requesting data from the backend if needed.
     /// Switches to the ShowManager scene upon successful loading of both JSON files.
     /// </summary>
-    private IEnumerator LoadShowJsonData() // Renamed from LoadShowJSONThenPopulate
+    private IEnumerator LoadShowJsonData()
     {
-        // Pre-flight checks for required services and data
         if (session.JsonService == null || session.showStateSO == null || string.IsNullOrEmpty(session.showStateSO.CurrentShowID))
         {
-            Debug.LogError("LoadShowJsonData: JsonService or ShowStateSO not ready. Aborting JSON load.");
-            // TODO: Implement user-facing error message
+            Debug.LogError("LoadShowJsonData: JsonService or ShowStateSO not ready.");
             yield break;
         }
 
-        string currentShowId = session.showStateSO.CurrentShowID;
-        Debug.Log($"🚀 Loading Marcher & Timing JSON for Show ID: {currentShowId} using JsonPersistenceService...");
+        string showId = session.showStateSO.CurrentShowID;
+        string marcherJson = session.JsonService.LoadJsonFromCache(showId, "marcher");
+        string timingJson = session.JsonService.LoadJsonFromCache(showId, "timing");
 
-        // Flags to track completion of asynchronous operations
-        bool marcherJsonLoadAttemptComplete = false;
-        bool timingJsonLoadAttemptComplete = false;
-        bool marcherLoadSuccess = false;
-        bool timingLoadSuccess = false;
-
-        // --- Request Marcher JSON ---
-        session.JsonService.GetJson(currentShowId, "marcher", (result) =>
+        if (string.IsNullOrEmpty(marcherJson) || string.IsNullOrEmpty(timingJson))
         {
-            if (!string.IsNullOrEmpty(result))
+            Debug.LogError("❌ Missing cached JSON.");
+            yield break;
+        }
+
+        bool parsedMarcher = false;
+        bool parsedTiming = false;
+
+        float timeout = 10f;
+        float timer = 0f;
+
+        StartCoroutine(session.JsonService.ParseMarcherStateJSONAsync(marcherJson, (countPos, identities) =>
+        {
+            if (countPos != null && countPos.Count > 0)
             {
-                session.runtimeCacheSO.CachedMarcherJSON = result; // Store result in the Runtime Cache SO
-                session.JsonService.ParseMarcherStateJSON(result, out var countPos, out var ids);
+                session.runtimeCacheSO.CachedMarcherJSON = marcherJson;
                 session.runtimeCacheSO.ParsedCountPositions = countPos;
-                session.runtimeCacheSO.ParsedIdentities = ids;
-                marcherLoadSuccess = true;
-                Debug.Log("✅ Marcher JSON loaded/cached successfully.");
+                session.runtimeCacheSO.ParsedIdentities = identities;
+                parsedMarcher = true;
+                Debug.Log("✅ Parsed marcher JSON");
             }
-            else
-            {
-                Debug.LogError($"❌ Failed to load/download Marcher JSON for show {currentShowId}.");
-                // Error is logged within JsonService, consider additional user feedback here
-            }
-            marcherJsonLoadAttemptComplete = true; // Mark this request as finished
-        });
+            else Debug.LogError("❌ Failed to parse marcher JSON");
+        }));
 
-        // --- Request Timing JSON ---
-        session.JsonService.GetJson(currentShowId, "timing", (result) =>
+        StartCoroutine(session.JsonService.ParseSetTimingMapJSONAsync(timingJson, (timingMap) =>
         {
-             if (!string.IsNullOrEmpty(result))
+            if (timingMap != null && timingMap.Count > 0)
             {
-                session.runtimeCacheSO.CachedTimingJSON = result;
-                session.runtimeCacheSO.SetTimingMap = session.JsonService.ParseSetTimingMapJSON(result);
-                timingLoadSuccess = true;
-                Debug.Log("✅ Timing JSON loaded/cached successfully.");
+                session.runtimeCacheSO.CachedTimingJSON = timingJson;
+                session.runtimeCacheSO.SetTimingMap = timingMap;
+                parsedTiming = true;
+                Debug.Log("✅ Parsed timing JSON");
             }
-            else
-            {
-                Debug.LogError($"❌ Failed to load/download Timing JSON for show {currentShowId}.");
-                 // Error is logged within JsonService, consider additional user feedback here
-            }
-            timingJsonLoadAttemptComplete = true; // Mark this request as finished
-        });
+            else Debug.LogError("❌ Failed to parse timing JSON");
+        }));
 
-        // --- Wait for both requests to complete ---
-        Debug.Log("⏳ Waiting for JSON loading attempts to complete...");
-        yield return new WaitUntil(() => marcherJsonLoadAttemptComplete && timingJsonLoadAttemptComplete);
-
-        // --- Proceed to next scene only if BOTH were successful ---
-        if (marcherLoadSuccess && timingLoadSuccess)
+        // ⏳ Wait with timeout watchdog
+        while (!(parsedMarcher && parsedTiming) && timer < timeout)
         {
-             Debug.Log($"✅ Both JSON files ready for {currentShowId}. Switching to Show Manager scene...");
-             if (SceneController.instance != null)
-             {
-                SceneController.instance.SwitchScene(4); // Switch to ShowManagerScene (index 4)
-             } else {
-                 Debug.LogError("SceneController instance is null! Cannot switch scene.");
-                 // TODO: Implement user-facing error message
-             }
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        if (parsedMarcher && parsedTiming)
+        {
+            Debug.Log("🚀 JSON parse complete. Proceeding to ShowManagerScene.");
+            SceneController.instance?.SwitchScene(4);
         }
         else
         {
-            Debug.LogError($"❌ Failed to load necessary JSON data for show {currentShowId}. Cannot switch scene.");
-            // TODO: Implement user-facing error message (e.g., "Failed to load show data. Please try again.")
+            Debug.LogError($"❌ JSON parse timed out after {timeout} seconds. Aborting.");
+            // Optional: Show retry UI or debug overlay
         }
     }
 
@@ -381,39 +367,79 @@ public class ShowSelectionManager : MonoBehaviour
     /// Attempts to pre-fetch/cache JSON data for all known shows in the background.
     /// Uses the JsonPersistenceService to handle cache checks and downloads.
     /// </summary>
-    private IEnumerator PreFetchAndCacheAllJSONs()
+    // private IEnumerator PreFetchAndCacheAllJSONs()
+    // {
+    //     if (session.savedShows == null || session.savedShows.Count == 0)
+    //     {
+    //         Debug.Log("ℹ️ No saved shows found to prefetch.");
+    //         yield break;
+    //     }
+    //     if (session.JsonService == null)
+    //     {
+    //          Debug.LogError("PreFetchAndCacheAllJSONs: JsonService is not available. Skipping prefetch.");
+    //          yield break;
+    //     }
+    //
+    //     var showsToPrefetch = new List<SessionManager.ShowData>(session.savedShows);
+    //     Debug.Log($"🧠 Starting background prefetch/cache check for {showsToPrefetch.Count} shows...");
+    //
+    //     // Define a small delay to potentially spread out requests if hitting a backend
+    //     var delay = new WaitForSeconds(0.1f); // 100ms delay between shows
+    //
+    //     foreach (var show in showsToPrefetch)
+    //     {
+    //         if (string.IsNullOrEmpty(show.showID)) continue; // Skip invalid show entries
+    //
+    //         // Use GetJson for its cache-check/download logic. We discard the result here.
+    //         session.JsonService.GetJson(show.showID, "marcher", _ => { /* No action needed on result */ });
+    //         session.JsonService.GetJson(show.showID, "timing", _ => { /* No action needed on result */ });
+    //
+    //         yield return delay; // Wait briefly before starting the next show's requests
+    //     }
+    //
+    //     Debug.Log("🎉 Finished initiating background prefetch requests.");
+    // }
+    private async Task PreFetchAndCacheAllJSONsAsync()
     {
         if (session.savedShows == null || session.savedShows.Count == 0)
         {
             Debug.Log("ℹ️ No saved shows found to prefetch.");
-            yield break;
+            return;
         }
+
         if (session.JsonService == null)
         {
-             Debug.LogError("PreFetchAndCacheAllJSONs: JsonService is not available. Skipping prefetch.");
-             yield break;
+            Debug.LogError("PreFetchAndCacheAllJSONs: JsonService is not available. Skipping prefetch.");
+            return;
         }
 
         var showsToPrefetch = new List<SessionManager.ShowData>(session.savedShows);
         Debug.Log($"🧠 Starting background prefetch/cache check for {showsToPrefetch.Count} shows...");
 
-        // Define a small delay to potentially spread out requests if hitting a backend
-        var delay = new WaitForSeconds(0.1f); // 100ms delay between shows
+        float totalStart = Time.realtimeSinceStartup;
 
         foreach (var show in showsToPrefetch)
         {
-            if (string.IsNullOrEmpty(show.showID)) continue; // Skip invalid show entries
+            if (string.IsNullOrEmpty(show.showID)) continue;
 
-            // Use GetJson for its cache-check/download logic. We discard the result here.
-            session.JsonService.GetJson(show.showID, "marcher", _ => { /* No action needed on result */ });
-            session.JsonService.GetJson(show.showID, "timing", _ => { /* No action needed on result */ });
+            float start = Time.realtimeSinceStartup;
 
-            yield return delay; // Wait briefly before starting the next show's requests
+            // 🚀 Launch both fetches in parallel
+            Task<string> marcherTask = session.JsonService.GetJsonAsync(show.showID, "marcher");
+            Task<string> timingTask = session.JsonService.GetJsonAsync(show.showID, "timing");
+
+            // ✅ Await both to complete before moving to next show
+            await Task.WhenAll(marcherTask, timingTask);
+
+            float duration = Time.realtimeSinceStartup - start;
+            Debug.Log($"📦 Fetched marcher + timing JSON for {show.showID} in {duration:F2} sec");
+
+            await Task.Delay(100); // throttle next round to avoid API hammering
         }
 
-        Debug.Log("🎉 Finished initiating background prefetch requests.");
+        float totalElapsed = Time.realtimeSinceStartup - totalStart;
+        Debug.Log($"🎉 Finished downloading all JSON metadata. (⏱ Total: {totalElapsed:F2} sec)");
     }
-
 
     #endregion
 

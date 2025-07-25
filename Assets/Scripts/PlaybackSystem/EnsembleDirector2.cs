@@ -82,8 +82,14 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         fieldCenter = fieldManager.GetFieldCenter();
     }
 
-    private void OnMarchersReady()
+    public void OnMarchersReady()
     {
+        StartCoroutine(DelayedMarcherReadyFlow());
+    }
+    private IEnumerator DelayedMarcherReadyFlow()
+    {
+        yield return new WaitUntil(() => SelectedMarchers.IsInitialized);
+
         fieldCenter = fieldManager.GetFieldCenter();
         metronome.Marchers = marcherManager.Marchers; // if you expose a setter
         marchers = new List<MarcherPositionsManager>(marcherManager.Marchers);
@@ -93,14 +99,11 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         progressTracker.OnSetPercentChanged += setBar.UpdateSetProgressColor;
         UpdateInspectorSetProgress();
         UIController.InitializeCountsBar();
-        StartCoroutine(DelayedVisualizePaths());
+        VisualizePathsForSet(lastSet);
         UndoPositionCaseHandlers.Initialize(marcherService, this);
         RedoPositionCaseHandlers.Initialize(marcherService, this);
-    }
-    private IEnumerator DelayedVisualizePaths()
-    {
-        yield return new WaitUntil(() => SelectedMarchers.instance != null);
-        VisualizePathsForSet(lastSet);
+
+        Debug.Log("✅ Delayed OnMarchersReady complete.");
     }
 
 

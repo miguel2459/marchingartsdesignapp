@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 public class CameraModeManager : MonoBehaviour
 {
@@ -18,15 +19,14 @@ public class CameraModeManager : MonoBehaviour
 
     public bool IsTopDown() => isTopDownActive;
 
-    void Start()
+    public void CameraModeInit()
     {
         if (director != null)
         {
-            director.GetComponent<MarcherManager>().OnMarchersReady += ActivateFlyingMode;
+            ActivateFlyingMode();
         }
     }
-
-
+    
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.T))
@@ -38,6 +38,19 @@ public class CameraModeManager : MonoBehaviour
             topDownToggle.UpdateIcon(isTopDownActive);
         }
     }
+    
+    // private IEnumerator WaitForSelectedMarchersThenActivateFlying()
+    // {
+    //     yield return new WaitUntil(() =>
+    //         SelectedMarchers.instance != null &&
+    //         SelectedMarchers.instance.gameObject.activeInHierarchy &&
+    //         SelectedMarchers.IsInitialized
+    //     );
+    //
+    //     yield return null; // wait a frame just to be safe
+    //
+    //     ActivateFlyingMode();
+    // }
 
     private void ActivateTopDownMode()
     {

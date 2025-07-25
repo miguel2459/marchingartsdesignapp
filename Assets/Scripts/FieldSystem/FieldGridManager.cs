@@ -31,7 +31,7 @@ public class FieldGridManager : MonoBehaviour
     private List<LineRenderer> gridLines = new List<LineRenderer>();
     private List<LineRenderer> fieldGrid8_5 = new List<LineRenderer>();
 
-    void Start()
+    public void FieldGridInit()
     {
         snapToGrid = GetComponent<SnapToGridLines>();
         SetFieldType(GetFieldTypeFromSession());

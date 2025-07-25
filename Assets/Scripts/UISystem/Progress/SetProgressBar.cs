@@ -26,7 +26,7 @@ public class SetProgressBar : MonoBehaviour
     private int totalSets = 1;
     private int lastSet = 1;
     [SerializeField] private MarcherPositionHistory positionHistory;
-    private void Awake()
+    public void SetProgressBarInit()
     {
         if (director == null)
             Debug.LogError("SetProgressBar: please assign your EnsembleDirector2!");
@@ -50,14 +50,9 @@ public class SetProgressBar : MonoBehaviour
                 });
             }
         }
-        
+        AttachListeners();
 
         Debug.Log($"✅ Awake initialized {setButtonWrappers.Count} pre-existing set buttons.");
-    }
-
-    private void Start()
-    {
-        AttachListeners();
     }
 
     private void AttachListeners()

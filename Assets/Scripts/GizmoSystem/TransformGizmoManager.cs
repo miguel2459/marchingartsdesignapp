@@ -33,6 +33,9 @@ public class TransformGizmoManager : MonoBehaviour
     // ========================================================
     void Update()
     {
+        if (selectedMarchers == null || !SelectedMarchers.IsInitialized)
+            return;
+        
         if (selectedMarchers.SelectedCount == 0)
         {
             if (activeGizmo)

@@ -17,6 +17,7 @@ public class SelectedMarchers : MonoBehaviour
     [SerializeField] public DashedPathPreviewManager dashedPathPreviewManager; // Assign in Inspector
     [SerializeField] public CameraModeManager cameraModeManager;
     [SerializeField] public MarcherEditActions marcherEditActions;
+    public static bool IsInitialized { get; private set; } = false;
 
     // 🎥 Camera & Interaction
     public Camera cam;
@@ -27,7 +28,7 @@ public class SelectedMarchers : MonoBehaviour
 
     // 🧠 Selection Logic
     private MarcherSelectionManager selectionManager;
-    public int SelectedCount => selectionManager.SelectedMarchers.Count;
+    public int SelectedCount => selectionManager != null ? selectionManager.SelectedMarchers.Count : 0;
     public static SelectedMarchers instance;
 
     private void Awake()
@@ -35,13 +36,17 @@ public class SelectedMarchers : MonoBehaviour
         instance = this;
     }
 
-    private void Start()
+    public void SelectedMarchersInit()
     {
         selectionManager = new MarcherSelectionManager(director, dashedPathPreviewManager);
         marcherEditActions.SetSelectionManager(selectionManager);
+        IsInitialized = true; // ✅ signal ready
+        Debug.Log("✅ SelectedMarchers initialized.");
+
     }
     private void Update()
     {
+        if (!IsInitialized || selectionManager == null) return;
         if (SelectedCount > 0 && transformGizmoManager != null && transformGizmoManager.IsGizmoMoving)
         {
             //Debug.Log($"[Update] SelectedCount={SelectedCount}, IsMoving={transformGizmoManager?.isMoving}");

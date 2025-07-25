@@ -23,7 +23,7 @@ public class EnsembleSessionLoader : MonoBehaviour
     private int numberOfSets;
     //private int lastSet;
 
-    private void Awake()
+    public void EnsembleLoaderInit()
     {
         // auto‑assign if someone forgot to wire in Inspector
         if (bootstrapper == null)
@@ -33,6 +33,7 @@ public class EnsembleSessionLoader : MonoBehaviour
         if (jsonService   == null) jsonService   = SessionManager.instance.JsonService;
 
         bootstrapper.OnSessionReady += HandleSessionReady;
+        Debug.Log("Session Ready!");
     }
 
     private void OnDestroy()

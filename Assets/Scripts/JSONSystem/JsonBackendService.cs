@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using SimpleJSON;
@@ -86,62 +87,11 @@ public class JsonBackendService
         onComplete?.Invoke(success);
         request.Dispose();
     }
-
-    public void RequestDownloadJson(string showId, string jsonType, Action<string> onComplete)
-    {
-        coroutineHost.StartCoroutine(DownloadJsonCoroutine(showId, jsonType, onComplete));
-    }
     
-    public void RequestDownloadJsonWithMetadata(string showId, string jsonType, Action<CachedJsonMetadata> onComplete)
+    public async Task<CachedJsonMetadata> RequestDownloadJsonWithMetadataAsync(string showId, string jsonType)
     {
-        coroutineHost.StartCoroutine(DownloadJsonWithMetadataCoroutine(showId, jsonType, onComplete));
-    }
-
-    private IEnumerator DownloadJsonCoroutine(string showId, string jsonType, Action<string> onComplete)
-    {
-        string action = jsonType == MARCHER_TYPE ? "getMarcherJson" : "getTimingJson";
-        string baseUrl = backendURL; // e.g., https://us-central1-mada-backend.cloudfunctions.net/appsScriptProxy
-
-        // ✅ Properly build and encode the full query string
-        var uriBuilder = new System.UriBuilder(baseUrl);
-        var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
-        query["action"] = action;
-        query["showId"] = showId;
-        query["accountSheetId"] = accountSheetId;
-        uriBuilder.Query = query.ToString();
-
-        string finalUrl = uriBuilder.ToString();
-        Debug.Log($"📥 Downloading {jsonType} JSON for {showId}, from: {finalUrl}");
-
-        UnityWebRequest request = UnityWebRequest.Get(finalUrl);
-        request.downloadHandler = new DownloadHandlerBuffer();
-        request.SetRequestHeader("User-Agent", "UnityWebRequest");
-
-        yield return request.SendWebRequest();
-
-        if (request.result == UnityWebRequest.Result.Success)
-        {
-            string resultJson = request.downloadHandler?.text ?? "";
-            Debug.Log($"✅ Downloaded {jsonType} JSON for {showId}.");
-            onComplete?.Invoke(resultJson);
-        }
-        else
-        {
-            string rawResponse = request.downloadHandler?.text ?? "(no body)";
-            Debug.LogError($"❌ Failed to download {jsonType} JSON for {showId}: {request.error}");
-            Debug.LogError($"🔍 {jsonType} JSON for {showId}: Raw server response: {rawResponse}");
-            onComplete?.Invoke(null);
-        }
-
-        request.Dispose();
-    }
-    
-    private IEnumerator DownloadJsonWithMetadataCoroutine(string showId, string jsonType, Action<CachedJsonMetadata> onComplete)
-    {
-        string action = jsonType == MARCHER_TYPE ? "getMarcherJson" : "getTimingJson";
-        string baseUrl = backendURL;
-
-        var uriBuilder = new System.UriBuilder(baseUrl);
+        string action = jsonType == "marcher" ? "getMarcherJson" : "getTimingJson";
+        var uriBuilder = new UriBuilder(backendURL);
         var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
         query["action"] = action;
         query["showId"] = showId;
@@ -155,7 +105,9 @@ public class JsonBackendService
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("User-Agent", "UnityWebRequest");
 
-        yield return request.SendWebRequest();
+        var op = request.SendWebRequest();
+        while (!op.isDone)
+            await Task.Yield(); // async wait without blocking
 
         if (request.result == UnityWebRequest.Result.Success)
         {
@@ -163,26 +115,74 @@ public class JsonBackendService
             try
             {
                 var root = JSON.Parse(result);
-                string jsonContent = root["data"].ToString();  // Serialize back to string
+                string jsonContent = root["data"].ToString();
                 string timestampStr = root["timestamp"];
                 DateTime timestamp = DateTime.TryParse(timestampStr, out var parsedTime)
                     ? parsedTime : DateTime.UtcNow;
 
                 Debug.Log($"✅ Received {jsonType} JSON with timestamp: {timestamp:O}");
-                onComplete?.Invoke(new CachedJsonMetadata(jsonContent, timestamp));
+                return new CachedJsonMetadata(jsonContent, timestamp);
             }
             catch (Exception e)
             {
-                Debug.LogError($"❌ Failed to parse metadata response: {e.Message}\n{result}");
-                onComplete?.Invoke(null);
+                Debug.LogError($"❌ Failed to parse metadata response: {e.Message}\n{request.downloadHandler?.text}");
+                return null;
             }
         }
         else
         {
             Debug.LogError($"❌ Request failed: {request.error}, Response: {request.downloadHandler?.text ?? "(empty)"}");
-            onComplete?.Invoke(null);
+            return null;
         }
-
-        request.Dispose();
-    }
+    } 
+    
+    // private IEnumerator DownloadJsonWithMetadataCoroutine(string showId, string jsonType, Action<CachedJsonMetadata> onComplete)
+    // {
+    //     string action = jsonType == MARCHER_TYPE ? "getMarcherJson" : "getTimingJson";
+    //     string baseUrl = backendURL;
+    //
+    //     var uriBuilder = new System.UriBuilder(baseUrl);
+    //     var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+    //     query["action"] = action;
+    //     query["showId"] = showId;
+    //     query["accountSheetId"] = accountSheetId;
+    //     uriBuilder.Query = query.ToString();
+    //
+    //     string finalUrl = uriBuilder.ToString();
+    //     Debug.Log($"📥 Requesting {jsonType} JSON metadata for {showId} from: {finalUrl}");
+    //
+    //     UnityWebRequest request = UnityWebRequest.Get(finalUrl);
+    //     request.downloadHandler = new DownloadHandlerBuffer();
+    //     request.SetRequestHeader("User-Agent", "UnityWebRequest");
+    //
+    //     yield return request.SendWebRequest();
+    //
+    //     if (request.result == UnityWebRequest.Result.Success)
+    //     {
+    //         string result = request.downloadHandler?.text ?? "";
+    //         try
+    //         {
+    //             var root = JSON.Parse(result);
+    //             string jsonContent = root["data"].ToString();  // Serialize back to string
+    //             string timestampStr = root["timestamp"];
+    //             DateTime timestamp = DateTime.TryParse(timestampStr, out var parsedTime)
+    //                 ? parsedTime : DateTime.UtcNow;
+    //
+    //             Debug.Log($"✅ Received {jsonType} JSON with timestamp: {timestamp:O}");
+    //             onComplete?.Invoke(new CachedJsonMetadata(jsonContent, timestamp));
+    //         }
+    //         catch (Exception e)
+    //         {
+    //             Debug.LogError($"❌ Failed to parse metadata response: {e.Message}\n{result}");
+    //             onComplete?.Invoke(null);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         Debug.LogError($"❌ Request failed: {request.error}, Response: {request.downloadHandler?.text ?? "(empty)"}");
+    //         onComplete?.Invoke(null);
+    //     }
+    //
+    //     request.Dispose();
+    // }
 }

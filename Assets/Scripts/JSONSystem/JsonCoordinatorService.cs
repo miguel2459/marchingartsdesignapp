@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -23,39 +25,74 @@ public class JsonCoordinatorService
         cacheService = cache;
         backendService = backend;
     }
-
-    /// <summary>
-    /// Attempts to retrieve JSON content using local cache first, then falling back to backend if needed.
-    /// </summary>
-    public void GetJson(string showId, string jsonType, Action<string> onResult)
+    
+    public async Task<string> GetJsonAsync(string showId, string jsonType)
     {
         string cached = cacheService.LoadJsonFromLocalCache(showId, jsonType);
         DateTime? localTimestamp = JsonTimestampService.LoadTimestamp(showId, jsonType);
 
-        backendService.RequestDownloadJsonWithMetadata(showId, jsonType, metadata =>
+        var metadata = await backendService.RequestDownloadJsonWithMetadataAsync(showId, jsonType);
+        if (metadata == null)
         {
-            if (metadata == null)
-            {
-                Debug.LogWarning($"⚠️ JsonCoordinatorService: Failed to download metadata. Falling back to cache.");
-                onResult?.Invoke(cached);
-                return;
-            }
+            Debug.LogWarning($"⚠️ JsonCoordinatorService: Failed to download metadata. Falling back to cache.");
+            return cached;
+        }
 
-            bool isCloudNewer = !localTimestamp.HasValue || metadata.serverTimestamp > localTimestamp.Value;
+        bool isCloudNewer = !localTimestamp.HasValue || metadata.serverTimestamp > localTimestamp.Value;
 
-            if (isCloudNewer)
-            {
-                Debug.Log($"☁️ Cloud version is newer. Updating local cache for {jsonType} of {showId}.");
-                cacheService.SaveJsonToLocalCache(showId, jsonType, metadata.jsonContent);
-                JsonTimestampService.SaveTimestamp(showId, jsonType, metadata.serverTimestamp);
-                onResult?.Invoke(metadata.jsonContent);
-            }
-            else
-            {
-                Debug.Log($"📂 Using cached {jsonType} JSON for {showId}, already up to date.");
-                onResult?.Invoke(cached);
-            }
-        });
+        if (isCloudNewer)
+        {
+            Debug.Log($"☁️ Cloud version is newer. Updating local cache for {jsonType} of {showId}.");
+            cacheService.SaveJsonToLocalCache(showId, jsonType, metadata.jsonContent);
+            JsonTimestampService.SaveTimestamp(showId, jsonType, metadata.serverTimestamp);
+            return metadata.jsonContent;
+        }
+        else
+        {
+            Debug.Log($"📂 Using cached {jsonType} JSON for {showId}, already up to date.");
+            return cached;
+        }
+    }
+
+
+
+    /// <summary>
+    /// Attempts to retrieve JSON content using local cache first, then falling back to backend if needed.
+    /// </summary>
+    // public void GetJson(string showId, string jsonType, Action<string> onResult)
+    // {
+    //     string cached = cacheService.LoadJsonFromLocalCache(showId, jsonType);
+    //     DateTime? localTimestamp = JsonTimestampService.LoadTimestamp(showId, jsonType);
+    //
+    //     backendService.RequestDownloadJsonWithMetadata(showId, jsonType, metadata =>
+    //     {
+    //         if (metadata == null)
+    //         {
+    //             Debug.LogWarning($"⚠️ JsonCoordinatorService: Failed to download metadata. Falling back to cache.");
+    //             onResult?.Invoke(cached);
+    //             return;
+    //         }
+    //
+    //         bool isCloudNewer = !localTimestamp.HasValue || metadata.serverTimestamp > localTimestamp.Value;
+    //
+    //         if (isCloudNewer)
+    //         {
+    //             Debug.Log($"☁️ Cloud version is newer. Updating local cache for {jsonType} of {showId}.");
+    //             cacheService.SaveJsonToLocalCache(showId, jsonType, metadata.jsonContent);
+    //             JsonTimestampService.SaveTimestamp(showId, jsonType, metadata.serverTimestamp);
+    //             onResult?.Invoke(metadata.jsonContent);
+    //         }
+    //         else
+    //         {
+    //             Debug.Log($"📂 Using cached {jsonType} JSON for {showId}, already up to date.");
+    //             onResult?.Invoke(cached);
+    //         }
+    //     });
+    // }
+    
+    public string LoadJsonFromCache(string showId, string jsonType)
+    {
+        return cacheService.LoadJsonFromLocalCache(showId, jsonType);
     }
 
     /// <summary>
@@ -89,13 +126,14 @@ public class JsonCoordinatorService
     /// <summary>
     /// Wrapper around parsing methods.
     /// </summary>
-    public void ParseMarcherStateJSON(string jsonText,
-    out Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>> countPositions,
-    out Dictionary<string, MarcherIdentity> identities)
+    public IEnumerator ParseMarcherStateJSONAsync(string jsonText, Action<Dictionary<string, Dictionary<int, Dictionary<int, PositionEntry>>>, Dictionary<string, MarcherIdentity>> onComplete)
     {
-        parserService.ParseMarcherStateJSON(jsonText, out countPositions, out identities);
+        yield return parserService.ParseMarcherStateJSONAsync(jsonText, onComplete);
     }
 
-    public Dictionary<int, RuntimeCacheSO.SetTimingData> ParseSetTimingMapJSON(string jsonText) =>
-        parserService.ParseSetTimingMapJSON(jsonText);
+    public IEnumerator ParseSetTimingMapJSONAsync(string jsonText, Action<Dictionary<int, RuntimeCacheSO.SetTimingData>> onComplete)
+    {
+        yield return parserService.ParseSetTimingMapJSONAsync(jsonText, onComplete);
+    }
+
 }

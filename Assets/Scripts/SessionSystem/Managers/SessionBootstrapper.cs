@@ -10,13 +10,13 @@ public class SessionBootstrapper : MonoBehaviour
     /// <summary>Fired when both JSON blobs are parsed and cached.</summary>
     public event Action OnSessionReady = delegate { };
 
-    private void Awake()
+    public void SessionBootstrapperInit()
     {
         if (sessionManager == null)  sessionManager = SessionManager.instance;
         if (jsonService == null)     jsonService    = sessionManager.JsonService;
     }
 
-    private IEnumerator Start()
+    public IEnumerator BootStrapperStart()
     {
         Debug.Log("🚀 SessionBootstrapper starting...");
 
@@ -37,6 +37,5 @@ public class SessionBootstrapper : MonoBehaviour
         }
 
         Debug.LogWarning("⚠️ JSON not yet parsed. You likely bypassed Scene 3. Aborting load.");
-        yield break; // Optional: avoid silent errors
     }
 }

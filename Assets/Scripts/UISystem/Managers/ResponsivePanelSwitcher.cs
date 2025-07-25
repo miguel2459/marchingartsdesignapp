@@ -17,7 +17,7 @@ public class ResponsivePanelSwitcher : MonoBehaviour
     private int lastScreenWidth;
     private int lastScreenHeight;
     public ResponsivePanelSlotReparenter slotReparenter;
-    void Start()
+    void PanelSwitcherInit()
     {
         UpdateLayout(forceUpdate: true);
     }
