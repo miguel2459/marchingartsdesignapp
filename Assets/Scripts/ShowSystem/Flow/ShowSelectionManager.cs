@@ -24,6 +24,7 @@ public class ShowSelectionManager : MonoBehaviour
     public GameObject panelCreateNewShowPrefab;
     [Tooltip("Prefab for displaying an existing saved show")]
     public GameObject panelSavedShowPrefab;
+    private Dictionary<string, ShowPanelUI> showPanelMap = new();
 
     //================================================================================
     #region Lifecycle Methods
@@ -116,6 +117,8 @@ public class ShowSelectionManager : MonoBehaviour
                 if (savedShowPanel.TryGetComponent<ShowPanelUI>(out var panelUI))
                 {
                     panelUI.SetShowData(show);
+                    showPanelMap[show.showID] = panelUI;
+                    
                     // Ensure listener is removed before adding to prevent duplicates
                     panelUI.onShowSelected -= OnShowSelected;
                     panelUI.onShowSelected += OnShowSelected;
@@ -367,79 +370,61 @@ public class ShowSelectionManager : MonoBehaviour
     /// Attempts to pre-fetch/cache JSON data for all known shows in the background.
     /// Uses the JsonPersistenceService to handle cache checks and downloads.
     /// </summary>
-    // private IEnumerator PreFetchAndCacheAllJSONs()
-    // {
-    //     if (session.savedShows == null || session.savedShows.Count == 0)
-    //     {
-    //         Debug.Log("ℹ️ No saved shows found to prefetch.");
-    //         yield break;
-    //     }
-    //     if (session.JsonService == null)
-    //     {
-    //          Debug.LogError("PreFetchAndCacheAllJSONs: JsonService is not available. Skipping prefetch.");
-    //          yield break;
-    //     }
-    //
-    //     var showsToPrefetch = new List<SessionManager.ShowData>(session.savedShows);
-    //     Debug.Log($"🧠 Starting background prefetch/cache check for {showsToPrefetch.Count} shows...");
-    //
-    //     // Define a small delay to potentially spread out requests if hitting a backend
-    //     var delay = new WaitForSeconds(0.1f); // 100ms delay between shows
-    //
-    //     foreach (var show in showsToPrefetch)
-    //     {
-    //         if (string.IsNullOrEmpty(show.showID)) continue; // Skip invalid show entries
-    //
-    //         // Use GetJson for its cache-check/download logic. We discard the result here.
-    //         session.JsonService.GetJson(show.showID, "marcher", _ => { /* No action needed on result */ });
-    //         session.JsonService.GetJson(show.showID, "timing", _ => { /* No action needed on result */ });
-    //
-    //         yield return delay; // Wait briefly before starting the next show's requests
-    //     }
-    //
-    //     Debug.Log("🎉 Finished initiating background prefetch requests.");
-    // }
     private async Task PreFetchAndCacheAllJSONsAsync()
     {
-        if (session.savedShows == null || session.savedShows.Count == 0)
-        {
-            Debug.Log("ℹ️ No saved shows found to prefetch.");
-            return;
-        }
+        if (session.savedShows == null || session.savedShows.Count == 0) return;
+        if (session.JsonService == null) return;
 
-        if (session.JsonService == null)
-        {
-            Debug.LogError("PreFetchAndCacheAllJSONs: JsonService is not available. Skipping prefetch.");
-            return;
-        }
-
-        var showsToPrefetch = new List<SessionManager.ShowData>(session.savedShows);
-        Debug.Log($"🧠 Starting background prefetch/cache check for {showsToPrefetch.Count} shows...");
-
+        var tasks = new List<Task>();
         float totalStart = Time.realtimeSinceStartup;
 
-        foreach (var show in showsToPrefetch)
+        Debug.Log($"🧠 Starting parallel prefetch for {session.savedShows.Count} shows...");
+
+        foreach (var show in session.savedShows)
         {
             if (string.IsNullOrEmpty(show.showID)) continue;
 
-            float start = Time.realtimeSinceStartup;
+            // Add safe per-show fetch logic without background threads
+            tasks.Add(FetchJsonForShowAsync(show));
+        }
 
-            // 🚀 Launch both fetches in parallel
-            Task<string> marcherTask = session.JsonService.GetJsonAsync(show.showID, "marcher");
-            Task<string> timingTask = session.JsonService.GetJsonAsync(show.showID, "timing");
+        try
+        {
+            await Task.WhenAll(tasks); // this line will now complete properly
+            float totalElapsed = Time.realtimeSinceStartup - totalStart;
+            Debug.Log($"🎉 Finished downloading all JSON metadata. (⏱ Total: {totalElapsed:F2} sec)");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"❌ One or more JSON downloads failed: {ex.Message}");
+        }
+    }
 
-            // ✅ Await both to complete before moving to next show
-            await Task.WhenAll(marcherTask, timingTask);
+    private async Task FetchJsonForShowAsync(SessionManager.ShowData show)
+    {
+        float start = Time.realtimeSinceStartup;
+
+        try
+        {
+            await Task.WhenAll(
+                session.JsonService.GetJsonAsync(show.showID, "marcher"),
+                session.JsonService.GetJsonAsync(show.showID, "timing")
+            );
 
             float duration = Time.realtimeSinceStartup - start;
             Debug.Log($"📦 Fetched marcher + timing JSON for {show.showID} in {duration:F2} sec");
-
-            await Task.Delay(100); // throttle next round to avoid API hammering
+            // ✅ UI Feedback
+            if (showPanelMap.TryGetValue(show.showID, out var panelUI))
+            {
+                panelUI.ShowReady();
+            }
         }
-
-        float totalElapsed = Time.realtimeSinceStartup - totalStart;
-        Debug.Log($"🎉 Finished downloading all JSON metadata. (⏱ Total: {totalElapsed:F2} sec)");
+        catch (Exception ex)
+        {
+            Debug.LogError($"❌ JSON fetch failed for show {show.showID}: {ex.Message}");
+        }
     }
+
 
     #endregion
 
