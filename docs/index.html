@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20250725-221849 -->
+    <!-- Build Timestamp: 20250726-215755 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,13 +22,19 @@
     </style>
 </head>
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
+<!-- ?? Branded Loading Screen -->
+<div id="mada-loader">
+    <img src="logo.png" alt="MADA Logo" style="width: 140px; margin-bottom: 20px;">
+    <div id="mada-spinner"></div>
+    <p style="margin-top: 20px;">Loading MADA...</p>
+</div>
 <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
 
-<script src="Build/daeac5337231f935053fc9acc99d3ef1.loader.js?v=20250725-221849"></script>
+<script src="Build/daeac5337231f935053fc9acc99d3ef1.loader.js?v=20250726-215755"></script>
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "20250725-221849"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "20250726-215755"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -78,15 +84,19 @@
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/4ecccd43ceaff8dadc331ae1cecd0dc1.data?v=20250725-221849&cb=" + Date.now(),
-        frameworkUrl: "Build/cf7259052dcb4c87104b47abe780a837.framework.js?v=20250725-221849",
-        codeUrl: "Build/7152ee763d987b3edd1d6726d6d51af3.wasm?v=20250725-221849",
+        dataUrl: "Build/4ecccd43ceaff8dadc331ae1cecd0dc1.data?v=20250726-215755&cb=" + Date.now(),
+        frameworkUrl: "Build/cf7259052dcb4c87104b47abe780a837.framework.js?v=20250726-215755",
+        codeUrl: "Build/7152ee763d987b3edd1d6726d6d51af3.wasm?v=20250726-215755",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
         productVersion: "0.1"
     }).then((unityInstance) => {
         unityInstanceRef = unityInstance;
+
+        // ? Hide loader after Unity is ready
+        const loader = document.getElementById("mada-loader");
+        if (loader) loader.style.display = "none";
 
         // ? Inject version into Unity
         if (buildTimestamp) {
@@ -166,7 +176,7 @@
     }
 </script>
 <div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20250725-221849
+    Build Timestamp: 20250726-215755
 </div>
 </body>
 </html>
