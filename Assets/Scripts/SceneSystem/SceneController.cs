@@ -9,11 +9,11 @@ public class SceneController : MonoBehaviour
     private bool isSceneLoading = false; // Prevent duplicate scene loading
 
     // Scene build indices
-    private const int MAIN_SCENE = 0;
-    private const int STARTUP_SCENE = 1;
-    private const int LOGIN_SCENE = 2;
-    private const int SHOW_SELECTION_SCENE = 3;
-    private const int SHOW_MANAGER_SCENE = 4;
+    private const int MAIN_SCENE = 1;
+    private const int STARTUP_SCENE = 2;
+    private const int LOGIN_SCENE = 3;
+    private const int SHOW_SELECTION_SCENE = 4;
+    private const int SHOW_MANAGER_SCENE = 5;
 
     private void Awake()
     {

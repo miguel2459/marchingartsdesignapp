@@ -163,7 +163,7 @@ public class CreateShowManager : MonoBehaviour
             panelLoadingNewShow.SetActive(false);
             panelCreateNewShow.SetActive(false);
             session.AddNewShow(showTitle);
-            SceneController.instance.SwitchScene(3); // Load ShowManagerScene directly
+            SceneController.instance.SwitchScene(5); // Load ShowManagerScene directly
         }
         else
         {

@@ -458,8 +458,8 @@ public class SessionManager : MonoBehaviour
              Debug.LogError("SessionManager: ExitShow: showDataManager or SceneController is null! Cannot exit properly.");
              return;
         }
-        // Tell ShowDataManager to save, and upon completion, switch to Scene 3 (Show Selection)
-        showDataManager.ExitShow(() => SceneController.instance.SwitchScene(3));
+        // Tell ShowDataManager to save, and upon completion, switch to Scene 4 (Show Selection)
+        showDataManager.ExitShow(() => SceneController.instance.SwitchScene(4));
     }
 
     public void StartLogout()
@@ -483,7 +483,7 @@ public class SessionManager : MonoBehaviour
         // Switch to the initial scene (e.g., Startup or Login)
         if (SceneController.instance != null)
         {
-             SceneController.instance.SwitchScene(1); // Switch to Startup Scene (index 1)
+             SceneController.instance.SwitchScene(2); // Switch to Startup Scene (index 2)
         } else {
              Debug.LogError("SessionManager: Logout: SceneController instance is null! Cannot switch scene.");
         }

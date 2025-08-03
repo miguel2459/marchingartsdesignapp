@@ -176,8 +176,8 @@ public class ShowSelectionManager : MonoBehaviour
              return;
         }
 
-        // Prevent duplicate scene loads if already transitioning to the Show Manager scene (index 4)
-        if (!SceneController.instance.IsSceneCurrentlyLoading(4))
+        // Prevent duplicate scene loads if already transitioning to the Show Manager scene (index 5)
+        if (!SceneController.instance.IsSceneCurrentlyLoading(5))
         {
             session.selectedShow = show;
             // Start the process by fetching the detailed metadata from the show's specific Google Sheet
@@ -357,7 +357,7 @@ public class ShowSelectionManager : MonoBehaviour
         if (parsedMarcher && parsedTiming)
         {
             Debug.Log("🚀 JSON parse complete. Proceeding to ShowManagerScene.");
-            SceneController.instance?.SwitchScene(4);
+            SceneController.instance?.SwitchScene(5);
         }
         else
         {

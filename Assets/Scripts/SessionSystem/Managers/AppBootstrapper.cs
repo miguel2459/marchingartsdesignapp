@@ -27,12 +27,12 @@ public class AppBootstrapper : MonoBehaviour
                 SessionManager.instance.AutoLogin();
                 // Wait for user shows to finish loading before switching
                 yield return new WaitUntil(() => SceneController.instance.isSessionInitialized);
-                SceneController.instance.SwitchScene(3); // Show Selection Scene
+                SceneController.instance.SwitchScene(4); // Show Selection Scene
             }
             else
             {
                 Debug.Log("🚪 AppBootstrapper: No session found. Awaiting login scene.");
-                SceneController.instance.LoadSceneAdditive(1); // Startup Scene
+                SceneController.instance.LoadSceneAdditive(2); // Startup Scene
             }
         }
         else
