@@ -13,6 +13,9 @@ public class AppBootstrapper : MonoBehaviour
         if (configLoader != null)
         {
             yield return StartCoroutine(configLoader.LoadAndStore());
+            
+            // Wait until BuildInfoManager.BuildVersion is no longer "unknown"
+            yield return new WaitUntil(() => BuildInfoManager.BuildVersion != "unknown");
 
             // Wait for validation to complete
             yield return new WaitUntil(() => SessionStateValidator.HasValidationRun);
