@@ -22,7 +22,7 @@ public class MainSceneCameraManager : MonoBehaviour
         // Call DisableOtherCameras() immediately when a new scene loads
         DisableOtherCameras();
 
-        if (scene.buildIndex == 4) // ShowManagerScene
+        if (scene.buildIndex == 5) // ShowManagerScene
         {
             //EnableFlyingCamera();
         }
