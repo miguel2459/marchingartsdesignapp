@@ -3832,6 +3832,8 @@ MonoBehaviour:
   scrollContent: {fileID: 6096821}
   panelCreateNewShowPrefab: {fileID: 5357787536932491623, guid: f77e2b61cd2ef194c8936456f6d908ab, type: 3}
   panelSavedShowPrefab: {fileID: 3571755949087133947, guid: a6647742cad4cd34984655b45f6db9ec, type: 3}
+  panelLoading: {fileID: 1523254440}
+  loadingStatusText: {fileID: 1202574587}
 --- !u!1 &1199147596
 GameObject:
   m_ObjectHideFlags: 0
@@ -6990,6 +6992,7 @@ MonoBehaviour:
   inputNumProps: {fileID: 1427914827}
   buttonCreate: {fileID: 1726946164}
   buttonBack: {fileID: 1397377735}
+  loadingStatusText: {fileID: 1202574587}
 --- !u!1 &2074600970
 GameObject:
   m_ObjectHideFlags: 0

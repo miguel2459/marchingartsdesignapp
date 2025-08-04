@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using TMPro;
 using SimpleJSON; // Assuming you continue using SimpleJSON
 
 /// <summary>
@@ -25,6 +26,9 @@ public class ShowSelectionManager : MonoBehaviour
     [Tooltip("Prefab for displaying an existing saved show")]
     public GameObject panelSavedShowPrefab;
     private Dictionary<string, ShowPanelUI> showPanelMap = new();
+
+    public GameObject panelLoading;
+    public TMP_Text loadingStatusText;
 
     //================================================================================
     #region Lifecycle Methods
@@ -182,6 +186,13 @@ public class ShowSelectionManager : MonoBehaviour
             session.selectedShow = show;
             // Start the process by fetching the detailed metadata from the show's specific Google Sheet
             Debug.Log($"Selected Show: {show.showTitle} (ID: {show.showID})");
+            if (panelLoading != null)
+            {
+                panelLoading.SetActive(true);
+                if (loadingStatusText != null)
+                    loadingStatusText.text = "Loading Show...";
+            }
+
             StartCoroutine(FetchShowDetails(show.showSheetID));
         } else {
              Debug.LogWarning("Scene 4 (ShowManagerScene) is already loading, skipping OnShowSelected action.");

@@ -12,6 +12,7 @@ public class ShowSceneInitializer : MonoBehaviour
     public SetProgressBar setProgressBar;
     public EnsembleUIController uiController;
     public CameraModeManager cameraModeManager;
+    public UserAccountManager userAccountManager;
 
     private bool initialized = false;
 
@@ -56,7 +57,8 @@ public class ShowSceneInitializer : MonoBehaviour
         setProgressBar.SetProgressBarInit();
 
         // Debug.Log("⚙️ [Step 8] Init EnsembleUIController...");
-        // uiController.InitializeUI();
+        uiController.InitializeUI();
+        userAccountManager.UserAccountInit();
 
         Debug.Log("⚙️ [Step 9] Init Camera ModeManager...");
         cameraModeManager.CameraModeInit();

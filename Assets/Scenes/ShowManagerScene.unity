@@ -25057,7 +25057,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1457443314}
   m_HandleRect: {fileID: 1457443313}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -28632,6 +28632,7 @@ MonoBehaviour:
   setProgressBar: {fileID: 1171218384}
   uiController: {fileID: 1171218386}
   cameraModeManager: {fileID: 218049296}
+  userAccountManager: {fileID: 924746104}
 --- !u!1 &826234778
 GameObject:
   m_ObjectHideFlags: 0
@@ -58415,8 +58416,8 @@ MonoBehaviour:
   maxRatio: 0.22
   minHeight: 301.3
   maxHeight: 299.9
-  currentAspect: 0.5625
-  currentRatio: 0.18135417
+  currentAspect: 0.5622189
+  currentRatio: 0.18132932
   currentHeight: 301.3
 --- !u!1 &1632353107
 GameObject:
@@ -78336,7 +78337,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1900278117}
   m_HandleRect: {fileID: 1900278116}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:

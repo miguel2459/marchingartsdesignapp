@@ -17,7 +17,7 @@ public class UserAccountManager : MonoBehaviour
     public TMP_Text lastSaveDate;
     public TMP_Text lastSaveTime;
 
-    private void UserAccountInit()
+    public void UserAccountInit()
     {
         if (SessionManager.instance == null)
         {

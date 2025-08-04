@@ -21,6 +21,7 @@ public class CreateShowManager : MonoBehaviour
     public TMP_InputField inputNumProps;
     public Button buttonCreate;
     public Button buttonBack;
+    public TMP_Text loadingStatusText;
 
     private string showID;
     private string productionYear = System.DateTime.Now.Year.ToString();
@@ -61,6 +62,9 @@ public class CreateShowManager : MonoBehaviour
         {
             //Enable Loading Panel
             //Disable Create New Show Panel
+            if (loadingStatusText != null)
+                loadingStatusText.text = "Creating New Show...";
+
             panelLoadingNewShow.SetActive(true);
             // Generate unique show ID
             showID = "SH" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
