@@ -90,7 +90,10 @@
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
-        productVersion: "0.1"
+        productVersion: "0.1",
+        config: {
+            autoSyncPersistentDataPath: true // ✅ CRITICAL FOR MOBILE
+        }
     }).then((unityInstance) => {
         unityInstanceRef = unityInstance;
 
