@@ -28,24 +28,44 @@ public class JsonCoordinatorService
     
     public async Task<string> GetJsonAsync(string showId, string jsonType)
     {
-        string cached = cacheService.LoadJsonFromLocalCache(showId, jsonType);
-        DateTime? localTimestamp = JsonTimestampService.LoadTimestamp(showId, jsonType);
+        bool hasLocalFile = cacheService.DoesCacheExist(showId, jsonType);
+        string cached = hasLocalFile ? cacheService.LoadJsonFromLocalCache(showId, jsonType) : null;
+        DateTime? localTimestamp = hasLocalFile ? JsonTimestampService.LoadTimestamp(showId, jsonType) : null;
 
-        var metadata = await backendService.RequestDownloadJsonWithMetadataAsync(showId, jsonType);
-        if (metadata == null)
+        // If no local file, we must fetch from backend
+        if (!hasLocalFile)
         {
-            Debug.LogWarning($"⚠️ JsonCoordinatorService: Failed to download metadata. Falling back to cache.");
+            Debug.Log($"📂 No local cache for {jsonType} of {showId}. Fetching from backend...");
+            var metadata = await backendService.RequestDownloadJsonWithMetadataAsync(showId, jsonType);
+            if (metadata != null)
+            {
+                cacheService.SaveJsonToLocalCache(showId, jsonType, metadata.jsonContent);
+                JsonTimestampService.SaveTimestamp(showId, jsonType, metadata.serverTimestamp);
+                return metadata.jsonContent;
+            }
+            else
+            {
+                Debug.LogError($"❌ Failed to download {jsonType} for {showId} with no local fallback available.");
+                return null;
+            }
+        }
+
+        // Local file exists — compare timestamps
+        var metaCheck = await backendService.RequestDownloadJsonWithMetadataAsync(showId, jsonType);
+        if (metaCheck == null)
+        {
+            Debug.LogWarning($"⚠️ Failed to get backend metadata for {jsonType} of {showId}. Using local cache.");
             return cached;
         }
 
-        bool isCloudNewer = !localTimestamp.HasValue || metadata.serverTimestamp > localTimestamp.Value;
+        bool isCloudNewer = !localTimestamp.HasValue || metaCheck.serverTimestamp > localTimestamp.Value;
 
         if (isCloudNewer)
         {
             Debug.Log($"☁️ Cloud version is newer. Updating local cache for {jsonType} of {showId}.");
-            cacheService.SaveJsonToLocalCache(showId, jsonType, metadata.jsonContent);
-            JsonTimestampService.SaveTimestamp(showId, jsonType, metadata.serverTimestamp);
-            return metadata.jsonContent;
+            cacheService.SaveJsonToLocalCache(showId, jsonType, metaCheck.jsonContent);
+            JsonTimestampService.SaveTimestamp(showId, jsonType, metaCheck.serverTimestamp);
+            return metaCheck.jsonContent;
         }
         else
         {
@@ -53,7 +73,6 @@ public class JsonCoordinatorService
             return cached;
         }
     }
-
 
 
     /// <summary>
