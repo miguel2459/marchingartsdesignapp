@@ -158,7 +158,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 357.8265, y: -447.04633}
+  m_AnchoredPosition: {x: 357.8265, y: -643.6444}
   m_SizeDelta: {x: 470, y: 408.646}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &3167362
@@ -553,6 +553,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   loginPanel: {fileID: 1349285151}
   signUpPanel: {fileID: 3167360}
+  forgotPasswordPanel: {fileID: 1477881183}
   loginInputFields: {fileID: 1349285151}
   signUpInputFields: {fileID: 3167360}
   loading: {fileID: 622355747}
@@ -611,7 +612,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 274.1729, y: 77.3977}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &178729930
 MonoBehaviour:
@@ -635,11 +636,11 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 27
+    m_FontSize: 41
     m_FontStyle: 0
     m_BestFit: 0
-    m_MinSize: 10
-    m_MaxSize: 40
+    m_MinSize: 0
+    m_MaxSize: 53
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -2168,7 +2169,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 357.8265, y: -447.04633}
+  m_AnchoredPosition: {x: 357.8265, y: -453.489}
   m_SizeDelta: {x: 604, y: 402}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &668421270
@@ -2371,6 +2372,51 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &704017599
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 704017601}
+  - component: {fileID: 704017600}
+  m_Layer: 0
+  m_Name: LoginSceneBootstrapper
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &704017600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 704017599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1012d71342b18774cb0fd4fab7a2dc5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  useMockAuth: 0
+--- !u!4 &704017601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 704017599}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &719250928
 GameObject:
   m_ObjectHideFlags: 0
@@ -2753,12 +2799,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c291ee3a4a5e7343975cde444ad0440, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  loginPanel: {fileID: 1349285151}
-  forgotPasswordPanel: {fileID: 1477881183}
-  emailInputField: {fileID: 890938982}
+  emailInput: {fileID: 890938982}
   submitButton: {fileID: 941857688}
   returnToLoginButton: {fileID: 1297183956}
-  errorText: {fileID: 2042053191}
+  panelsManager: {fileID: 142501671}
 --- !u!1 &843789462
 GameObject:
   m_ObjectHideFlags: 0
@@ -3041,7 +3085,7 @@ GameObject:
   - component: {fileID: 890938983}
   - component: {fileID: 890938982}
   m_Layer: 5
-  m_Name: InputField (TMP)
+  m_Name: Email InputField (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3463,7 +3507,7 @@ GameObject:
   - component: {fileID: 941857689}
   - component: {fileID: 941857688}
   m_Layer: 5
-  m_Name: Button
+  m_Name: Submit Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5003,7 +5047,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 357.8265, y: -447.04633}
+  m_AnchoredPosition: {x: 357.8265, y: -737.46045}
   m_SizeDelta: {x: 470, y: 308.2324}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1349285153
@@ -5321,7 +5365,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 357.8265, y: -784.5405}
+  m_AnchoredPosition: {x: 357.8265, y: -605.0381}
   m_SizeDelta: {x: 604, y: 259.6714}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1477881185
@@ -5407,7 +5451,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Back
+  m_text: Return
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -7163,7 +7207,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1948155416}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: 
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &1976681623
 GameObject:
   m_ObjectHideFlags: 0
@@ -8065,8 +8121,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 798244328}
-        m_TargetAssemblyTypeName: ForgotPasswordManager, Assembly-CSharp
+      - m_Target: {fileID: 142501671}
+        m_TargetAssemblyTypeName: LoginSystem.LoginPanelsManager, Assembly-CSharp
         m_MethodName: ShowForgotPasswordPanel
         m_Mode: 1
         m_Arguments:
@@ -8156,11 +8212,12 @@ CanvasRenderer:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 704017601}
   - {fileID: 259795085}
   - {fileID: 1770314557}
   - {fileID: 424573279}
   - {fileID: 2042884070}
   - {fileID: 1325617022}
   - {fileID: 1591122018}
-  - {fileID: 142501672}
   - {fileID: 798244327}
+  - {fileID: 142501672}

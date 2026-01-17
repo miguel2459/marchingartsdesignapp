@@ -28,7 +28,20 @@ public class ConfigLoader : MonoBehaviour
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"❌ ConfigLoader: Config fetch failed: {request.error}");
+                string responseText = request.downloadHandler != null ? request.downloadHandler.text : "(null)";
+                long statusCode = request.responseCode;
+                string allHeaders = "";
+                foreach (var kvp in request.GetResponseHeaders() ?? new System.Collections.Generic.Dictionary<string,string>())
+                    allHeaders += $"{kvp.Key}: {kvp.Value}\n";
+
+                Debug.LogError(
+                    $"❌ ConfigLoader: Config fetch failed\n" +
+                    $"    Error: {request.error}\n" +
+                    $"    Status: {statusCode}\n" +
+                    $"    URL: {configEndpoint}\n" +
+                    $"    Headers:\n{allHeaders}" +
+                    $"    Body:\n{responseText}"
+                );
                 yield break;
             }
 

@@ -20,38 +20,43 @@ public class MarcherNamingUI : MonoBehaviour
 
     private void Awake()
     {
-        namingPanel.SetActive(false); // Start hidden
-        confirmButton.onClick.AddListener(OnConfirm);
+        if (namingPanel != null) namingPanel.SetActive(false); // Start hidden
+        if (confirmButton != null) confirmButton.onClick.AddListener(OnConfirm);
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.N) && selectedMarchers.SelectedCount > 0)
-        {
-            TogglePanel();
-        }
-
-        if (namingPanel.activeSelf && selectedMarchers.SelectedCount == 0)
+        // Auto-close if selection becomes empty
+        if (namingPanel != null && namingPanel.activeSelf && selectedMarchers != null && selectedMarchers.SelectedCount == 0)
         {
             namingPanel.SetActive(false);
         }
     }
 
-    private void TogglePanel()
+    // === Public API for external triggers ===
+    public void TogglePanel()
     {
+        if (namingPanel == null || selectedMarchers == null) return;
+
+        // Only allow opening if at least one marcher is selected
+        if (!namingPanel.activeSelf && selectedMarchers.SelectedCount == 0) return;
+
         namingPanel.SetActive(!namingPanel.activeSelf);
+
         if (namingPanel.activeSelf)
         {
             PopulateDropdownIfNeeded();
             customNameInput.text = "";
 
-            int count =selectedMarchers.SelectedCount;
-            marcherCountText.text = $"Selected {count} Marcher{(count == 1 ? "" : "s")}";
+            int count = selectedMarchers.SelectedCount;
+            if (marcherCountText != null)
+                marcherCountText.text = $"Selected {count} Marcher{(count == 1 ? "" : "s")}";
         }
     }
 
     private void PopulateDropdownIfNeeded()
     {
+        if (sectionDropdown == null) return;
         if (sectionDropdown.options.Count > 0) return;
 
         List<string> sections = MarcherNameAssignmentService.GetStandardSections();
@@ -64,7 +69,7 @@ public class MarcherNamingUI : MonoBehaviour
         string customName = customNameInput.text.Trim();
         bool useCustom = !string.IsNullOrEmpty(customName);
 
-        if (selectedMarchers.SelectedCount == 0)
+        if (selectedMarchers == null || selectedMarchers.SelectedCount == 0)
         {
             Debug.LogWarning("Naming UI: No marchers selected.");
             return;
@@ -72,7 +77,7 @@ public class MarcherNamingUI : MonoBehaviour
 
         foreach (GameObject marcher in selectedMarchers.GetSelectionCopy())
         {
-            if (marcher.TryGetComponent(out MarcherIdentityManager identity))
+            if (marcher != null && marcher.TryGetComponent(out MarcherIdentityManager identity))
             {
                 if (useCustom)
                 {

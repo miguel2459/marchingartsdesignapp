@@ -9,10 +9,38 @@ public class MarcherEditActions : MonoBehaviour
     [SerializeField] private CountsProgressBar countsProgressBar;
     [SerializeField] private MarcherDeleteConfirmationPanel deleteConfirmationPanel;
     [SerializeField] private DashedPathPreviewManager dashedPathPreviewManager;
-
+    [SerializeField] private MarcherNamingUI namingUI;
+    
+    private void Update()
+    {
+        // Centralize the N hotkey here
+        if (Input.GetKeyDown(KeyCode.N))
+        {
+            TryToggleNamingPanel();
+        }
+    }
+    
     public void SetSelectionManager(MarcherSelectionManager manager)
     {
         selectionManager = manager;
+    }
+    
+    public void OnClickToggleNamingPanel()
+    {
+        TryToggleNamingPanel();
+    }
+
+    private void TryToggleNamingPanel()
+    {
+        if (namingUI == null || selectionManager == null) return;
+
+        if (selectionManager.SelectedMarchers == null || selectionManager.SelectedMarchers.Count == 0)
+        {
+            Debug.LogWarning("🛈 Select at least one marcher to open the Naming panel.");
+            return;
+        }
+
+        namingUI.TogglePanel();
     }
 
     public void ConfirmDotViaSpacebar()
