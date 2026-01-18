@@ -13,6 +13,7 @@ namespace LoginSystem
         public GameObject loginInputFields;
         public GameObject signUpInputFields;
         public GameObject loading;
+        public GameObject guestPanel;
         
         public GameObject errorMessagePanel; 
         public TextMeshProUGUI errorMessageText; 
@@ -32,6 +33,7 @@ namespace LoginSystem
         {
             forgotPasswordPanel.SetActive(false);
             loginPanel.SetActive(false);
+            guestPanel.SetActive(false);
             signUpPanel.SetActive(true);
             
             HideError(); 
@@ -42,6 +44,7 @@ namespace LoginSystem
         {
             forgotPasswordPanel.SetActive(false);
             signUpPanel.SetActive(false);
+            guestPanel.SetActive(false);
             loginPanel.SetActive(true);
             
             HideError(); 
@@ -58,6 +61,15 @@ namespace LoginSystem
             titleText.text = "Reset password";
         }
 
+        public void ShowGuestPanel()
+        {
+            loginPanel.SetActive(false);
+            signUpPanel.SetActive(false);
+            guestPanel.SetActive(true);
+            
+            HideError(); 
+            titleText.text = "Guest of";
+        }
         public void ShowLoading(bool isLogin)
         {
             // Always hide the error message when loading starts

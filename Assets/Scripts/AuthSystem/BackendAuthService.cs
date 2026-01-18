@@ -16,6 +16,7 @@ namespace LoginSystem
         private const int MaxRetries = 3;
         private const float TimeoutLoginSeconds = 10f; // Typical login should be fast
         private const float TimeoutSignUpSeconds = 30f; // SignUp might involve more backend work (e.g., Drive operations)
+        private const float TimeoutGuestSeconds = 30f; // Guest may create Drive assets like SignUp
 
         public BackendAuthService(string backendURL, MonoBehaviour coroutineHost)
         {
@@ -34,7 +35,11 @@ namespace LoginSystem
         {
             coroutineHost.StartCoroutine(SignUpCoroutine(name, email, password, onComplete));
         }
-        
+        public void GuestLogin(string email, Action<LoginResult> onComplete)
+        {
+            coroutineHost.StartCoroutine(GuestLoginCoroutine(email, onComplete));
+        }
+
         private IEnumerator LoginCoroutine(string email, string password, Action<LoginResult> onComplete)
         {
             int attempts = 0;
@@ -194,6 +199,86 @@ namespace LoginSystem
             }
         }
         
+        private IEnumerator GuestLoginCoroutine(string email, Action<LoginResult> onComplete)
+        {
+            int attempts = 0;
+        
+            while (attempts < MaxRetries)
+            {
+                attempts++;
+        
+                string url = backendURL;
+                var payload = new GuestLoginPayload { email = email };
+        
+                using (UnityWebRequest request = CreatePostRequest(url, payload))
+                {
+                    request.timeout = (int)TimeoutGuestSeconds;
+        
+                    yield return request.SendWebRequest();
+        
+                    // 1) Retry ONLY on transient transport/data failures (NOT ProtocolError).
+                    if (ShouldRetryTransport(request.result))
+                    {
+                        Debug.LogWarning($"⚠ GuestLogin transport failure (attempt {attempts}/{MaxRetries}): {request.error}");
+        
+                        if (attempts < MaxRetries)
+                        {
+                            yield return new WaitForSeconds(0.5f);
+                            continue;
+                        }
+        
+                        Debug.LogError($"❌ Max retries reached for guest login transport errors. Aborting. Last error: {request.error}");
+                        onComplete?.Invoke(new LoginResult(false, "network_error"));
+                        yield break;
+                    }
+        
+                    // 2) ProtocolError = HTTP 4xx/5xx. Do NOT retry.
+                    if (request.result == UnityWebRequest.Result.ProtocolError)
+                    {
+                        string body = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+                        string status = TryExtractStatus<LoginResponse>(body);
+        
+                        if (string.IsNullOrEmpty(status))
+                            status = request.responseCode >= 500 ? "server_error" : "http_error";
+        
+                        onComplete?.Invoke(new LoginResult(false, status));
+                        yield break;
+                    }
+        
+                    // 3) Success: parse and return (same response shape as Login).
+                    try
+                    {
+                        string jsonResponse = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        Debug.Log($"📥 GuestLogin response: {jsonResponse}");
+        #endif
+                        var response = JsonUtility.FromJson<LoginResponse>(jsonResponse);
+        
+                        if (response != null && response.status == "success")
+                        {
+                            // userName may be "Guest" from backend, but we pass it through.
+                            onComplete?.Invoke(new LoginResult(true, null, response.userId, response.userName, response.folderId, response.userSheetID));
+                        }
+                        else
+                        {
+                            string status = response != null && !string.IsNullOrEmpty(response.status)
+                                ? response.status
+                                : "parse_error";
+        
+                            onComplete?.Invoke(new LoginResult(false, status));
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"🚨 GuestLogin JSON parse error: {e.Message}");
+                        onComplete?.Invoke(new LoginResult(false, "parse_error"));
+                    }
+        
+                    yield break;
+                }
+            }
+        }
+        
         // Retry policy:
         // - Retry on transient transport/data processing failures.
         // - Do NOT retry on ProtocolError (HTTP 4xx/5xx). Treat it as a definitive response.
@@ -301,6 +386,8 @@ namespace LoginSystem
                     return $"{{action:'{sp.action}', name:'{sp.name}', email:'{MaskEmail(sp.email)}', password:'***'}}";
                 case PasswordResetPayload pr:
                     return $"{{action:'{pr.action}', email:'{MaskEmail(pr.email)}'}}";
+                case GuestLoginPayload gp:
+                    return $"{{action:'{gp.action}', email:'{MaskEmail(gp.email)}'}}";
                 default:
                     // Avoid logging any unknown payload types because they may contain secrets.
                     return "{payload:'(unrecognized type - logging suppressed)'}";
@@ -310,10 +397,10 @@ namespace LoginSystem
         private static string MaskEmail(string email)
         {
             if (string.IsNullOrWhiteSpace(email)) return string.Empty;
-
+        
             int at = email.IndexOf('@');
             if (at <= 1) return "***";
-
+        
             string first = email.Substring(0, 1);
             string domain = at < email.Length - 1 ? email.Substring(at) : "";
             return $"{first}***{domain}";
@@ -335,6 +422,13 @@ namespace LoginSystem
             public string name;
             public string email;
             public string password;
+        }
+
+        [Serializable]
+        private class GuestLoginPayload
+        {
+            public string action = "guestLogin";
+            public string email;
         }
 
         [Serializable]

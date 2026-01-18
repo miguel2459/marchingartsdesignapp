@@ -12,6 +12,8 @@ namespace LoginSystem
             { "server_error", "A server error occurred. Please try again later." },
             { "network_error", "Network error. Check your internet connection." },
             { "parse_error", "Unexpected response from server. Please contact support. contact@mprstudios.com" },
+            { "guest_email_exists_as_full_account", "This email already has a full account. Please log in instead." },
+
 
             // 🔒 Password Reset Specific
             { "password_reset_email_sent", "✅ Password reset email sent! Check your inbox." },

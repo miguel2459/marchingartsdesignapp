@@ -29,5 +29,12 @@ namespace LoginSystem
                 onComplete?.Invoke(false, "account_not_found");
             }
         }
+        
+        public void GuestLogin(string email, System.Action<LoginResult> onComplete)
+        {
+            Debug.Log($"[Mock] Simulating guest login for {email}");
+            onComplete?.Invoke(new LoginResult(true, null, "MockGuestUserID", "Guest", "MockGuestFolderID", "MockGuestSheetID"));
+        }
+
     }
 }
