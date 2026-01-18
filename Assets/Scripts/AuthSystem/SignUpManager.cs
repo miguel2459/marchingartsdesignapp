@@ -29,7 +29,7 @@ namespace LoginSystem
         void Update()
         {
             // Only process input if the sign-up panel is active and not in a loading state
-            if (panelsManager != null && panelsManager.signUpPanel.activeInHierarchy && !panelsManager.loading.activeInHierarchy)
+            if (panelsManager != null && panelsManager.signUpPanel.activeInHierarchy && !panelsManager.loadingPanel.activeInHierarchy)
             {
                 if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                 {
@@ -66,23 +66,20 @@ namespace LoginSystem
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                panelsManager.ShowError("All fields must be filled.");
+                panelsManager.ShowMessage("All fields must be filled.");
                 return;
             }
             
             if (!AuthInputValidator.TryValidateSignUp(name, email, password, confirmPassword, out string reason))
             {
-                panelsManager.ShowError(reason);
+                panelsManager.ShowMessage(reason);
                 return;
             }
 
             createAccountButton.interactable = false;
-            panelsManager.ShowLoading(false);
+            panelsManager.ShowLoading();
             backendAuth.SignUp(name, email, password, result =>
             {
-                //panelsManager.HideLoading(false);
-                createAccountButton.interactable = true;
-
                 if (result.Success)
                 {
                     Debug.Log($"✅ Account Created: {result.UserId}");
@@ -93,8 +90,10 @@ namespace LoginSystem
                 }
                 else
                 {
+                    panelsManager.HideLoading();
+                    createAccountButton.interactable = true;
                     string friendlyMessage = BackendErrorMapper.GetFriendlyMessage(result.ErrorMessage);
-                    panelsManager.ShowError(friendlyMessage);
+                    panelsManager.ShowMessage(friendlyMessage);
                 }
             });
         }

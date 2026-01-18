@@ -29,7 +29,7 @@ namespace LoginSystem
         void Update()
         {
             // Only process input if the login panel is active and not in a loading state
-            if (panelsManager != null && panelsManager.loginPanel.activeInHierarchy && !panelsManager.loading.activeInHierarchy)
+            if (panelsManager != null && panelsManager.loginPanel.activeInHierarchy && !panelsManager.loadingPanel.activeInHierarchy)
             {
                 if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                 {
@@ -64,23 +64,20 @@ namespace LoginSystem
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                panelsManager.ShowError("Email and password cannot be empty.");
+                panelsManager.ShowMessage("Email and password cannot be empty.");
                 return;
             }
             
             if (!AuthInputValidator.TryValidateLogin(email, password, out string reason))
             {
-                panelsManager.ShowError(reason);
+                panelsManager.ShowMessage(reason);
                 return;
             }
             
             loginButton.interactable = false;
-            panelsManager.ShowLoading(true);
+            panelsManager.ShowLoading();
             backendAuth.Login(email, password, result =>
             {
-                //panelsManager.HideLoading(true);
-                loginButton.interactable = true;
-
                 if (result.Success)
                 {
                     Debug.Log($"✅ Login Successful: {result.UserName} ({result.UserId})");
@@ -92,8 +89,11 @@ namespace LoginSystem
                 }
                 else
                 {
+                    panelsManager.HideLoading();
+                    loginButton.interactable = true;
+                    
                     string friendlyMessage = BackendErrorMapper.GetFriendlyMessage(result.ErrorMessage);
-                    panelsManager.ShowError(friendlyMessage);
+                    panelsManager.ShowMessage(friendlyMessage);
                 }
             });
         }

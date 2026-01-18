@@ -68,11 +68,5 @@ public class SessionStateValidator : MonoBehaviour
         Debug.Log("🧹 SessionStateValidator: Clearing session-related PlayerPrefs...");
         PlayerPrefs.DeleteKey("AccountSheetID");
         PlayerPrefs.DeleteKey("UserInfoRef");
-
-        // Optional: clear session cache object if you have one
-        //SessionState.Clear();
-
-        Debug.Log("🔁 SessionStateValidator: Restarting to login scene...");
-        //SceneController.Instance.SwitchScene("LoginScene");
     }
 }

@@ -1,117 +1,170 @@
-// LoginPanelsManager.cs
-
 using UnityEngine;
-using TMPro; // Make sure this is included
+using TMPro;
 
 namespace LoginSystem
 {
     public class LoginPanelsManager : MonoBehaviour
     {
+        public enum AuthUIState
+        {
+            Login,
+            SignUp,
+            ForgotPassword,
+            Guest,
+            Loading
+        }
+        
         public GameObject loginPanel;
         public GameObject signUpPanel;
         public GameObject forgotPasswordPanel;
-        public GameObject loginInputFields;
-        public GameObject signUpInputFields;
-        public GameObject loading;
         public GameObject guestPanel;
+        public GameObject loadingPanel;
+        public GameObject messagePanel; 
         
-        public GameObject errorMessagePanel; 
-        public TextMeshProUGUI errorMessageText; 
-
+        public TextMeshProUGUI messageText; 
         public TextMeshProUGUI titleText;
-        [SerializeField] private SignUpManager signUpManager;
-        [SerializeField] private LoginManager loginManager;
-
+        
+        public AuthUIState CurrentState { get; private set; } = AuthUIState.Login;
+        
         private void Start()
         {
-            errorMessagePanel.SetActive(true);
-            HideError();
-            ShowLoginPanel();
-        }
-
-        public void ShowSignUpPanel()
-        {
-            forgotPasswordPanel.SetActive(false);
-            loginPanel.SetActive(false);
-            guestPanel.SetActive(false);
-            signUpPanel.SetActive(true);
-            
-            HideError(); 
-            titleText.text = "Sign up";
-        }
-
-        public void ShowLoginPanel()
-        {
-            forgotPasswordPanel.SetActive(false);
-            signUpPanel.SetActive(false);
-            guestPanel.SetActive(false);
-            loginPanel.SetActive(true);
-            
-            HideError(); 
-            titleText.text = "Login to";
+            messagePanel.SetActive(true);
+            SetState(AuthUIState.Login);
         }
         
-        public void ShowForgotPasswordPanel()
+        public void SetState(AuthUIState state)
         {
-            loginPanel.SetActive(false);
-            signUpPanel.SetActive(false);
-            forgotPasswordPanel.SetActive(true);
-
-            HideError();
-            titleText.text = "Reset password";
-        }
-
-        public void ShowGuestPanel()
-        {
-            loginPanel.SetActive(false);
-            signUpPanel.SetActive(false);
-            guestPanel.SetActive(true);
-            
-            HideError(); 
-            titleText.text = "Guest of";
-        }
-        public void ShowLoading(bool isLogin)
-        {
-            // Always hide the error message when loading starts
-            HideError(); 
-
-            if (isLogin)
+            if (state == AuthUIState.Loading)
             {
-                loginInputFields.SetActive(false);
-                loading.SetActive(true);
+                // Use ShowLoadingPanel(...) instead so flow is explicit.
+                ShowLoadingPanel();
+                return;
             }
-            else
+
+            CurrentState = state;
+
+            ApplyPanelsForState(state);
+            ApplyTitleForState(state);
+
+            // Generally: whenever switching panels, clear stale error copy.
+            HideMessage();
+        }
+        
+        public void ShowLoadingPanel()
+        {
+            ApplyPanelsForState(AuthUIState.Loading);
+            ApplyMessageForLoadingFlow(CurrentState);
+        }
+        
+        private void ApplyPanelsForState(AuthUIState state)
+        {
+            // Hard-off everything first (deterministic)
+            SetActiveSafe(loginPanel, false);
+            SetActiveSafe(signUpPanel, false);
+            SetActiveSafe(forgotPasswordPanel, false);
+            SetActiveSafe(guestPanel, false);
+            SetActiveSafe(loadingPanel, false);
+
+            switch (state)
             {
-                signUpInputFields.SetActive(false);
-                loading.SetActive(true);
+                case AuthUIState.Login:
+                    SetActiveSafe(loginPanel, true);
+                    break;
+
+                case AuthUIState.SignUp:
+                    SetActiveSafe(signUpPanel, true);
+                    break;
+
+                case AuthUIState.ForgotPassword:
+                    SetActiveSafe(forgotPasswordPanel, true);
+                    break;
+
+                case AuthUIState.Guest:
+                    SetActiveSafe(guestPanel, true);
+                    break;
+
+                case AuthUIState.Loading:
+                    SetActiveSafe(loadingPanel, true);
+                    break;
             }
         }
-
-        public void HideLoading(bool isLogin)
+        
+        private void ApplyTitleForState(AuthUIState state)
         {
-            if (isLogin)
+            if (titleText == null) return;
+
+            switch (state)
             {
-                loginInputFields.SetActive(true);
-                loading.SetActive(false);
-            }
-            else
-            {
-                signUpInputFields.SetActive(true);
-                loading.SetActive(false);
+                case AuthUIState.Login:
+                    titleText.text = "Login to";
+                    break;
+                case AuthUIState.SignUp:
+                    titleText.text = "Sign up";
+                    break;
+                case AuthUIState.ForgotPassword:
+                    titleText.text = "Reset password";
+                    break;
+                case AuthUIState.Guest:
+                    titleText.text = "Guest of";
+                    break;
+                case AuthUIState.Loading:
+                    // Title for loading is flow-specific; handled elsewhere.
+                    break;
             }
         }
-
-        // ADDED: Centralized method to display an error message
-        public void ShowError(string message)
+        
+        public void ApplyMessageForLoadingFlow(AuthUIState state)
         {
-            if (errorMessageText != null)
-                errorMessageText.text = message ?? "";
+            if (messageText == null) return;
+
+            switch (state)
+            {
+                case AuthUIState.Login:
+                    messageText.text = "Logging in...";
+                    break;
+                case AuthUIState.SignUp:
+                    messageText.text = "Creating account...";
+                    break;
+                case AuthUIState.ForgotPassword:
+                    messageText.text = "Sending reset link...";
+                    break;
+                case AuthUIState.Guest:
+                    messageText.text = "Signing in as guest...";
+                    break;
+            }
+        }
+        
+        private static void SetActiveSafe(GameObject go, bool active)
+        {
+            if (go != null)
+                go.SetActive(active);
         }
 
-        public void HideError()
+        public void ShowSignUpPanel() => SetState(AuthUIState.SignUp);
+
+        public void ShowLoginPanel() => SetState(AuthUIState.Login);
+        
+        public void ShowForgotPasswordPanel() => SetState(AuthUIState.ForgotPassword);
+
+        public void ShowGuestPanel() => SetState(AuthUIState.Guest);
+        public void ShowLoading() => SetState(AuthUIState.Loading);
+
+        public void HideLoading()
         {
-            if (errorMessageText != null)
-                errorMessageText.text = "";
+            // Return to the last non-loading state.
+            SetState(CurrentState);
+        }
+        
+        public void ShowMessage(string message)
+        {
+            if (messageText != null)
+                messageText.text = message ?? "";
+        }
+
+        public void HideMessage()
+        {
+            if (messageText != null)
+                messageText.text = "";
         }
     }
 }

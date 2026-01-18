@@ -6,7 +6,6 @@ using System.Collections;
 public class BootstrapSceneLoader : MonoBehaviour
 {
     public float minDisplayTime = 1.0f; // Prevent flash if scene loads fast
-    public Image spinner;
     
     private void Start()
     {
@@ -32,11 +31,5 @@ public class BootstrapSceneLoader : MonoBehaviour
 
         // TODO: Optionally check if LoginScene is visible before unloading
         SceneManager.UnloadSceneAsync(0); // BootstrapScene
-    }
-    
-    private void Update()
-    {
-        if (spinner != null)
-            spinner.transform.Rotate(Vector3.forward * -300f * Time.deltaTime);
     }
 }

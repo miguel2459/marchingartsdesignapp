@@ -45,8 +45,7 @@ namespace LoginSystem
             }
 
             authService = ServiceLocator.AuthService;
-
-            panelsManager.HideError();
+            
             SetInteractable(true);
         }
 
@@ -65,7 +64,7 @@ namespace LoginSystem
             if (!panelsManager.guestPanel.activeInHierarchy)
                 return;
 
-            if (panelsManager.loading != null && panelsManager.loading.activeInHierarchy)
+            if (panelsManager.loadingPanel != null && panelsManager.loadingPanel.activeInHierarchy)
                 return;
 
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
@@ -96,12 +95,12 @@ namespace LoginSystem
 
             if (!AuthInputValidator.TryValidateEmail(email, out string reason))
             {
-                panelsManager.ShowError(reason);
+                panelsManager.ShowMessage(reason);
                 return;
             }
 
             BeginSubmittingUI();
-            panelsManager.ShowError("Signing in as guest...");
+            panelsManager.ShowMessage("Signing in as guest...");
 
             // NOTE: Requires adding to IAuthService + BackendAuthService:
             // void GuestLogin(string email, Action<LoginResult> onComplete);
@@ -109,8 +108,6 @@ namespace LoginSystem
             {
                 if (this == null || !isActiveAndEnabled)
                     return;
-            
-                EndSubmittingUI();
             
                 if (result.Success)
                 {
@@ -123,8 +120,9 @@ namespace LoginSystem
                 }
                 else
                 {
+                    EndSubmittingUI();
                     string friendlyMessage = BackendErrorMapper.GetFriendlyMessage(result.ErrorMessage);
-                    panelsManager.ShowError(friendlyMessage);
+                    panelsManager.ShowMessage(friendlyMessage);
                 }
             });
         }
@@ -133,8 +131,6 @@ namespace LoginSystem
         {
             if (isSubmitting)
                 return;
-
-            panelsManager.HideError();
 
             if (emailInput != null)
                 emailInput.text = string.Empty;
@@ -145,13 +141,14 @@ namespace LoginSystem
         private void BeginSubmittingUI()
         {
             isSubmitting = true;
-            panelsManager.HideError();
+            panelsManager.ShowLoading();
             SetInteractable(false);
         }
 
         private void EndSubmittingUI()
         {
             isSubmitting = false;
+            panelsManager.HideLoading();
             SetInteractable(true);
         }
 

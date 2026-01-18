@@ -43,9 +43,7 @@ namespace LoginSystem
             }
 
             authService = ServiceLocator.AuthService;
-
-            panelsManager.HideError();
-            //panelsManager.SetLoading(false);
+            
             SetInteractable(true);
         }
 
@@ -67,14 +65,14 @@ namespace LoginSystem
             // Full-scope shared validation (consistent reason strings)
             if (!AuthInputValidator.TryValidateEmail(email, out string reason))
             {
-                panelsManager.ShowError(reason);
+                panelsManager.ShowMessage(reason);
                 return;
             }
 
             BeginSubmittingUI();
 
             // Neutral "status" message routed through the same UI pipe for consistency
-            panelsManager.ShowError("Submitting password reset request...");
+            panelsManager.ShowMessage("Submitting password reset request...");
 
             authService.RequestPasswordReset(email, (success, statusOrMessage) =>
             {
@@ -82,17 +80,16 @@ namespace LoginSystem
                 if (this == null || !isActiveAndEnabled)
                     return;
 
-                EndSubmittingUI();
-
                 if (success)
                 {
-                    panelsManager.ShowError("Password reset email sent. Check your inbox.");
+                    panelsManager.ShowMessage("Password reset email sent. Check your inbox.");
                     return;
                 }
 
                 // statusOrMessage may be a backend code; map to friendly copy.
+                EndSubmittingUI();
                 string friendly = BackendErrorMapper.GetFriendlyMessage(statusOrMessage);
-                panelsManager.ShowError(friendly);
+                panelsManager.ShowMessage(friendly);
             });
         }
 
@@ -101,7 +98,7 @@ namespace LoginSystem
             if (isSubmitting)
                 return;
 
-            panelsManager.HideError();
+            panelsManager.HideMessage();
 
             if (emailInput != null)
                 emailInput.text = string.Empty;
@@ -112,15 +109,14 @@ namespace LoginSystem
         private void BeginSubmittingUI()
         {
             isSubmitting = true;
-            panelsManager.HideError();      // clear stale messages before showing status
-            //panelsManager.SetLoading(true);
+            panelsManager.ShowLoading();      // clear stale messages before showing status
             SetInteractable(false);
         }
 
         private void EndSubmittingUI()
         {
             isSubmitting = false;
-            //panelsManager.SetLoading(false);
+            panelsManager.HideLoading();
             SetInteractable(true);
         }
 

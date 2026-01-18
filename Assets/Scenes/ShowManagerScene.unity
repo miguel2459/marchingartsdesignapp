@@ -23133,7 +23133,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -1010, y: 34}
+  m_AnchoredPosition: {x: -258.8, y: 34}
   m_SizeDelta: {x: 76.58148, y: 42.4568}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &648176129
@@ -59091,8 +59091,8 @@ MonoBehaviour:
   maxRatio: 0.22
   minHeight: 301.3
   maxHeight: 299.9
-  currentAspect: 0.4620853
-  currentRatio: 0.1724842
+  currentAspect: 0.45
+  currentRatio: 0.17141666
   currentHeight: 301.3
 --- !u!1 &1632353107
 GameObject:
