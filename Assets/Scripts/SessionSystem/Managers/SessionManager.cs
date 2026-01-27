@@ -379,7 +379,7 @@ public class SessionManager : MonoBehaviour
     /// Refreshes the show list and triggers the selection flow for the new show.
     /// </summary>
     /// <param name="showTitle">The title of the newly created show.</param>
-    public void AddNewShow(string showTitle)
+    public void  AddNewShow(string showTitle)
     {
         Debug.Log($"➕SessionManager: Adding new show '{showTitle}' to session flow.");
         StartCoroutine(ReinitializeAndSelectNewShow(showTitle));

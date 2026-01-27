@@ -73,41 +73,6 @@ public class JsonCoordinatorService
             return cached;
         }
     }
-
-
-    /// <summary>
-    /// Attempts to retrieve JSON content using local cache first, then falling back to backend if needed.
-    /// </summary>
-    // public void GetJson(string showId, string jsonType, Action<string> onResult)
-    // {
-    //     string cached = cacheService.LoadJsonFromLocalCache(showId, jsonType);
-    //     DateTime? localTimestamp = JsonTimestampService.LoadTimestamp(showId, jsonType);
-    //
-    //     backendService.RequestDownloadJsonWithMetadata(showId, jsonType, metadata =>
-    //     {
-    //         if (metadata == null)
-    //         {
-    //             Debug.LogWarning($"⚠️ JsonCoordinatorService: Failed to download metadata. Falling back to cache.");
-    //             onResult?.Invoke(cached);
-    //             return;
-    //         }
-    //
-    //         bool isCloudNewer = !localTimestamp.HasValue || metadata.serverTimestamp > localTimestamp.Value;
-    //
-    //         if (isCloudNewer)
-    //         {
-    //             Debug.Log($"☁️ Cloud version is newer. Updating local cache for {jsonType} of {showId}.");
-    //             cacheService.SaveJsonToLocalCache(showId, jsonType, metadata.jsonContent);
-    //             JsonTimestampService.SaveTimestamp(showId, jsonType, metadata.serverTimestamp);
-    //             onResult?.Invoke(metadata.jsonContent);
-    //         }
-    //         else
-    //         {
-    //             Debug.Log($"📂 Using cached {jsonType} JSON for {showId}, already up to date.");
-    //             onResult?.Invoke(cached);
-    //         }
-    //     });
-    // }
     
     public string LoadJsonFromCache(string showId, string jsonType)
     {

@@ -165,7 +165,7 @@ public class ShowSelectionManager : MonoBehaviour
     /// Stores the selected show data and initiates the process of fetching its details.
     /// </summary>
     /// <param name="show">The data associated with the selected show.</param>
-    public void OnShowSelected(SessionManager.ShowData show)
+    public void  OnShowSelected(SessionManager.ShowData show)
     {
         if (show == null || string.IsNullOrEmpty(show.showID))
         {
@@ -197,7 +197,7 @@ public class ShowSelectionManager : MonoBehaviour
         } else {
              Debug.LogWarning("Scene 4 (ShowManagerScene) is already loading, skipping OnShowSelected action.");
         }
-    }
+    }  
 
     #endregion
 

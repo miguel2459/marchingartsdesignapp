@@ -52,7 +52,6 @@ public class SessionStateValidator : MonoBehaviour
         }
     }
 
-
     private bool IsSessionValid()
     {
         string sheetID = PlayerPrefs.GetString("AccountSheetID");

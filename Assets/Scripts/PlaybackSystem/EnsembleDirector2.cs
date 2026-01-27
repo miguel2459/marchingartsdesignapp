@@ -80,6 +80,11 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         setBar.OnTotalSetsChanged(numberOfSets);      
 
         fieldCenter = fieldManager.GetFieldCenter();
+        if (selectedMarchers != null && !SelectedMarchers.IsInitialized)
+        {
+            selectedMarchers.SelectedMarchersInit();
+        }
+
     }
 
     public void OnMarchersReady()
@@ -105,12 +110,10 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
 
         Debug.Log("✅ Delayed OnMarchersReady complete.");
     }
-
-
+    
     public List<GameObject> MarcherObjects =>
     new List<GameObject>(Marchers.Select(m => m.gameObject));
-
-
+    
     public void PreviewCountPosition(int setNumber, int clickedCount)
     {
         var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
@@ -352,15 +355,11 @@ public class EnsembleDirector2 : MonoBehaviour, IMarcherProvider, ISetProgressTr
         return 0;
     }
 
-    
-
     private int GetCurrentCountForSet(int setIndex)
     {
         int activeIndex = counts.GetActiveCountIndex();
         return (activeIndex >= 0) ? activeIndex + 1 : 1; // Convert from 0-based to 1-based
     }
-
-
     public bool IsMarcherSelected(GameObject marcher)
     {
         return selectedMarchers != null && selectedMarchers.IsSelected(marcher);

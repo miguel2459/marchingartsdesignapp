@@ -53,21 +53,21 @@ public class SelectedMarchers : MonoBehaviour
             dashedPathPreviewManager?.UpdatePreviewCycle(forceRefresh: true);
         }        
     }
-
     
     public List<GameObject> GetSelectionCopy()
     {
-        return selectionManager.GetSelectionCopy();
+        return selectionManager != null ? selectionManager.GetSelectionCopy() : new List<GameObject>();
     }
 
     public void ForEachSelected(System.Action<GameObject> action)
     {
+        if (selectionManager == null) return;
         selectionManager.ForEachSelected(action);
     }
 
     public bool IsSelected(GameObject marcher)
     {
-        return selectionManager.SelectedMarchers.Contains(marcher);
+        return selectionManager != null && selectionManager.SelectedMarchers.Contains(marcher);
     }
     public void Select(GameObject marcher)
     {
@@ -81,6 +81,7 @@ public class SelectedMarchers : MonoBehaviour
     
     public void ReCacheAnchorsForSelected()
     {
+        if (selectionManager == null) return;
         selectionManager.ReCacheAnchorsForSelected();
     }
 
@@ -118,7 +119,8 @@ public class SelectedMarchers : MonoBehaviour
 
     public void ClearSelection()
     {
-        selectionManager.ClearAndResetVisuals(); // includes ClearAll()
+        if (selectionManager == null) return;
+        selectionManager.ClearAndResetVisuals(); 
 
         Debug.Log("SelectedMarchers: 🧹 Selection cleared and marchers recolored to progress state.");
     }

@@ -60,28 +60,26 @@ public class MarcherManager : MonoBehaviour
 
     private void PositionMarchers()
     {
-        int prevSet;
-        int fallbackCount;
-
-        if (sessionLoader.LastSet == 1)
-        {
-            prevSet = 0;
-            fallbackCount = 0;
-        }
-        else
-        {
-            prevSet = sessionLoader.LastSet - 1;
-            var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
-            fallbackCount = timingMap.TryGetValue(prevSet, out var t) ? t.count : 1;
-        }
+        // int prevSet;
+        // int fallbackCount;
+        //
+        // if (sessionLoader.LastSet == 1)
+        // {
+        //     prevSet = 0;
+        //     fallbackCount = 0;
+        // }
+        // else
+        // {
+        //     prevSet = sessionLoader.LastSet - 1;
+        //     var timingMap = sessionLoader.RuntimeCache.SetTimingMap;
+        //     fallbackCount = timingMap.TryGetValue(prevSet, out var t) ? t.count : 1;
+        // }
 
         bool usedSaved = false;
         List<MarcherPositionsManager> fallbackMarchers = new List<MarcherPositionsManager>();
 
         foreach (var m in Marchers)
         {
-            //m.InitializeSetCount(sessionLoader.NumberOfSets);
-
             // Try restoring position data
             if (sessionLoader.RuntimeCache.ParsedCountPositions.TryGetValue(m.name, out var restored))
             {
@@ -97,13 +95,6 @@ public class MarcherManager : MonoBehaviour
                     identity.LoadIdentity(identityData.section, identityData.abbr, identityData.number);
                 }
             }
-
-            // // Try restoring last known confirmed position
-            // var interpolator = new MarcherInterpolator(
-            //     m,
-            //     setIndex => sessionLoader.RuntimeCache.SetTimingMap.TryGetValue(setIndex, out var timing) ? timing.count : 8,
-            //     () => m.transform.position
-            // );
 
             if (TryFindLatestConfirmedPositionAcrossSets(m, sessionLoader.LastSet, out int latestSet, out int latestCount, out Vector3 latestPos))
             {
@@ -132,9 +123,7 @@ public class MarcherManager : MonoBehaviour
             }
 
             Debug.Log("🔳 Fallback: arranged all marchers in square and confirmed Set 0, Count 0.");
-        }
-        
-        if (fallbackMarchers.Count > 0)
+        } else if (fallbackMarchers.Count > 0)
         {
             FallbackLineupOnBackSideline(fallbackMarchers);
         }
@@ -224,8 +213,7 @@ public class MarcherManager : MonoBehaviour
 
         Debug.Log($"🔁 FallbackLineupOnBackSideline: Positioned and confirmed {fallbackMarchers.Count} marcher(s).");
     }
-
-
+    
     public void SetMarchersList(IReadOnlyList<MarcherPositionsManager> updatedList)
     {
         Marchers = updatedList;
