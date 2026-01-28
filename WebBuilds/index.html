@@ -28,7 +28,15 @@
     <div id="mada-spinner"></div>
     <p style="margin-top: 20px;">Loading MADA...</p>
 </div>
-<canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
+<div id="screen-dimmer"></div>
+
+<div id="htmlInputContainer">
+    <input id="userInput" placeholder="Type here..." type="text" tabindex="0" />
+</div>
+
+<div id="unity-container">
+    <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
+</div>
 
 <script src="Build/c682e45bff283fe4a978c52eba68f68f.loader.js"></script>
 
@@ -91,10 +99,13 @@
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
         productVersion: "0.1",
-        config: {
+        config: { 
             autoSyncPersistentDataPath: true // ✅ CRITICAL FOR MOBILE
         }
     }).then((unityInstance) => {
+        unityInstanceRef = unityInstance;
+
+        window.unityInstance = unityInstance;
         unityInstanceRef = unityInstance;
 
         // ✅ Hide loader after Unity is ready
@@ -177,6 +188,50 @@
     } else {
         console.warn("Unity canvas element not found with ID 'unity-canvas'. Touch event preventDefault may not be fully effective.");
     }
+</script>
+<script>
+    window.HideHtmlInput = function (value) {
+        const inputId = window.currentInputFieldId || "default";
+        document.getElementById("htmlInputContainer").style.display = "none";
+        document.getElementById("unity-container").style.display = "block";
+        document.getElementById("unity-canvas").style.pointerEvents = "auto";
+        document.getElementById("screen-dimmer").style.display = "none";
+
+        if (window.unityInstance) {
+            console.log("[JS] Sending value to Unity:", value, "for ID:", inputId);
+            window.unityInstance.SendMessage("InputBridge", "ReturnFromHtmlInput", inputId + "|" + value);
+        } else {
+            console.warn("[JS] Unity instance not ready!");
+        }
+
+        window.currentInputFieldId = null;
+    };
+
+    window.ShowHtmlInput = function (placeholderText = "", inputId = "default", defaultValue = "") {
+        console.log("ShowHtmlInput called for ID:", inputId, "with placeholder:", placeholderText);
+
+        document.getElementById("unity-canvas").style.pointerEvents = "none";
+        document.getElementById("unity-container").style.display = "none";
+        document.getElementById("screen-dimmer").style.display = "block";
+
+        window.currentInputFieldId = inputId;
+
+        const inputContainer = document.getElementById("htmlInputContainer");
+        const input = document.getElementById("userInput");
+
+        input.value = defaultValue || "";  //fill with existing value
+        input.placeholder = placeholderText || "Type here...";
+        inputContainer.style.display = "flex";
+
+        setTimeout(() => input.focus(), 200);
+
+        input.onblur = input.onkeydown = function (e) {
+            if (e.type === "blur" || (e.type === "keydown" && e.key === "Enter")) {
+                window.HideHtmlInput(input.value);
+            }
+        };
+    };
+
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20260126-175236 -->
+    <!-- Build Timestamp: 20260127-222813 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,13 +28,21 @@
     <div id="mada-spinner"></div>
     <p style="margin-top: 20px;">Loading MADA...</p>
 </div>
-<canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
+<div id="screen-dimmer"></div>
 
-<script src="Build/0409a9e3432353c914acdd7a5afa90b7.loader.js?v=20260126-175236"></script>
+<div id="htmlInputContainer">
+    <input id="userInput" placeholder="Type here..." type="text" tabindex="0" />
+</div>
+
+<div id="unity-container">
+    <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
+</div>
+
+<script src="Build/ce0945a136ad0ca52bc82952914ddf0f.loader.js?v=20260127-222813"></script>
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "20260126-175236"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "20260127-222813"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -84,17 +92,20 @@
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/f9e7274dbc41a43ed473b6c61452f2c6.data?v=20260126-175236&cb=" + Date.now(),
-        frameworkUrl: "Build/56e2dbc47cafb07e589f5b774ab8df22.framework.js?v=20260126-175236",
-        codeUrl: "Build/7f3342d97f74e7d63338ee6e529ad0b1.wasm?v=20260126-175236",
+        dataUrl: "Build/a5ba5a8474b762d217ff3980f17ebe67.data?v=20260127-222813&cb=" + Date.now(),
+        frameworkUrl: "Build/d4c92b073cb001503b19c8b681836f2e.framework.js?v=20260127-222813",
+        codeUrl: "Build/e023396ae450399137330c6274db582f.wasm?v=20260127-222813",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
         productVersion: "0.1",
-        config: {
+        config: { 
             autoSyncPersistentDataPath: true // ? CRITICAL FOR MOBILE
         }
     }).then((unityInstance) => {
+        unityInstanceRef = unityInstance;
+
+        window.unityInstance = unityInstance;
         unityInstanceRef = unityInstance;
 
         // ? Hide loader after Unity is ready
@@ -178,8 +189,52 @@
         console.warn("Unity canvas element not found with ID 'unity-canvas'. Touch event preventDefault may not be fully effective.");
     }
 </script>
+<script>
+    window.HideHtmlInput = function (value) {
+        const inputId = window.currentInputFieldId || "default";
+        document.getElementById("htmlInputContainer").style.display = "none";
+        document.getElementById("unity-container").style.display = "block";
+        document.getElementById("unity-canvas").style.pointerEvents = "auto";
+        document.getElementById("screen-dimmer").style.display = "none";
+
+        if (window.unityInstance) {
+            console.log("[JS] Sending value to Unity:", value, "for ID:", inputId);
+            window.unityInstance.SendMessage("InputBridge", "ReturnFromHtmlInput", inputId + "|" + value);
+        } else {
+            console.warn("[JS] Unity instance not ready!");
+        }
+
+        window.currentInputFieldId = null;
+    };
+
+    window.ShowHtmlInput = function (placeholderText = "", inputId = "default", defaultValue = "") {
+        console.log("ShowHtmlInput called for ID:", inputId, "with placeholder:", placeholderText);
+
+        document.getElementById("unity-canvas").style.pointerEvents = "none";
+        document.getElementById("unity-container").style.display = "none";
+        document.getElementById("screen-dimmer").style.display = "block";
+
+        window.currentInputFieldId = inputId;
+
+        const inputContainer = document.getElementById("htmlInputContainer");
+        const input = document.getElementById("userInput");
+
+        input.value = defaultValue || "";  //fill with existing value
+        input.placeholder = placeholderText || "Type here...";
+        inputContainer.style.display = "flex";
+
+        setTimeout(() => input.focus(), 200);
+
+        input.onblur = input.onkeydown = function (e) {
+            if (e.type === "blur" || (e.type === "keydown" && e.key === "Enter")) {
+                window.HideHtmlInput(input.value);
+            }
+        };
+    };
+
+</script>
 <div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20260126-175236
+    Build Timestamp: 20260127-222813
 </div>
 </body>
 </html>
