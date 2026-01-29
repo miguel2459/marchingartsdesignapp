@@ -76,7 +76,7 @@ canvas {
 #screen-dimmer {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5); /* translucent white */
+    background: rgba(0, 0, 0, 0.15); /* translucent white */
     z-index: 20000;
     display: none;
     pointer-events: none;

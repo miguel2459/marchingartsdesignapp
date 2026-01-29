@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class InputBridge : MonoBehaviour
 {
@@ -67,6 +68,11 @@ public class InputBridge : MonoBehaviour
         else
         {
             Debug.LogWarning("No input handler found for ID: " + id);
+        }
+        // Deselect any active TMP input field so it doesn't stay "focused"
+        if (EventSystem.current != null)
+        {
+            EventSystem.current.SetSelectedGameObject(null);
         }
 #endif
     }
