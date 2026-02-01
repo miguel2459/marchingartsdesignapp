@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20260201-131457 -->
+    <!-- Build Timestamp: 20260201-131903 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,11 +38,11 @@
     <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
 </div>
 
-<script src="Build/8f781d11e65651b024169d85f7210414.loader.js?v=20260201-131457"></script>
+<script src="Build/8f781d11e65651b024169d85f7210414.loader.js?v=20260201-131903"></script>
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "20260201-131457"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "20260201-131903"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -92,9 +92,9 @@
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/9b60b463ec67104ce8d4d3180b83785b.data?v=20260201-131457&cb=" + Date.now(),
-        frameworkUrl: "Build/828b50d99ef26d34f673ff3bfdbf1e3d.framework.js?v=20260201-131457",
-        codeUrl: "Build/5e74b601dd790c14f9de92d38ffe8152.wasm?v=20260201-131457",
+        dataUrl: "Build/9b60b463ec67104ce8d4d3180b83785b.data?v=20260201-131903&cb=" + Date.now(),
+        frameworkUrl: "Build/828b50d99ef26d34f673ff3bfdbf1e3d.framework.js?v=20260201-131903",
+        codeUrl: "Build/5e74b601dd790c14f9de92d38ffe8152.wasm?v=20260201-131903",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
@@ -211,7 +211,7 @@
         console.log("ShowHtmlInput called for ID:", inputId, "with placeholder:", placeholderText);
 
         document.getElementById("unity-canvas").style.pointerEvents = "none";
-        document.getElementById("unity-container").style.display = "none";
+        document.getElementById("unity-container").style.display = "block";
         document.getElementById("screen-dimmer").style.display = "block";
 
         window.currentInputFieldId = inputId;
@@ -234,7 +234,7 @@
 
 </script>
 <div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20260201-131457
+    Build Timestamp: 20260201-131903
 </div>
 </body>
 </html>
