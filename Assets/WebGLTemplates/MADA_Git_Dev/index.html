@@ -197,10 +197,6 @@
         document.getElementById("unity-canvas").style.pointerEvents = "auto";
         document.getElementById("screen-dimmer").style.display = "none";
 
-        // IMPORTANT: remove dimmer click handler so it doesn't fire later
-        const dimmer = document.getElementById("screen-dimmer");
-        if (dimmer) dimmer.onclick = null;
-
         if (window.unityInstance) {
             console.log("[JS] Sending value to Unity:", value, "for ID:", inputId);
             window.unityInstance.SendMessage("InputBridge", "ReturnFromHtmlInput", inputId + "|" + value);
@@ -214,56 +210,26 @@
     window.ShowHtmlInput = function (placeholderText = "", inputId = "default", defaultValue = "") {
         console.log("ShowHtmlInput called for ID:", inputId, "with placeholder:", placeholderText);
 
-        const unityCanvas = document.getElementById("unity-canvas");
-        const unityContainer = document.getElementById("unity-container");
-        const dimmer = document.getElementById("screen-dimmer");
+        document.getElementById("unity-canvas").style.pointerEvents = "none";
+        document.getElementById("unity-container").style.display = "none";
+        document.getElementById("screen-dimmer").style.display = "block";
+
+        window.currentInputFieldId = inputId;
+
         const inputContainer = document.getElementById("htmlInputContainer");
         const input = document.getElementById("userInput");
 
-        // Keep Unity visible but non-interactable
-        unityCanvas.style.pointerEvents = "none";
-        unityContainer.style.display = "block";
-
-        // Show overlay (dimmer can be transparent in CSS)
-        dimmer.style.display = "block";
-        inputContainer.style.display = "flex";
-
-        window.currentInputFieldId = inputId;
-        window.__htmlInputClosing = false;
-
         input.value = defaultValue || "";  //fill with existing value
         input.placeholder = placeholderText || "Type here...";
+        inputContainer.style.display = "flex";
 
-        // --- Explicit dismiss: tap outside input ---
-        dimmer.onclick = () => {
-            if (window.__htmlInputClosing) return;
-            window.HideHtmlInput(input.value);
-        };
+        setTimeout(() => input.focus(), 200);
 
-        // Prevent clicks inside the input container from dismissing
-        inputContainer.onclick = (e) => e.stopPropagation();
-
-        // Clear any previous handlers to avoid stacking
-        input.onblur = null;
-        input.onkeydown = null;
-
-        // --- Dismiss: Enter key ---
-        input.onkeydown = function (e) {
-            const isEnter = (e.key === "Enter") || (e.keyCode === 13);
-            if (isEnter) {
-                e.preventDefault();
-                if (window.__htmlInputClosing) return;
+        input.onblur = input.onkeydown = function (e) {
+            if (e.type === "blur" || (e.type === "keydown" && e.key === "Enter")) {
                 window.HideHtmlInput(input.value);
             }
         };
-
-        // --- Dismiss: blur (still useful on some devices) ---
-        input.onblur = function () {
-            if (window.__htmlInputClosing) return;
-            window.HideHtmlInput(input.value);
-        };
-
-        setTimeout(() => input.focus(), 200);
     };
 
 </script>
