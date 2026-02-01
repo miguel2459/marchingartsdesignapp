@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using TMPro;
 
 [RequireComponent(typeof(TMP_InputField))]
@@ -44,6 +45,9 @@ public class HtmlInputFieldHandler : MonoBehaviour
     public void ReceiveText(string value)
     {
         tmpInputField.text = value;
-        tmpInputField.ActivateInputField();
+        tmpInputField.DeactivateInputField();
+
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 }
