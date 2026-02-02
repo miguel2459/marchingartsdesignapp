@@ -1,16 +1,17 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System;
+using TMPro;
+
 
 public class EnsembleUIController : MonoBehaviour
 {
     [Header("Input Fields")]
-    [SerializeField] private InputField numberOfMarchersInputField;
-    [SerializeField] private InputField numberOfSetsInputField;
-    [SerializeField] private InputField countsPerSetInputField;
-    [SerializeField] private InputField startBpmInputField;
-    [SerializeField] private InputField endBpmInputField;
-    [SerializeField] private InputField intervalField;
+    [SerializeField] private TMP_InputField numberOfMarchersInputField;
+    [SerializeField] private TMP_InputField numberOfSetsInputField;
+    [SerializeField] private TMP_InputField countsPerSetInputField;
+    [SerializeField] private TMP_InputField startBpmInputField;
+    [SerializeField] private TMP_InputField endBpmInputField;
+    //[SerializeField] private InputField intervalField;
 
     [Header("Director (implements IMarcherProvider & ISetProgressTracker)")]
     [SerializeField] private EnsembleDirector2 director;

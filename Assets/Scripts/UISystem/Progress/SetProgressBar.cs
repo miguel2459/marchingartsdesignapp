@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Collections;
+using TMPro;
 
 public class SetProgressBar : MonoBehaviour
 {
@@ -12,9 +13,9 @@ public class SetProgressBar : MonoBehaviour
     public GameObject sectionPrefab;
     public ScrollRect scrollRect;
     public Text currentSetText;
-    public InputField setCountsInput;
-    public InputField startBPMInput;
-    public InputField endBPMInput;
+    public TMP_InputField setCountsInput;
+    public TMP_InputField startBPMInput;
+    public TMP_InputField endBPMInput;
     private int currentSetIndex = 1;
     private int cachedCount = 8;
     private float cachedStartBPM = 140f;
