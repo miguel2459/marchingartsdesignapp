@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPR Studios | Marching Arts</title>
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
+    <link rel="shortcut icon" href="/favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #111;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 24px 64px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        header img {
+            width: 100px;
+            margin-bottom: 16px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: #888;
+            margin-top: 4px;
+            font-size: 0.95rem;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 680px;
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 28px 24px;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .card:hover {
+            background: #202020;
+            border-color: #1e90ff;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            color: #888;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        .card .cta {
+            display: inline-block;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1e90ff;
+        }
+
+        footer {
+            margin-top: 64px;
+            color: #444;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/app/logo.png" alt="MPR Studios logo">
+        <h1>Marching Arts</h1>
+        <p>MPR Studios</p>
+    </header>
+
+    <main class="cards">
+        <a class="card" href="/app/">
+            <h2>MADA</h2>
+            <p>Marching Arts Design App — interactive 3D drill design and playback tool.</p>
+            <span class="cta">Launch app →</span>
+        </a>
+        <a class="card" href="/lessons/">
+            <h2>Lessons</h2>
+            <p>Interactive marching arts lessons for students and educators.</p>
+            <span class="cta">Browse lessons →</span>
+        </a>
+    </main>
+
+    <footer>MPR Studios</footer>
+</body>
+</html>
