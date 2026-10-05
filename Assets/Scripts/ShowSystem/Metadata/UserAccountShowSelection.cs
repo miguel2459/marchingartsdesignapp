@@ -4,7 +4,10 @@ public class UserAccountShowSelection : MonoBehaviour
 {
     [Header("UI References")]
     public GameObject accountPanel;
+
+    public GameObject logoutPanel;
     public Button accountButton;
+    public Button logoutPanelButton;
     public Button logoutButton;
     public Text usernameText;
 
@@ -20,6 +23,9 @@ public class UserAccountShowSelection : MonoBehaviour
 
         if (logoutButton != null)
             logoutButton.onClick.AddListener(LogoutUser);
+        
+        if (logoutPanelButton != null)
+            logoutPanelButton.onClick.AddListener(ToggleLogoutPanel);
 
         // Populate username
         if (usernameText != null && SessionManager.instance != null)
@@ -33,6 +39,14 @@ public class UserAccountShowSelection : MonoBehaviour
         if (accountPanel != null)
         {
             accountPanel.SetActive(!accountPanel.activeSelf);
+        }
+    }
+
+    private void ToggleLogoutPanel()
+    {
+        if (logoutPanel != null)
+        {
+            logoutPanel.SetActive(!logoutPanel.activeSelf);
         }
     }
 
