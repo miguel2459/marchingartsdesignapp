@@ -1,241 +1,122 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en">
 <head>
-    <!-- Build Timestamp: 20260201-174400 -->
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="MADA" />
-    <title>MADA | Marching Arts Design App</title>
+    <title>MPR Studios | Marching Arts</title>
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
+    <link rel="shortcut icon" href="/favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
     <style>
-        html, body, canvas {
-            touch-action: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-            overscroll-behavior: contain;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #111;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 24px 64px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        header img {
+            width: 100px;
+            margin-bottom: 16px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: #888;
+            margin-top: 4px;
+            font-size: 0.95rem;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 680px;
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 28px 24px;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .card:hover {
+            background: #202020;
+            border-color: #1e90ff;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            color: #888;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        .card .cta {
+            display: inline-block;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1e90ff;
+        }
+
+        footer {
+            margin-top: 64px;
+            color: #444;
+            font-size: 0.8rem;
         }
     </style>
 </head>
-<body style="text-align: center; padding: 0; border: 0; margin: 0;">
-<!-- ?? Branded Loading Screen -->
-<div id="mada-loader">
-    <img src="logo.png" alt="MADA Logo" style="width: 140px; margin-bottom: 20px;">
-    <div id="mada-spinner"></div>
-    <p style="margin-top: 20px;">Loading MADA...</p>
-</div>
-<div id="screen-dimmer"></div>
+<body>
+    <header>
+        <img src="/app/logo.png" alt="MPR Studios logo">
+        <h1>Marching Arts</h1>
+        <p>MPR Studios</p>
+    </header>
 
-<div id="htmlInputContainer">
-    <input id="userInput" placeholder="Type here..." type="text" tabindex="0" />
-</div>
+    <main class="cards">
+        <a class="card" href="/app/">
+            <h2>MADA</h2>
+            <p>Marching Arts Design App — interactive 3D drill design and playback tool.</p>
+            <span class="cta">Launch app →</span>
+        </a>
+        <a class="card" href="/lessons/">
+            <h2>Lessons</h2>
+            <p>Interactive marching arts lessons for students and educators.</p>
+            <span class="cta">Browse lessons →</span>
+        </a>
+    </main>
 
-<div id="unity-container">
-    <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
-</div>
-
-<script src="Build/c0914dadf4eb832082c893e09e35ee71.loader.js?v=20260201-174400"></script>
-
-<script>
-    // Define version from build timestamp
-    const buildTimestamp = "20260201-174400"; // Update this automatically in your build pipeline if needed
-
-    // Adjust for mobile
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-
-        var canvas = document.querySelector("#unity-canvas");
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.position = "fixed";
-
-        document.body.style.textAlign = "left";
-    }
-
-    // Store reference to Unity instance
-    let unityInstanceRef = null;
-
-    function sendToUnity(message) {
-        if (unityInstanceRef && unityInstanceRef.SendMessage) {
-            unityInstanceRef.SendMessage("AppFocusManager", "OnBrowserFocusChange", message);
-        }
-    }
-
-    // Focus/visibility detection
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-            console.log("?? Tab hidden");
-            sendToUnity("PAUSE");
-        } else {
-            console.log("?? Tab visible");
-            sendToUnity("RESUME");
-        }
-    });
-
-    window.addEventListener("blur", () => {
-        console.log("?? Window blurred");
-        sendToUnity("PAUSE");
-    });
-
-    window.addEventListener("focus", () => {
-        console.log("?? Window focused");
-        sendToUnity("RESUME");
-    });
-
-    // Unity loading
-    createUnityInstance(document.querySelector("#unity-canvas"), {
-        arguments: [],
-        dataUrl: "Build/b3c333b3b5904ef22f14f0be8bfe2dbd.data?v=20260201-174400&cb=" + Date.now(),
-        frameworkUrl: "Build/0b92542977f56e638b1f35f7d0007c1d.framework.js?v=20260201-174400",
-        codeUrl: "Build/ede9ef9226ae121ecc48f87962267dfd.wasm?v=20260201-174400",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "MPR Studios",
-        productName: "MADA_MarchingArtsDesignApp",
-        productVersion: "0.1",
-        config: { 
-            autoSyncPersistentDataPath: true // ? CRITICAL FOR MOBILE
-        }
-    }).then((unityInstance) => {
-        unityInstanceRef = unityInstance;
-
-        window.unityInstance = unityInstance;
-        unityInstanceRef = unityInstance;
-
-        // ? Hide loader after Unity is ready
-        const loader = document.getElementById("mada-loader");
-        if (loader) loader.style.display = "none";
-
-        // ? Inject version into Unity
-        if (buildTimestamp) {
-            unityInstance.SendMessage("BuildInfoManager", "SetBuildVersion", buildTimestamp);
-        }
-    }).catch((message) => {
-        alert(message);
-    });
-</script>
-<script>
-(function patchUnityLoaderRetry() {
-    const originalFetch = window.fetch;
-
-    window.fetch = async function(url, options) {
-        // Retry only for .data file requests
-        if (url.includes(".data")) {
-            const maxRetries = 3;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    const response = await originalFetch(url, options);
-                    if (!response.ok) throw new Error("Status " + response.status);
-                    return response; // ? Success
-                } catch (err) {
-                    console.warn(`?? .data fetch failed [${attempt}/${maxRetries}]: ${err.message}`);
-                    if (attempt === maxRetries) throw err; // ? Give up
-                    await new Promise(res => setTimeout(res, 1000 * attempt)); // ?? Exponential backoff
-                }
-            }
-        }
-
-        // Non-.data file: default behavior
-        return originalFetch(url, options);
-    };
-})();
-</script>
-<script>
-    const unityCanvas = document.getElementById("unity-canvas"); // Corrected ID
-
-    // Ensure unityCanvas exists before adding listeners to it
-    if (unityCanvas) {
-        // Prevent default browser gestures on the canvas itself
-        // touch-action: none; in CSS should cover most of this,
-        // but these act as explicit JS overrides for specific event types.
-        unityCanvas.addEventListener("touchstart", function (e) {
-            // Only prevent if multiple touches are involved, to allow single-tap for UI/selection
-            if (e.touches.length > 1) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
-        unityCanvas.addEventListener("touchmove", function (e) {
-            // Prevent scrolling/panning by the browser
-            e.preventDefault();
-        }, { passive: false });
-
-        // 'gesturestart', 'gesturechange', 'gestureend' are deprecated in favor of pointer events
-        // and touch events. While they might still work on some platforms (e.g., iOS Safari),
-        // touch-action: none; and preventing default on touchstart/touchmove are more standard.
-        // Keeping them for now if they are explicitly causing issues, but touch-action is primary.
-
-        // If you still want to explicitly prevent 'gesture' events, attach to document
-        // as they are browser-level gestures that might not originate directly on canvas.
-        document.addEventListener("gesturestart", function (e) {
-            e.preventDefault();
-        }, { passive: false });
-
-        document.addEventListener("gesturechange", function (e) {
-            e.preventDefault();
-        }, { passive: false });
-
-        document.addEventListener("gestureend", function (e) {
-            e.preventDefault();
-        }, { passive: false }); // Added passive: false
-    } else {
-        console.warn("Unity canvas element not found with ID 'unity-canvas'. Touch event preventDefault may not be fully effective.");
-    }
-</script>
-<script>
-    window.HideHtmlInput = function (value) {
-        const inputId = window.currentInputFieldId || "default";
-        document.getElementById("htmlInputContainer").style.display = "none";
-        document.getElementById("unity-container").style.display = "block";
-        document.getElementById("unity-canvas").style.pointerEvents = "auto";
-        document.getElementById("screen-dimmer").style.display = "none";
-
-        if (window.unityInstance) {
-            console.log("[JS] Sending value to Unity:", value, "for ID:", inputId);
-            window.unityInstance.SendMessage("InputBridge", "ReturnFromHtmlInput", inputId + "|" + value);
-        } else {
-            console.warn("[JS] Unity instance not ready!");
-        }
-
-        window.currentInputFieldId = null;
-    };
-
-    window.ShowHtmlInput = function (placeholderText = "", inputId = "default", defaultValue = "") {
-        console.log("ShowHtmlInput called for ID:", inputId, "with placeholder:", placeholderText);
-
-        document.getElementById("unity-canvas").style.pointerEvents = "none";
-        document.getElementById("unity-container").style.display = "block";
-        document.getElementById("screen-dimmer").style.display = "block";
-
-        window.currentInputFieldId = inputId;
-
-        const inputContainer = document.getElementById("htmlInputContainer");
-        const input = document.getElementById("userInput");
-
-        input.value = defaultValue || "";  //fill with existing value
-        input.placeholder = placeholderText || "Type here...";
-        inputContainer.style.display = "flex";
-
-        setTimeout(() => input.focus(), 200);
-
-        input.onblur = input.onkeydown = function (e) {
-            if (e.type === "blur" || (e.type === "keydown" && e.key === "Enter")) {
-                window.HideHtmlInput(input.value);
-            }
-        };
-    };
-
-</script>
-<div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20260201-174400
-</div>
+    <footer>MPR Studios</footer>
 </body>
 </html>
-

@@ -1,31 +1,41 @@
 # === injectBuildMetadata.ps1 ===
-$buildDir = "docs"
-$indexPath = Join-Path $buildDir "index.html"
+param(
+    [string]$BuildDir = ""
+)
 
-# Ensure file exists
+# Resolve build directory: use parameter if given, else default to <projectRoot>/docs/app
+$projectRoot = Split-Path $PSScriptRoot -Parent
+if ([string]::IsNullOrEmpty($BuildDir)) {
+    $BuildDir = Join-Path $projectRoot "docs\app"
+}
+$BuildDir  = [System.IO.Path]::GetFullPath($BuildDir)
+$indexPath = Join-Path $BuildDir "index.html"
+
 if (!(Test-Path $indexPath)) {
-    Write-Host "❌ index.html not found in $buildDir"
+    Write-Host "❌ index.html not found at $indexPath"
     exit 1
 }
 
-# Get timestamp
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$html      = [System.IO.File]::ReadAllText($indexPath, [System.Text.UTF8Encoding]::new($false))
 
-# Update .js/.wasm/.data file references with version string
-$html = Get-Content $indexPath -Raw
-
-# Detect actual filenames
-$maxRetries = 10
-$retryDelay = 1
-$buildPath = "$buildDir/Build"
+# Wait for build files to appear
+$buildPath     = Join-Path $BuildDir "Build"
+$maxRetries    = 10
+$retryDelay    = 1
+$dataFile      = $null
+$frameworkFile = $null
+$wasmFile      = $null
+$loaderFile    = $null
+$ready         = $false
 
 Write-Host "⏳ Waiting for Unity build files to finalize..."
 
 for ($i = 0; $i -lt $maxRetries; $i++) {
-    $dataFile = Get-ChildItem $buildPath -Filter *.data | Select-Object -First 1
-    $frameworkFile = Get-ChildItem $buildPath -Filter *.framework.js | Select-Object -First 1
-    $wasmFile = Get-ChildItem $buildPath -Filter *.wasm | Select-Object -First 1
-    $loaderFile = Get-ChildItem $buildPath -Filter *.loader.js | Select-Object -First 1
+    $dataFile      = Get-ChildItem $buildPath -Filter *.data          | Select-Object -First 1
+    $frameworkFile = Get-ChildItem $buildPath -Filter *.framework.js  | Select-Object -First 1
+    $wasmFile      = Get-ChildItem $buildPath -Filter *.wasm          | Select-Object -First 1
+    $loaderFile    = Get-ChildItem $buildPath -Filter *.loader.js     | Select-Object -First 1
 
     $ready = $dataFile -and $frameworkFile -and $wasmFile -and $loaderFile
     if ($ready) { break }
@@ -39,39 +49,36 @@ if (-not $ready) {
     exit 1
 }
 
+# Replace loader <script> tag (handles existing ?v= query string)
+$html = $html -replace '<script src="Build/.*?\.loader\.js(?:\?v=[^"]*)?"></script>', `
+    "<script src=`"Build/$($loaderFile.Name)?v=$timestamp`"></script>"
 
-if (!$dataFile -or !$frameworkFile -or !$wasmFile -or !$loaderFile) {
-    Write-Host "❌ Missing one or more build files."
-    exit 1
-}
-
-# Replace Unity loader script tag
-$html = $html -replace '<script src="Build/.*?\.loader\.js"></script>', "<script src=`"Build/$($loaderFile.Name)?v=$timestamp`"></script>"
-
-# Replace file references inside createUnityInstance
+# Replace createUnityInstance file URLs
 $html = $html `
-    -replace 'dataUrl:\s*"Build/.*?\.data\?v=.*?"\s*\+\s*Date\.now\(\)', "dataUrl: `"Build/$($dataFile.Name)?v=$timestamp&cb=`" + Date.now()" `
-    -replace 'frameworkUrl:\s*".*?"', "frameworkUrl: `"Build/$($frameworkFile.Name)?v=$timestamp`"" `
-    -replace 'codeUrl:\s*".*?"', "codeUrl: `"Build/$($wasmFile.Name)?v=$timestamp`""
+    -replace 'dataUrl:\s*"Build/[^"]*"[^,\n]*', `
+        "dataUrl: `"Build/$($dataFile.Name)?v=$timestamp&cb=`" + Date.now()" `
+    -replace 'frameworkUrl:\s*"[^"]*"', `
+        "frameworkUrl: `"Build/$($frameworkFile.Name)?v=$timestamp`"" `
+    -replace 'codeUrl:\s*"[^"]*"', `
+        "codeUrl: `"Build/$($wasmFile.Name)?v=$timestamp`""
 
-# Replace build timestamp comment
+# Replace HTML comment timestamp
 $html = $html -replace '<!-- Build Timestamp: .*?-->', "<!-- Build Timestamp: $timestamp -->"
 
-# Inject footer
-$footerHtml = @"
-<div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: $timestamp
-</div>
-"@
+# Replace JS constant timestamp
+$html = $html -replace 'const buildTimestamp = ".*?";', "const buildTimestamp = `"$timestamp`";"
 
-$html = $html -replace "</body>", "$footerHtml`n</body>"
+# Replace existing footer div or inject if absent (multiline-safe)
+$footerDiv     = "<div style=`"position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999`">`n    Build Timestamp: $timestamp`n</div>"
+$footerPattern = '(?s)<div style="position:fixed; top: 10px; left: 10px[^"]*"[^>]*>.*?</div>'
 
-# Inject or replace JavaScript build timestamp constant
-if ($html -match 'const buildTimestamp = ".*?";') {
-    $html = $html -replace 'const buildTimestamp = ".*?";', "const buildTimestamp = `"$timestamp`";"
+if ([regex]::IsMatch($html, $footerPattern)) {
+    $html = [regex]::Replace($html, $footerPattern, $footerDiv)
+} else {
+    $html = $html -replace "</body>", "$footerDiv`n</body>"
 }
 
-# Write updated HTML
-Set-Content -Path $indexPath -Value $html
+# Write UTF-8 without BOM
+[System.IO.File]::WriteAllText($indexPath, $html, [System.Text.UTF8Encoding]::new($false))
 
-Write-Host "✅ index.html updated with timestamp and version query strings."
+Write-Host "✅ index.html updated with timestamp $timestamp"

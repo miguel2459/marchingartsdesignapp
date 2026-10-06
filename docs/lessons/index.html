@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lessons | MPR Studios</title>
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
+    <link rel="shortcut icon" href="/favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #111;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 24px 64px;
+        }
+
+        nav {
+            width: 100%;
+            max-width: 680px;
+            margin-bottom: 40px;
+        }
+
+        nav a {
+            color: #888;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        nav a:hover { color: #fff; }
+
+        header {
+            width: 100%;
+            max-width: 680px;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        header p {
+            color: #888;
+            margin-top: 6px;
+            font-size: 0.95rem;
+        }
+
+        .lesson-list {
+            width: 100%;
+            max-width: 680px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .lesson {
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 24px;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .lesson:hover {
+            background: #202020;
+            border-color: #1e90ff;
+        }
+
+        .lesson h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .lesson p {
+            color: #888;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .lesson .cta {
+            display: inline-block;
+            margin-top: 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1e90ff;
+        }
+    </style>
+</head>
+<body>
+    <nav><a href="/">← Home</a></nav>
+
+    <header>
+        <h1>Lessons</h1>
+        <p>Interactive marching arts lessons. Progress saves in your browser.</p>
+    </header>
+
+    <div class="lesson-list">
+        <a class="lesson" href="/lessons/charlie-brown/">
+            <h2>Charlie Brown — Count by Count</h2>
+            <p>Learn a classic show opener one count at a time. Follow each marcher's path, answer questions, and build your visual vocabulary.</p>
+            <span class="cta">Start lesson →</span>
+        </a>
+    </div>
+</body>
+</html>
