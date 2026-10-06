@@ -183,8 +183,11 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 <script>
 'use strict';
 const DEPTH=85.33, QN=8, PASS=6, KEY='cb-lesson-v1';
+const qnFor=n=>n===2?10:QN;
+const passFor=n=>n===2?8:PASS;
 const S={name:'',hash:'college',grid:true,best:{},unlocked:1};
-function load(){try{const r=localStorage.getItem(KEY);if(r)Object.assign(S,JSON.parse(r));}catch(e){}}
+function load(){try{const r=localStorage.getItem(KEY);if(r)Object.assign(S,JSON.parse(r));}catch(e){}
+  if(S.best[2]!==undefined&&S.l2v!==2){delete S.best[2];S.l2v=2;save();}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const H=()=>S.hash==='hs'?28:32;
 const hashName=()=>S.hash==='hs'?'a high school field':'a college field';
@@ -202,6 +205,12 @@ const steps=n=>round2(n)===1?'1 step':fmt(n)+' steps';
 const FR={0:'0',0.25:'¼',0.5:'½',0.75:'¾',1:'1',1.25:'1¼',1.5:'1½',1.75:'1¾',2:'2',2.5:'2½',3:'3'};
 const fmtFrac=v=>{const r=round2(v);return FR[r]!==undefined?FR[r]:fmt(r);};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtSS=n=>{const s=Math.round(n*10)/10;return (s===Math.floor(s)?String(Math.floor(s)):String(s))+'-to-5';};
+const fmtSPC=v=>{let s=String(Math.round(v*100)/100);if(s.includes('.'))s=s.replace(/\.?0+$/,'');return s;};
+const CLEAN_SS=[6,8,12,16];
+const ssNearest=n=>CLEAN_SS.reduce((a,b)=>Math.abs(b-n)<Math.abs(a-n)?b:a);
+const ssLean=n=>{const near=ssNearest(n);if(Math.abs(n-near)<=0.2)return `about a ${near}-to-5`;return `a little ${n>near?'smaller':'bigger'} than a ${near}-to-5`;};
+const gutSentence=(st,co)=>st===co?'Same counts as steps: exactly an 8-to-5.':co>st?'More counts than steps, so smaller than an 8-to-5.':'Fewer counts than steps, so bigger than an 8-to-5.';
 const gcd=(a,b)=>b?gcd(b,a%b):a;
 const fracStr=(a,b)=>{const g=gcd(a,b);return `${a/g}/${b/g}`;};
 
@@ -216,6 +225,16 @@ function explainLat(x){const {k,off,inside}=latParts(x);if(off===0)return `Later
 function explainDep(y){const h=H();y=round2(y);if(y<h/2)return y===0?"For depth, it's on the front sideline.":`For depth, it's closer to the sideline than the hash, so call it ${steps(y)} off the front sideline.`;const off=round2(y-h);if(off===0)return "For depth, it's right on the front hash.";return `For depth, it's ${steps(Math.abs(off))} ${off>0?'behind the front hash (toward the back sideline)':'in front of the front hash (toward the audience)'}.`;}
 
 /* ---------- field drawing ---------- */
+function rulerSegments(x1,x2){
+  const lo=Math.min(x1,x2),hi=Math.max(x1,x2);
+  const breaks=[];
+  for(let k=Math.ceil(lo/8)*8;k<hi;k+=8){if(k>lo)breaks.push(k);}
+  const pts=[x1,...breaks,x2];
+  const segs=[];
+  for(let i=0;i<pts.length-1;i++)segs.push(round2(Math.abs(pts[i+1]-pts[i])));
+  return segs;
+}
+function rulerSumLine(x1,x2){const segs=rulerSegments(x1,x2);if(!segs.length)return '';const total=segs.reduce((a,b)=>a+b,0);return segs.join(' + ')+' = '+total+' steps';}
 function computeView(points,minW){
   const h=H();const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
   let x0=Math.floor((Math.min(...xs)-5)/8)*8,x1=Math.ceil((Math.max(...xs)+5)/8)*8;
@@ -254,6 +273,18 @@ function fieldSVG(spec){
     if(p.label){const opt=(p.cls||'').includes('opt');const lx=p.lx!==undefined?p.lx:(opt?0:1.3),ly=p.ly!==undefined?p.ly:(opt?1.6:1.2);
       s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${opt?'middle':'start'}">${esc(p.label)}</text>`;}});
   if(spec.marcher)s+=`<circle class="marcher" id="${id}m" cx="${spec.marcher.x}" cy="${-spec.marcher.y}" r="1.15"/>`;
+  if(spec.ruler){const r=spec.ruler;const segs=rulerSegments(r.x1,r.x2);const dir=r.x2>r.x1?1:-1;
+    const ry=-(r.y-2.5);
+    s+=`<line x1="${r.x1}" y1="${ry}" x2="${r.x2}" y2="${ry}" stroke="#fff" stroke-opacity=".85" stroke-width=".28"/>`;
+    s+=`<line x1="${r.x1}" y1="${ry-.8}" x2="${r.x1}" y2="${ry+.8}" stroke="#fff" stroke-opacity=".85" stroke-width=".28"/>`;
+    s+=`<line x1="${r.x2}" y1="${ry-.8}" x2="${r.x2}" y2="${ry+.8}" stroke="#fff" stroke-opacity=".85" stroke-width=".28"/>`;
+    let cx=r.x1;
+    for(let i=0;i<segs.length;i++){const nx=round2(cx+dir*segs[i]);
+      if(i>0)s+=`<line x1="${cx}" y1="${ry-.5}" x2="${cx}" y2="${ry+.5}" stroke="#fff" stroke-opacity=".6" stroke-width=".18"/>`;
+      s+=`<text class="dot-label" x="${(cx+nx)/2}" y="${ry+2.6}" text-anchor="middle">${segs[i]}</text>`;
+      cx=nx;}
+    const total=segs.reduce((a,b)=>a+b,0);
+    s+=`<text class="dot-label" x="${r.x2+dir*1.8}" y="${ry+2.6}" text-anchor="${dir>0?'start':'end'}">= ${total} steps</text>`;}
   return s+'</svg>';
 }
 function legsFor(a,b,L,D,dir){
@@ -438,7 +469,7 @@ const GEN={1:gen1,2:gen2,3:gen3,4:gen4,5:gen5,6:gen6};
 /* ---------- lessons ---------- */
 const LEVELS=[
  {n:1,title:'Where am I?',sub:'Name any spot on the field, lateral first, then depth.'},
- {n:2,title:'Step size is math',sub:'Distance ÷ counts tells you the step before you take it.'},
+ {n:2,title:'Step size is math',sub:'How many 8-to-5 steps to my dot, over how many counts?'},
  {n:3,title:'Rise over run',sub:'Every diagonal is two straight lines happening at once.'},
  {n:4,title:'Checkpoints',sub:'Where should you be on count X?'},
  {n:5,title:'Charlie Brown',sub:'Put it together on the full exercise.'},
@@ -459,15 +490,67 @@ function learn1(){const h=H();const p={x:8*6+3,y:h+4};return `<div class="prose"
 <li>The small hash ticks are 1 yard apart (1.6 steps). Use them to estimate between yard lines.</li></ul></div>
 ${fig({pts:[{...p,r:1.1}],minW:40},`This dot: <b>${posDesc(p)}</b>.`)}
 <p class="note">A real field has no step grid. The grid is here to train your eye; turn it off at the bottom of the page once this feels easy.</p>`;}
-function learn2(){const h=H();const a={x:48,y:h},b={x:64,y:h};return `<div class="prose">
-<p>A step size name tells you how many steps it takes to cover 5 yards. A 6-to-5 is 6 steps per 5 yards; a 12-to-5 is 12. Five yards is 180 inches, so the step length is 180 ÷ the first number.</p></div>
-<div class="tw"><table class="t"><thead><tr><th>Step size</th><th>Steps per 5 yards</th><th>Each step</th></tr></thead><tbody>
-${[6,8,12,16].map(n=>`<tr><td class="c">${n}-to-5</td><td>${n}</td><td>${fmtIn(180/n,2)}</td></tr>`).join('')}</tbody></table></div>
-<div class="prose"><h3>Work it out before you step off</h3>
-<p>Count the 5-yard chunks between start and end, then divide the counts by the chunks. That number is your step size.</p></div>
-${fig({pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}]},'S1 30 to S1 40 in 12 counts: 2 chunks, 12 ÷ 2 = 6, so a <b>6-to-5</b>.')}
-<div class="prose"><p>It works backward too. At a 12-to-5, the S1 30 to the S1 40 takes 2 × 12 = 24 counts.</p>
-<p class="note">Coordinates in this lesson are always counted in 8-to-5 steps, even when you're taking a different size step. The 8-to-5 is the ruler. Your step size is how fast you use it up.</p></div>`;}
+function learn2(){const h=H();
+  const f1a={x:48,y:h},f1b={x:64,y:h};
+  const f2a={x:46,y:h},f2b={x:64,y:h};
+  const f3a={x:52,y:h},f3b={x:60,y:h};
+  const f4a={x:75,y:h},f4b={x:86,y:h};
+  const f5a={x:34,y:h},f5b={x:50,y:h};
+  return `<div class="prose">
+<h3>The one question</h3>
+<p>Here's the secret: every step size question you'll ever get is really just one question.</p>
+<p><b>How many 8-to-5 steps to my dot, and how many counts do I have to get there?</b></p>
+<p>Answer those two numbers and the rest is easy math. Seriously. Let's get really good at both.</p>
+<h3>Your ruler</h3>
+<p>The 8-to-5 step is your ruler. Yard lines are always 8 of them apart, so the whole field is one giant ruler with a mark every 8 steps.</p>
+<p>To count the steps between two dots, walk it in pieces: from your dot to the nearest yard line, then line to line in 8s, then from the last line to your end dot. Add up the pieces.</p>
+<p><b>Line to line.</b> S1 30 to S1 40. Two gaps: 8 + 8 = <b>16 steps</b>. Easy.</p></div>
+${fig({pts:[{...f1a,label:'Start'},{...f1b,cls:'end',label:'End'}],paths:[{pts:[f1a,f1b]}],ruler:{x1:48,x2:64,y:h}},'S1 30 → S1 40')}
+<div class="prose"><p><b>Off a line.</b> 2 outside the S1 30 to the S1 40. You start 2 steps before the 30, so: 2 + 8 + 8 = <b>18 steps</b>.</p></div>
+${fig({pts:[{...f2a,label:'Start'},{...f2b,cls:'end',label:'End'}],paths:[{pts:[f2a,f2b]}],ruler:{x1:46,x2:64,y:h}},'2 outside S1 30 → S1 40')}
+<div class="prose"><p><b>Same line, opposite sides.</b> 4 outside the S1 35 to 4 inside the S1 35. This one fools people, because both dots "say" 35. But you're crossing the line: 4 + 4 = <b>8 steps</b>.</p></div>
+${fig({pts:[{...f3a,label:'Start'},{...f3b,cls:'end',label:'End'}],paths:[{pts:[f3a,f3b]}],ruler:{x1:52,x2:60,y:h}},'4 outside S1 35 → 4 inside S1 35')}
+<div class="prose"><p><b>Crossing the 50.</b> 3 inside the S1 45 to 2 inside the S2 45. After the 50, the yard numbers count back down, so use the 50 as your anchor. 3 inside the S1 45 is 5 steps from the 50. 2 inside the S2 45 is 6 steps past it. 5 + 6 = <b>11 steps</b>.</p></div>
+${fig({pts:[{...f4a,label:'Start'},{...f4b,cls:'end',label:'End'}],paths:[{pts:[f4a,f4b]}],ruler:{x1:75,x2:86,y:h}},'3 inside S1 45 → 2 inside S2 45')}
+<div class="prose"><p class="note">Tip: say your pieces out loud. "Two, plus eight, plus eight, is eighteen." Doing this in your head on the field is a skill every tech notices.</p>
+<h3>The gut check</h3>
+<p>Before you touch the formula, compare your two numbers. An 8-to-5 is the step where one count covers exactly one ruler step. So:</p>
+<ul><li><b>Same counts as steps:</b> it's an 8-to-5.</li>
+<li><b>More counts than steps:</b> you've got extra time, so your steps get <b>smaller</b>.</li>
+<li><b>Fewer counts than steps:</b> you're short on time, so your steps get <b>bigger</b>.</li></ul>
+<p>This takes two seconds, and it catches almost every math mistake. If your answer and your gut check ever disagree, trust your gut and redo the math.</p>
+<h3>The formula</h3>
+<p><b>Step Size = 8 × Counts ÷ Steps</b></p>
+<p>Why the 8? A step size tells you how many of <i>your</i> steps fit in 5 yards, and 5 yards is 8 ruler steps.</p>
+<p>Let's try one together: <b>10 steps to your dot in 12 counts.</b><br>
+Gut check first: more counts than steps, so it should be smaller than an 8-to-5.<br>
+Now the math: 8 × 12 ÷ 10 = <b>9.6</b>. A 9.6-to-5. Smaller than an 8-to-5, just like your gut said.</p>
+<h3>Real drill isn't always clean</h3>
+<p>Drill writers don't always hand you a perfect 6 or 8. You'll see a 9.6, a 7.1, a 6.1. That's completely normal. Here's how to read them.</p></div>
+<div class="tw"><table class="t"><thead><tr><th>Step size</th><th>Each step</th></tr></thead><tbody>
+<tr><td class="c">6-to-5</td><td>30"</td></tr>
+<tr><td class="c">8-to-5</td><td>22.5"</td></tr>
+<tr><td class="c">12-to-5</td><td>15"</td></tr>
+<tr><td class="c">16-to-5</td><td>11.25"</td></tr>
+</tbody></table></div>
+<div class="prose"><p>The one rule to remember: <b>bigger number, smaller step.</b> A 12-to-5 is smaller than a 6-to-5, because you're taking 12 steps to cover the same 5 yards.</p>
+<p>So a 9.6 sits between an 8 and a 12, closer to the 8: a little smaller than an 8-to-5. A 6.1 is basically a 6-to-5. Name the closest one, then say which way it leans.</p>
+<h3>Flip it around</h3>
+<p>Same formula, different questions.</p>
+<p><b>How many counts do I need?</b> Counts = Step Size × Steps ÷ 8<br>
+12 steps at an 8-to-5: 8 × 12 ÷ 8 = <b>12 counts</b>.</p>
+<p><b>Where do I land?</b> Steps = 8 × Counts ÷ Step Size<br>
+Start 2 inside the S1 20 and do a 6-to-5 for 12 counts: 8 × 12 ÷ 6 = 16 steps. You land <b>2 inside the S1 30</b>.</p></div>
+${fig({pts:[{...f5a,label:'Start'},{...f5b,cls:'end',label:'End'}],paths:[{pts:[f5a,f5b]}],ruler:{x1:34,x2:50,y:h}},'2 inside S1 20 → 2 inside S1 30 (16 steps)')}
+<div class="prose">
+<h3>In inches</h3>
+<p>Some people feel it better in inches: <b>Inches = 22.5 × Steps ÷ Counts.</b><br>
+10 steps in 12 counts: 22.5 × 10 ÷ 12 = <b>18.75"</b>. Put that next to 22.5" for an 8-to-5 and you can feel exactly how much to shorten up.</p>
+<h3>Coming up next</h3>
+<p>Notice that steps ÷ counts tells you how much ruler each count covers. 10 ÷ 12 is about 0.83 steps per count. Hold onto that idea. In Level 3 you'll do the exact same thing in two directions at once, and honestly, that's all a diagonal is.</p>
+<h3>Try it yourself</h3>
+<p>Pick a start, an end, and your counts. Make your guess before you hit "Show me."</p></div>
+<div class="player" id="calc">${calcInner()}</div>`;}
 function learn3(){const h=H();const a={x:56,y:h-4},b={x:72,y:h+4};const rows=[0,4,8,12,16].map(c=>({c,p:{x:a.x+c,y:a.y+c/2}}));
   return `<div class="prose"><p>A diagonal looks hard because it's one line going two directions. Split it into two straight-line moves and it's easy: one lateral, one depth. Each has its own rate per count.</p></div>
 ${fig({pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],legs:legsFor(a,b,16,8,1)},'S1 35 (4 in front of the hash) to S1 45 (4 behind), 16 counts.')}
@@ -532,27 +615,69 @@ function playerPlay(){if(player.t>=maxT())player.t=0;player.playing=true;player.
   player.raf=requestAnimationFrame(loop);}
 function playerRefresh(){playerStop();player.shown=-1;const el=document.getElementById('player');if(el)el.innerHTML=playerHTML();}
 
+/* ---------- step size calculator ---------- */
+const calc={sk:6,soff:0,sdir:1,ek:8,eoff:0,edir:1,counts:12,shown:false};
+function calcX(k,off,dir){if(k===10)return 80+dir*off;if(k<10)return 8*k+(dir>0?off:-off);return 8*k+(dir>0?-off:off);}
+function calcDirLabel(k){return k===10?['Side 1','Side 2']:['Outside','Inside'];}
+function calcRefresh(){const el=document.getElementById('calc');if(el)el.innerHTML=calcInner();}
+function calcInner(){
+  const h=H();const x1=calcX(calc.sk,calc.soff,calc.sdir),x2=calcX(calc.ek,calc.eoff,calc.edir);
+  const totalSteps=round2(Math.abs(x2-x1));
+  const a={x:x1,y:h},b={x:x2,y:h};
+  const fspec={pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}]};
+  if(totalSteps>0)fspec.ruler={x1,x2,y:h};
+  const mkYd=(sel,cur)=>Array.from({length:21},(_,k)=>`<option value="${k}"${k===cur?' selected':''}>${lineName(k)}</option>`).join('');
+  const mkOff=(sel,cur)=>Array.from({length:8},(_,i)=>`<option value="${i}"${i===cur?' selected':''}>${i===0?'On the line':i+' steps'}</option>`).join('');
+  const mkDir=(k,cur)=>{const[a,b]=calcDirLabel(k);return `<option value="-1"${cur===-1?' selected':''}>${a}</option><option value="1"${cur===1?' selected':''}>${b}</option>`;};
+  const countOpts=[4,6,8,12,16,24,32].map(c=>`<option value="${c}"${c===calc.counts?' selected':''}>${c}</option>`).join('');
+  const dirS=calc.soff>0?`<label>${calcDirLabel(calc.sk).join('/')} <select data-calc="sdir">${mkDir(calc.sk,calc.sdir)}</select></label>`:'';
+  const dirE=calc.eoff>0?`<label>${calcDirLabel(calc.ek).join('/')} <select data-calc="edir">${mkDir(calc.ek,calc.edir)}</select></label>`:'';
+  let results='';
+  if(totalSteps===0){results='<p class="note">Pick two different dots.</p>';}
+  else if(calc.shown){
+    const ss=8*calc.counts/totalSteps,inches=22.5*totalSteps/calc.counts,spc=totalSteps/calc.counts;
+    results=`<p>${gutSentence(totalSteps,calc.counts)}</p>
+<p><b>Step size:</b> 8 × ${calc.counts} ÷ ${totalSteps} = <b>${fmtSS(ss)}</b> — ${ssLean(ss)}.</p>
+<p><b>Inches:</b> 22.5 × ${totalSteps} ÷ ${calc.counts} = <b>${fmtIn(inches)}</b></p>
+<p><b>Per count:</b> ${totalSteps} ÷ ${calc.counts} = <b>${fmtSPC(spc)} steps per count</b></p>
+${ss<4?'<p class="note">That\'s a huge step. Most drill won\'t ask for this.</p>':''}`;}
+  return `<div class="custom">
+<label>Start <select data-calc="sk">${mkYd('sk',calc.sk)}</select></label>
+<label>Offset <select data-calc="soff">${mkOff('soff',calc.soff)}</select></label>${dirS}
+</div>
+<div class="custom">
+<label>End <select data-calc="ek">${mkYd('ek',calc.ek)}</select></label>
+<label>Offset <select data-calc="eoff">${mkOff('eoff',calc.eoff)}</select></label>${dirE}
+</div>
+<div class="custom"><label>Counts <select data-calc="counts">${countOpts}</select></label></div>
+<figure class="fig">${fieldSVG(fspec)}</figure>
+${totalSteps>0?`<p><b>${rulerSumLine(x1,x2)}</b></p>`:''}
+${results?`<div class="fb ok"><div class="prose">${results}</div></div>`:''}
+${!calc.shown&&totalSteps>0?`<div class="btn-row"><button class="btn primary" data-act="calcshow">Show me</button></div>`:''}`;
+}
+
 /* ---------- app state + views ---------- */
 let view={name:'intro'};let quiz=null;let hero=0;
 function startQuiz(n){quiz={n,i:0,score:0,answered:false,choice:null,used:new Set(),done:false};quiz.q=GEN[n](quiz);}
-function trackHTML(){return LEVELS.map(L=>{const locked=L.n>S.unlocked;const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=PASS;
+function trackHTML(){return LEVELS.map(L=>{const locked=L.n>S.unlocked;const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=passFor(L.n);
   return `<button class="trk${passed?' passed':''}${cur?' cur':''}" data-act="goto" data-n="${L.n}"${locked?' disabled':''}${cur?' aria-current="step"':''} aria-label="Level ${L.n}: ${L.title}${passed?', passed':''}${locked?', locked':''}"><span class="trk-n">${L.n}</span><span class="trk-t">${L.title}</span></button>`;}).join('')+
   `<button class="trk${view.name==='results'?' cur':''}" data-act="results" aria-label="Results"><span class="trk-n">✓</span><span class="trk-t">Results</span></button>`;}
 function introHTML(){const h=H();const cont=S.name&&S.unlocked>1;
   return `<section class="hero"><figure class="hero-fig">${fieldSVG({id:'hero',paths:[{pts:cbPath(V_MAIN,2)}],pts:[{x:32,y:h,label:'S1 20'}],marcher:{x:32,y:h},minW:48,grid:false,aria:'The Charlie Brown zigzag drawn on the field'})}</figure>
 <h1>Charlie Brown, count by count</h1>
-<p class="lede">Prep for the Blue Devils A Corps audition. Six short levels take you from naming your spot on the field to marching Charlie Brown with the right step on every count. Each level is a short lesson and an 8-question check. Get ${PASS} right to unlock the next one.</p>
+<p class="lede">Prep for the Blue Devils A Corps audition. Six short levels take you from naming your spot on the field to marching Charlie Brown with the right step on every count. Each level has a short lesson and a practice check.</p>
 <ol class="levels-list">${LEVELS.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
 <div class="name-row"><label for="nameIn">Your name<input id="nameIn" autocomplete="given-name" value="${esc(S.name)}"></label>
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(6,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
 function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of 6</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
 <div role="tabpanel">${view.tab==='learn'?LEARN[view.n]()+`<div class="btn-row"><button class="btn primary" data-act="tab" data-tab="practice">Start the practice check</button></div>`:practiceHTML()}</div></section>`;}
+function fbHeader(n,ok){return ok?'Correct.':'Not quite.';}
 function practiceHTML(){
-  if(!quiz||quiz.n!==view.n){const b=S.best[view.n];return `<div class="prose"><p>${QN} questions. Get ${PASS} right to pass. You'll see the reasoning after every answer, right or wrong, and the questions change every time you run it.</p>${b!==undefined?`<p class="muted">Best score so far: ${b} / ${QN}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="begin">Start the check</button></div>`;}
-  if(quiz.done){const pass=quiz.score>=PASS;const n=view.n;
-    return `<div class="score"><span class="big">${quiz.score}</span><span class="of">/ ${QN}</span></div>
-<p class="prompt">${pass?(n<6?`Passed. Level ${n+1} is unlocked.`:'Passed. That\'s the whole lesson.'):`You need ${PASS} to pass. Look back at the lesson and run it again; you'll get new questions.`}</p>
+  if(!quiz||quiz.n!==view.n){const b=S.best[view.n];const qn=qnFor(view.n),pf=passFor(view.n);return `<div class="prose"><p>${qn} questions. Get ${pf} right to pass. You'll see the reasoning after every answer, right or wrong, and the questions change every time you run it.</p>${b!==undefined?`<p class="muted">Best score so far: ${b} / ${qn}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="begin">Start the check</button></div>`;}
+  if(quiz.done){const pf=passFor(quiz.n);const pass=quiz.score>=pf;const n=view.n;
+    return `<div class="score"><span class="big">${quiz.score}</span><span class="of">/ ${qnFor(n)}</span></div>
+<p class="prompt">${pass?(n<6?`Passed. Level ${n+1} is unlocked.`:'Passed. That\'s the whole lesson.'):`You need ${pf} to pass. Look back at the lesson and run it again; you'll get new questions.`}</p>
 <div class="btn-row">${pass?(n<6?`<button class="btn primary" data-act="goto" data-n="${n+1}">Go to level ${n+1}</button>`:`<button class="btn primary" data-act="results">See your results</button>`):`<button class="btn primary" data-act="tab" data-tab="learn">Review the lesson</button>`}<button class="btn" data-act="begin">${pass?'Run it again':'Try again'}</button></div>`;}
   const q=quiz.q;let field='';
   if(q.field){const spec=JSON.parse(JSON.stringify(q.field));spec.pts=spec.pts||[];spec.extra=q.reveal||[];
@@ -561,15 +686,16 @@ function practiceHTML(){
   const ok=quiz.answered&&quiz.choice===q.correct;
   const opts=q.options.map((o,i)=>{let c='opt';if(quiz.answered){if(i===q.correct)c+=' right';else if(i===quiz.choice)c+=' wrong';}
     return `<button class="${c}" data-act="answer" data-i="${i}"${quiz.answered?' disabled':''}>${o}</button>`;}).join('');
-  return `<div class="qmeta"><span>Question ${quiz.i+1} of ${QN}</span><span>${quiz.score} correct</span></div><div class="qbar"><span style="width:${(quiz.i/QN)*100}%"></span></div>
+  const qn=qnFor(quiz.n);
+  return `<div class="qmeta"><span>Question ${quiz.i+1} of ${qn}</span><span>${quiz.score} correct</span></div><div class="qbar"><span style="width:${(quiz.i/qn)*100}%"></span></div>
 <p class="prompt">${q.prompt}</p>${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
-${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${ok?'Correct.':'Not quite.'}</p><p>${q.explain}</p></div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===QN-1?'See your score':'Next question'}</button></div>`:''}`;}
+${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p></div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
 function resultsHTML(){const tot=LEVELS.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
 <div class="report"><p><b>${esc(S.name||'Student')}</b><br><span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
 <div class="tw"><table class="t"><thead><tr><th>Level</th><th>Best</th><th>Status</th></tr></thead><tbody>
-${LEVELS.map(L=>{const b=S.best[L.n];return `<tr><td>${L.n}. ${L.title}</td><td class="c">${b===undefined?'–':`${b} / ${QN}`}</td><td>${b===undefined?'Not taken':b>=PASS?'Passed':'Not passed yet'}</td></tr>`;}).join('')}
-</tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${QN*6}</span></div></div></section>`;}
+${LEVELS.map(L=>{const b=S.best[L.n];return `<tr><td>${L.n}. ${L.title}</td><td class="c">${b===undefined?'–':`${b} / ${qnFor(L.n)}`}</td><td>${b===undefined?'Not taken':b>=passFor(L.n)?'Passed':'Not passed yet'}</td></tr>`;}).join('')}
+</tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${LEVELS.reduce((s,L)=>s+qnFor(L.n),0)}</span></div></div></section>`;}
 
 function render(){
   playerStop();cancelAnimationFrame(hero);
@@ -594,13 +720,14 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
   if(a==='begin'){startQuiz(view.n);view.tab='practice';render();return;}
   if(a==='answer'&&quiz&&!quiz.answered){quiz.answered=true;quiz.choice=+el.dataset.i;if(quiz.choice===quiz.q.correct)quiz.score++;render();const nb=document.getElementById('nextBtn');if(nb)nb.focus({preventScroll:true});return;}
   if(a==='next'&&quiz){quiz.i++;quiz.answered=false;quiz.choice=null;
-    if(quiz.i>=QN){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);if(quiz.score>=PASS&&S.unlocked<=n)S.unlocked=Math.min(6,n+1);save();}
+    if(quiz.i>=qnFor(quiz.n)){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);if(quiz.score>=passFor(n)&&S.unlocked<=n)S.unlocked=Math.min(6,n+1);save();}
     else quiz.q=GEN[quiz.n](quiz);
     render();window.scrollTo(0,0);return;}
   if(a==='pv'){player.mode=el.dataset.v;if(player.mode==='main')player.v={...V_MAIN};else if(player.mode==='mid')player.v={...V_MID};else player.v={fwd:player.v.fwd,over:player.v.over,leg:player.v.leg};player.t=0;playerRefresh();return;}
   if(a==='pplay'){player.playing?playerStop():playerPlay();return;}
   if(a==='pstep'){playerStop();player.t=Math.max(0,Math.min(maxT(),Math.round(player.t)+(+el.dataset.d)));playerDraw();return;}
   if(a==='preset'){playerStop();player.t=0;playerDraw();return;}
+  if(a==='calcshow'){calc.shown=true;calcRefresh();return;}
   if(a==='coach'){S.unlocked=6;save();render();return;}
   if(a==='reset'){if(el.dataset.armed){S.best={};S.unlocked=1;quiz=null;save();el.dataset.armed='';el.textContent='Reset progress';return go({name:'intro'});}
     el.dataset.armed='1';el.textContent='Click again to erase all scores';setTimeout(()=>{el.dataset.armed='';el.textContent='Reset progress';},4000);return;}
@@ -609,6 +736,7 @@ document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='gridT'){S.grid=t.checked;save();if(view.name==='level'&&view.n===5&&view.tab==='learn'){render();}else render();return;}
   if(t.id==='hashSel'){S.hash=t.value;save();if(quiz&&!quiz.done)quiz=null;render();return;}
   if(t.dataset&&t.dataset.pc){player.v[t.dataset.pc]=+t.value;player.t=0;playerRefresh();}
+  if(t.dataset&&t.dataset.calc){calc[t.dataset.calc]=+t.value;calc.shown=false;calcRefresh();}
 });
 document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nameIn'){const b=document.querySelector('[data-act="start"]');if(b)b.click();}});
