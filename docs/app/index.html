@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <!-- Build Timestamp: 20260201-174400 -->
+    <!-- Build Timestamp: 20261006-115908 -->
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +22,7 @@
     </style>
 </head>
 <body style="text-align: center; padding: 0; border: 0; margin: 0;">
-<!-- ?? Branded Loading Screen -->
+<!-- 🌟 Branded Loading Screen -->
 <div id="mada-loader">
     <img src="logo.png" alt="MADA Logo" style="width: 140px; margin-bottom: 20px;">
     <div id="mada-spinner"></div>
@@ -38,11 +38,11 @@
     <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 1920px; height: 1080px; background: #231F20"></canvas>
 </div>
 
-<script src="Build/c0914dadf4eb832082c893e09e35ee71.loader.js?v=20260201-174400"></script>
+<script src="Build/4eb92210984c27e05c8b9cec9689f4eb.loader.js?v=20261006-115908"></script>
 
 <script>
     // Define version from build timestamp
-    const buildTimestamp = "20260201-174400"; // Update this automatically in your build pipeline if needed
+    const buildTimestamp = "20261006-115908"; // Update this automatically in your build pipeline if needed
 
     // Adjust for mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -71,36 +71,36 @@
     // Focus/visibility detection
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
-            console.log("?? Tab hidden");
+            console.log("👋 Tab hidden");
             sendToUnity("PAUSE");
         } else {
-            console.log("?? Tab visible");
+            console.log("👀 Tab visible");
             sendToUnity("RESUME");
         }
     });
 
     window.addEventListener("blur", () => {
-        console.log("?? Window blurred");
+        console.log("🔕 Window blurred");
         sendToUnity("PAUSE");
     });
 
     window.addEventListener("focus", () => {
-        console.log("?? Window focused");
+        console.log("🔔 Window focused");
         sendToUnity("RESUME");
     });
 
     // Unity loading
     createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
-        dataUrl: "Build/b3c333b3b5904ef22f14f0be8bfe2dbd.data?v=20260201-174400&cb=" + Date.now(),
-        frameworkUrl: "Build/0b92542977f56e638b1f35f7d0007c1d.framework.js?v=20260201-174400",
-        codeUrl: "Build/ede9ef9226ae121ecc48f87962267dfd.wasm?v=20260201-174400",
+        dataUrl: "Build/c16ecaaa698eff7ed40bcb169f240731.data?v=20261006-115908&cb=" + Date.now(),
+        frameworkUrl: "Build/b95d916a91ee2fe77c954db472324844.framework.js?v=20261006-115908",
+        codeUrl: "Build/4c54c994b3431722854855a5cf48f304.wasm?v=20261006-115908",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "MPR Studios",
         productName: "MADA_MarchingArtsDesignApp",
         productVersion: "0.1",
         config: { 
-            autoSyncPersistentDataPath: true // ? CRITICAL FOR MOBILE
+            autoSyncPersistentDataPath: true // ✅ CRITICAL FOR MOBILE
         }
     }).then((unityInstance) => {
         unityInstanceRef = unityInstance;
@@ -108,11 +108,11 @@
         window.unityInstance = unityInstance;
         unityInstanceRef = unityInstance;
 
-        // ? Hide loader after Unity is ready
+        // ✅ Hide loader after Unity is ready
         const loader = document.getElementById("mada-loader");
         if (loader) loader.style.display = "none";
 
-        // ? Inject version into Unity
+        // ✅ Inject version into Unity
         if (buildTimestamp) {
             unityInstance.SendMessage("BuildInfoManager", "SetBuildVersion", buildTimestamp);
         }
@@ -133,11 +133,11 @@
                 try {
                     const response = await originalFetch(url, options);
                     if (!response.ok) throw new Error("Status " + response.status);
-                    return response; // ? Success
+                    return response; // ✅ Success
                 } catch (err) {
-                    console.warn(`?? .data fetch failed [${attempt}/${maxRetries}]: ${err.message}`);
-                    if (attempt === maxRetries) throw err; // ? Give up
-                    await new Promise(res => setTimeout(res, 1000 * attempt)); // ?? Exponential backoff
+                    console.warn(`⚠️ .data fetch failed [${attempt}/${maxRetries}]: ${err.message}`);
+                    if (attempt === maxRetries) throw err; // ❌ Give up
+                    await new Promise(res => setTimeout(res, 1000 * attempt)); // ⏱️ Exponential backoff
                 }
             }
         }
@@ -234,8 +234,7 @@
 
 </script>
 <div style="position:fixed; top: 10px; left: 10px; font-size:12px; color:#aaa; z-index:9999">
-    Build Timestamp: 20260201-174400
+    Build Timestamp: 20261006-115908
 </div>
 </body>
 </html>
-
