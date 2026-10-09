@@ -39,10 +39,14 @@ docs/                          ← GitHub Pages root (Unity6_Dev branch, /docs f
 │   └── style.css
 └── lessons/
     ├── index.html
+    ├── field-reading/
+    │   └── index.html         "Field Reading & Step Size" lesson (Levels 1–4 active)
     └── charlie-brown/
-        └── index.html
+        └── index.html         Redirect to /lessons/field-reading/ (old URL)
 
 ```
+
+The lesson keeps the localStorage key `cb-lesson-v1` so saved progress from the old Charlie Brown URL carries over. Levels 5–6 (Charlie Brown exercise) are hidden via `ACTIVE_LEVELS` but their code remains.
 
 **Config file** (`Assets/StreamingAssets/config.json`) contains `googleApiKey` and `backendURL`. All copies under `**/StreamingAssets/config.json` are gitignored. In WebGL builds, config is fetched from a Cloud Function endpoint and stored in `PlayerPrefs` — the file is not read at runtime.
 
