@@ -344,29 +344,263 @@ function gen1(qz){const t=P1[qz.i];if(t==='concept')return pickConcept(C1,qz);co
   return pickPosQ({prompt:`Find this spot: <b>${posDesc(p)}</b>`,field:{pts:[]},p,explain});}
 
 /* ---------- level 2: step size ---------- */
-const P2=['size','counts','inches','landing','size','landing','counts','size'];
+// Shared gen2 helpers
+function randLat2(){
+  // Returns {x1,x2,counts,steps} with steps 5–16, both on front hash
+  for(let g=0;g<400;g++){
+    const k1=rnd(1,19),off1=rnd(0,6),k2=rnd(1,19),off2=rnd(0,6);
+    const dir1=off1===0?0:pick([-1,1]),dir2=off2===0?0:pick([-1,1]);
+    const x1=k1<10?8*k1+dir1*off1:k1>10?8*k1-dir1*off1:80+dir1*off1;
+    const x2=k2<10?8*k2+dir2*off2:k2>10?8*k2-dir2*off2:80+dir2*off2;
+    if(x1<4||x1>156||x2<4||x2>156)continue;
+    const st=round2(Math.abs(x2-x1));if(st<1)continue;
+    const counts=pick([4,6,8,12,16,24,32]);
+    const ss=8*counts/st;if(ss<5||ss>16)continue;
+    return {x1,x2,counts,steps:st};
+  }
+  return {x1:48,x2:64,counts:12,steps:16};
+}
+function stepCountWrongs(x1,x2){
+  // Common wrong answers for step-count questions
+  const correct=round2(Math.abs(x2-x1));
+  const {k:k1,off:o1}=latParts(x1),{k:k2,off:o2}=latParts(x2);
+  const gapOnly=Math.abs(k2-k1)*8;                       // ignored offsets
+  const flipOne=round2(Math.abs(x2-x1)+2*Math.abs(o1));  // flipped one offset
+  const sameLineZero=0;                                   // treated same line as 0
+  const cross50wrong=k1<10&&k2>10?round2(8*k1+Math.abs(o1)+8*(20-k2)+Math.abs(o2)):null;
+  const offBy1=correct+1,offBy2=correct+2;
+  return [gapOnly,flipOne,sameLineZero,cross50wrong,offBy1,offBy2]
+    .filter(v=>v!==null&&v!==correct&&v>=0).map(v=>String(round2(v)));
+}
+function mkExplain2(x1,x2,counts,ss){
+  const segs=rulerSegments(x1,x2);
+  const total=round2(Math.abs(x2-x1));
+  const countPart=segs.length>1?`<b>Count:</b> ${segs.join(' + ')} = ${total} steps.`:`<b>Count:</b> ${total} steps.`;
+  const co=counts>total?'more':'fewer';
+  const cmp=counts>total?'smaller':'bigger';
+  const gutPart=counts===total?`<b>Gut check:</b> ${counts} counts = ${total} steps, exactly an 8-to-5.`:`<b>Gut check:</b> ${counts} counts, ${co} than ${total} steps, so ${cmp} than an 8-to-5.`;
+  const calcPart=`<b>Calculate:</b> 8 × ${counts} ÷ ${total} = <b>${fmtSS(ss)}</b>, ${ssLean(ss)}.`;
+  return `${countPart}<br>${gutPart}<br>${calcPart}`;
+}
+const P2=['countLine','gut','sizeLine','countOffset','sizeOffOn','sizeOffOff','cross50','countsNeeded','land','compare'];
 const C2=[];
-function gen2(qz){const t=P2[qz.i];const h=H();
-  if(t==='size'){const N=pick([6,8,12,16]);const L=N===16?1:pick([1,2]);const C=N*L;const k=rnd(2,18-L);const a={x:8*k,y:h},b={x:8*(k+L),y:h};
-    return Object.assign({prompt:`You need to get from ${the(k)} to ${the(k+L)} in <b>${C} counts</b>. What step size is that?`,
-      field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}]},
-      explain:`${the(k)[0].toUpperCase()+the(k).slice(1)} to ${the(k+L)} is ${5*L} yards, which is ${L} five-yard chunk${L>1?'s':''}. ${C} counts ÷ ${L} = <b>${N}</b>, so it's a ${N}-to-5 (${fmtIn(180/N,2)} steps).`},
-      mc(`${N}-to-5`,shuffle([6,8,12,16,10].filter(x=>x!==N)).map(x=>`${x}-to-5`)));}
-  if(t==='counts'){const N=pick([6,8,12,16]);const L=pick(N>=12?[1,2]:[1,2,3]);const C=N*L;const k=rnd(2,18-L);const a={x:8*k,y:h},b={x:8*(k+L),y:h};
-    return Object.assign({prompt:`At a <b>${N}-to-5</b>, how many counts does it take to get from ${the(k)} to ${the(k+L)}?`,
-      field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}]},
-      explain:`At a ${N}-to-5, every 5 yards takes ${N} counts. That's ${L} chunk${L>1?'s':''} × ${N} = <b>${C} counts</b>.`},
-      mc(String(C),[C+N,C-N,8*L,C/2,5*L].filter(x=>x>0&&x!==C).map(String)));}
-  if(t==='inches'){const N=pick([6,8,10,12,16]);
-    return cq(`How long is one step at a <b>${N}-to-5</b>?`,fmtIn(180/N,2),shuffle([6,8,10,12,16].filter(x=>x!==N)).map(x=>fmtIn(180/x,2)),
-      `5 yards is 180 inches. 180 ÷ ${N} = <b>${fmtIn(180/N,2)}</b>. The bigger the first number, the smaller the step.`);}
-  const k=rnd(2,6);const n=pick([3,4,6,10,12,13,20]);const x=8*k+n;const lp=latParts(x);
-  const wrongs=[x-2,x+2,8*lp.k-lp.off,x+8].filter(v=>v>=0).map(latDesc);
-  const q8=Math.floor(n/8),r=n%8;
-  return Object.assign({prompt:`You start on ${the(k)}, front hash, and march <b>${n} steps</b> of 8-to-5 toward the 50. Where do you land laterally?`,
-    field:{pts:[{x:8*k,y:h,label:'Start'}]},reveal:[{x,y:h,cls:'reveal',label:'Here'}],
-    explain:`${q8?`${n} steps is ${q8} full yard line${q8>1?'s':''} (${8*q8} steps) plus ${r} more.`:`${n} steps is less than one yard line (8 steps).`} That puts you <b>${latDesc(x)}</b>.${r>4?' Past halfway, so name it off the closer line.':''}`},
-    mc(latDesc(x),wrongs));}
+function gen2_countLine(){
+  const h=H();const gaps=rnd(1,4);const k=rnd(1,20-gaps);const k2=k+gaps;
+  const ans=gaps*8;const a={x:8*k,y:h},b={x:8*k2,y:h};
+  const wrongs=[ans+8,ans-8,gaps*5,gaps*6].filter(v=>v>0&&v!==ans).map(String);
+  const explain=`<b>Count:</b> ${gaps} gap${gaps>1?'s':''} × 8 steps = <b>${ans} steps</b>. Yard lines are always 8 steps apart.`;
+  return Object.assign({prompt:`How many 8-to-5 steps from ${the(k)} to ${the(k2)}?`,
+    field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1:8*k,x2:8*k2,y:h}}},
+    mc(String(ans),wrongs),{explain});
+}
+function gen2_gut(){
+  const h=H();const {x1,x2,counts,steps}=randLat2();
+  let ans;
+  if(steps===counts)ans='Exactly an 8-to-5';
+  else if(counts>steps)ans='Smaller than an 8-to-5';
+  else ans='Bigger than an 8-to-5';
+  const all=['Bigger than an 8-to-5','Smaller than an 8-to-5','Exactly an 8-to-5',"Can't tell without the math"];
+  const wrongs=all.filter(x=>x!==ans);
+  const co=counts>steps?'more':'fewer';
+  const cmp=counts>steps?'smaller':'bigger';
+  const explain=counts===steps
+    ?`<b>Gut check:</b> ${counts} counts = ${steps} steps — exactly an 8-to-5. No math needed.`
+    :`<b>Gut check:</b> ${counts} counts, ${co} than ${steps} steps. Extra time = ${cmp} steps. It's <b>${ans.toLowerCase()}</b>.`;
+  return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. Without calculating: is the step bigger, smaller, or exactly an 8-to-5?`,
+    field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}]}},
+    mc(ans,wrongs),{explain});
+}
+function gen2_sizeLine(){
+  const h=H();const N=pick([6,8,12,16]);const L=N===16?1:pick([1,2]);const C=N*L;
+  const k=rnd(2,18-L);const a={x:8*k,y:h},b={x:8*(k+L),y:h};
+  const ss=N;const explain=mkExplain2(a.x,b.x,C,ss);
+  const wrongs=shuffle([6,8,12,16].filter(x=>x!==N)).map(x=>`${x}-to-5`);
+  return Object.assign({prompt:`From ${the(k)} to ${the(k+L)} in <b>${C} counts</b>. What step size?`,
+    field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1:a.x,x2:b.x,y:h}}},
+    mc(fmtSS(ss),wrongs),{explain});
+}
+function gen2_countOffset(){
+  const h=H();let x1,x2,sameLinePair=Math.random()<0.34;
+  if(sameLinePair){
+    const k=rnd(2,18);const off=rnd(1,3);
+    x1=k<10?8*k-off:8*k+off; x2=k<10?8*k+off:8*k-off; // opposite sides
+  } else {
+    const {x1:a,x2:b}=randLat2();x1=a;x2=b;
+  }
+  const ans=round2(Math.abs(x2-x1));
+  const wrongs=uniq(stepCountWrongs(x1,x2)).filter(w=>w!==String(ans)).slice(0,3);
+  const segs=rulerSegments(x1,x2);
+  const sumStr=segs.length>1?segs.join(' + ')+' = '+ans:''+ans;
+  const explain=`<b>Count:</b> ${sumStr} steps.${sameLinePair?' Both dots say the same yard line but you\'re crossing it — count both offsets.':''}`;
+  return Object.assign({prompt:`How many 8-to-5 steps from ${latDesc(x1)} to ${latDesc(x2)}?`,
+    field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
+    mc(String(ans),wrongs),{explain});
+}
+function gen2_sizeOffOn(){
+  const h=H();
+  for(let g=0;g<200;g++){
+    const k1=rnd(1,19),off1=rnd(1,6); // start off a line
+    const dir1=pick([-1,1]);
+    const x1=k1<10?8*k1+dir1*off1:k1>10?8*k1-dir1*off1:80+dir1*off1;
+    const k2=rnd(1,19);const x2=8*k2; // end on a line
+    if(x1<4||x1>156||x2<4||x2>156||Math.abs(x2-x1)<1)continue;
+    const st=round2(Math.abs(x2-x1));
+    const counts=pick([4,6,8,12,16,24,32]);
+    const ss=8*counts/st;if(ss<5||ss>16)continue;
+    const explain=mkExplain2(x1,x2,counts,ss);
+    const ssAns=fmtSS(ss);
+    const wrongSS=fmtSS(8*counts/Math.abs(8*k2-8*k1||1)); // ignored offset
+    const wrongs=uniq([wrongSS,fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
+    return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. What step size?`,
+      field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
+      mc(ssAns,wrongs),{explain});
+  }
+  return gen2_sizeLine();
+}
+function gen2_sizeOffOff(){
+  const h=H();
+  for(let g=0;g<200;g++){
+    const k1=rnd(1,19),off1=rnd(1,6),dir1=pick([-1,1]);
+    const k2=rnd(1,19),off2=rnd(1,6),dir2=pick([-1,1]);
+    const x1=k1<10?8*k1+dir1*off1:k1>10?8*k1-dir1*off1:80+dir1*off1;
+    const x2=k2<10?8*k2+dir2*off2:k2>10?8*k2-dir2*off2:80+dir2*off2;
+    if(x1<4||x1>156||x2<4||x2>156||Math.abs(x2-x1)<1)continue;
+    const st=round2(Math.abs(x2-x1));
+    const counts=pick([4,6,8,12,16,24,32]);
+    const ss=8*counts/st;if(ss<5||ss>16)continue;
+    const explain=mkExplain2(x1,x2,counts,ss);
+    const ssAns=fmtSS(ss);
+    const wrongs=uniq([fmtSS(8*counts/(Math.abs(k2-k1)*8||1)),fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
+    return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. What step size?`,
+      field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
+      mc(ssAns,wrongs),{explain});
+  }
+  return gen2_sizeOffOn();
+}
+function gen2_cross50(qz){
+  const h=H();const askSteps=qz.i%2===0; // alternate each run
+  for(let g=0;g<200;g++){
+    const off1=rnd(1,6),off2=rnd(1,6); // S1 45 side and S2 45 side
+    const x1=80-8-off1; // S1 side of 50 (inside S1 45)
+    const x2=80+8+off2; // but wait, let's do any cross-50 pair
+    // simpler: pick two dots that straddle 80
+    const xa=rnd(60,79),xb=rnd(81,100);
+    const st=round2(Math.abs(xb-xa));
+    const counts=pick([4,6,8,12,16,24,32]);
+    const ss=8*counts/st;if(ss<5||ss>16)continue;
+    const segs=rulerSegments(xa,xb);
+    const sumStr=segs.join(' + ')+' = '+st;
+    const wrongCounts50=round2(Math.abs(xb+xa-160)); // counted as if numbers kept going up past 50
+    if(askSteps){
+      const wrongs=uniq([String(wrongCounts50),String(st+8),String(st-4)]).filter(w=>w!==String(st)).slice(0,3);
+      const explain=`<b>Count:</b> ${sumStr} steps. Use the 50 as your anchor — yard numbers count back down after it.`;
+      return Object.assign({prompt:`How many 8-to-5 steps from ${latDesc(xa)} to ${latDesc(xb)}?`,
+        field:{pts:[{x:xa,y:h,label:'Start'},{x:xb,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:xa,y:h},{x:xb,y:h}]}],ruler:{x1:xa,x2:xb,y:h}}},
+        mc(String(st),wrongs),{explain});
+    } else {
+      const ssAns=fmtSS(ss);
+      const wrongs=uniq([fmtSS(8*counts/wrongCounts50),fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
+      const explain=mkExplain2(xa,xb,counts,ss);
+      return Object.assign({prompt:`From ${latDesc(xa)} to ${latDesc(xb)} in <b>${counts} counts</b>. What step size?`,
+        field:{pts:[{x:xa,y:h,label:'Start'},{x:xb,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:xa,y:h},{x:xb,y:h}]}],ruler:{x1:xa,x2:xb,y:h}}},
+        mc(ssAns,wrongs),{explain});
+    }
+  }
+  return gen2_countLine();
+}
+function gen2_countsNeeded(){
+  const h=H();const N=pick([6,8,12,16]);
+  for(let g=0;g<200;g++){
+    const {x1,x2,steps}=randLat2();
+    // need SS×steps÷8 to be a whole number
+    const C=N*steps/8;if(!Number.isInteger(C)||C<=0||C>64)continue;
+    const a={x:x1,y:h},b={x:x2,y:h};
+    const wrongInv=Math.round(8*steps/N); // inverted
+    const wrongYards=Math.round(N*Math.abs(latParts(x2).k-latParts(x1).k)); // used yard gaps not steps
+    const wrongs=uniq([String(wrongInv),String(wrongYards),String(C+N),String(C-N)]).filter(w=>w!==String(C)&&+w>0).slice(0,3);
+    const explain=`<b>Count:</b> ${steps} steps. <b>Counts needed:</b> ${N} × ${steps} ÷ 8 = <b>${C} counts</b>. You're solving for counts, so rearrange: Counts = SS × Steps ÷ 8.`;
+    return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} at a <b>${N}-to-5</b>. How many counts do you need?`,
+      field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1,x2,y:h}}},
+      mc(String(C),wrongs),{explain});
+  }
+  return gen2_sizeLine();
+}
+function gen2_land(qz){
+  const h=H();const N=pick([6,8,12,16]);const useText=qz.i%2===0;
+  for(let g=0;g<200;g++){
+    const k1=rnd(2,16),off1=rnd(0,4);
+    const dir1=off1===0?0:pick([-1,1]);
+    const x1=k1<10?8*k1+dir1*off1:8*k1-dir1*off1;
+    const counts=pick([4,6,8,12,16,24,32]);
+    const stepsRaw=8*counts/N;if(!Number.isInteger(stepsRaw))continue;
+    const dir=pick([-1,1]);
+    const x2=round2(x1+dir*stepsRaw);
+    if(x2<4||x2>156)continue;
+    const a={x:x1,y:h},b={x:x2,y:h};
+    const flipX=round2(x1-dir*stepsRaw); // landed wrong direction
+    const eightToFive=round2(x1+dir*counts); // used 8-to-5 instead of given SS
+    const wrongInside=8*latParts(x2).k-(latParts(x2).off); // flipped inside/outside
+    const explain=`<b>Count:</b> ${round2(Math.abs(x2-x1))} steps. Steps = 8 × ${counts} ÷ ${N} = ${stepsRaw}. Moving ${dir>0?'toward Side 2':'toward Side 1'}: you land at <b>${latDesc(x2)}</b>.`;
+    if(useText){
+      const wrongs=uniq([latDesc(flipX),latDesc(eightToFive),latDesc(round2(x1+dir*(stepsRaw+8)))]).filter(w=>w!==latDesc(x2)&&w!==latDesc(x2)).slice(0,3);
+      return Object.assign({prompt:`Start: <b>${latDesc(x1)}</b>, front hash. March a <b>${N}-to-5</b> for <b>${counts} counts</b> toward Side ${dir>0?2:1}. Where do you land?`,
+        field:{pts:[{...a,label:'Start'}]},reveal:[{...b,cls:'reveal',label:'Here'}]},
+        mc(latDesc(x2),wrongs),{explain});
+    }
+    return pickPosQ({prompt:`Start: <b>${latDesc(x1)}</b>, front hash. March a <b>${N}-to-5</b> for <b>${counts} counts</b> toward Side ${dir>0?2:1}. Tap your landing dot.`,
+      field:{pts:[{...a,label:'Start'}]},p:b,
+      extra:[{x:flipX,y:h},{x:eightToFive,y:h}],
+      explain,reveal:[{...b,cls:'reveal',label:'Here'}]});
+  }
+  return gen2_sizeLine();
+}
+function gen2_compare(){
+  const h=H();const askInches=Math.random()<0.4;
+  for(let g=0;g<200;g++){
+    const rA=randLat2(),rB=randLat2();
+    const ssA=8*rA.counts/rA.steps,ssB=8*rB.counts/rB.steps;
+    if(Math.abs(ssA-ssB)<0.01)continue; // too close, skip for A/B question
+    const inA=round2(22.5*rA.steps/rA.counts),inB=round2(22.5*rB.counts/rB.counts);
+    const aA={x:rA.x1,y:h-8},bA={x:rA.x2,y:h-8}; // Move A slightly above hash
+    const aB={x:rB.x1,y:h+8},bB={x:rB.x2,y:h+8}; // Move B slightly below hash
+    if(askInches){
+      const inchA=fmtIn(22.5*rA.steps/rA.counts);
+      const inchB=fmtIn(22.5*rB.steps/rB.counts);
+      const explainA=`Move A: ${rA.steps} steps in ${rA.counts} counts → 22.5 × ${rA.steps} ÷ ${rA.counts} = <b>${inchA}</b>.`;
+      const explainB=`Move B: ${rB.steps} steps in ${rB.counts} counts → 22.5 × ${rB.steps} ÷ ${rB.counts} = <b>${inchB}</b>.`;
+      // inch question — ask about move A only for simplicity
+      const cA=fmtSS(ssA);
+      const wrongs=uniq([fmtSS(ssB),fmtSS(8*rA.counts/rA.steps*1.1),fmtSS(ssA+1)]).filter(w=>w!==cA).slice(0,3);
+      return Object.assign({prompt:`Move A: ${latDesc(rA.x1)} → ${latDesc(rA.x2)} in <b>${rA.counts} counts</b>. What step size is that in inches?`,
+        field:{pts:[{x:rA.x1,y:h,label:'A start'},{x:rA.x2,y:h,cls:'end',label:'A end'}],paths:[{pts:[{x:rA.x1,y:h},{x:rA.x2,y:h}]}]}},
+        mc(inchA,[fmtIn(180/ssNearest(ssA)),fmtIn(22.5*rA.counts/rA.steps),fmtIn(22.5*(rA.steps+2)/rA.counts)].filter(w=>w!==inchA).slice(0,3)),
+        {explain:`22.5 × ${rA.steps} ÷ ${rA.counts} = <b>${inchA}</b>. Bigger step size number = physically smaller step.`});
+    }
+    const biggerSS=ssA>ssB?'A':'B'; // bigger SS number = physically smaller step
+    const smallerStep=biggerSS; // confusingly named — the one with bigger number has smaller physical step
+    const biggerStep=ssA<ssB?'A':'B'; // bigger physical step = smaller SS number
+    const ans=ssA<ssB?'A has the bigger step':'B has the bigger step';
+    const explain=`Move A: ${fmtSS(ssA)}. Move B: ${fmtSS(ssB)}. Smaller number = bigger step. <b>${ans}</b>.`;
+    const wrongs=['B has the bigger step','A has the bigger step','Same step size'].filter(x=>x!==ans);
+    return Object.assign({prompt:`Move A: ${latDesc(rA.x1)} → ${latDesc(rA.x2)} in <b>${rA.counts} counts</b>. Move B: ${latDesc(rB.x1)} → ${latDesc(rB.x2)} in <b>${rB.counts} counts</b>. Which move takes the bigger step?`,
+      field:null},mc(ans,wrongs),{explain});
+  }
+  return gen2_sizeLine();
+}
+function gen2(qz){
+  const t=P2[qz.i];
+  if(t==='countLine')return gen2_countLine();
+  if(t==='gut')return gen2_gut();
+  if(t==='sizeLine')return gen2_sizeLine();
+  if(t==='countOffset')return gen2_countOffset();
+  if(t==='sizeOffOn')return gen2_sizeOffOn();
+  if(t==='sizeOffOff')return gen2_sizeOffOff();
+  if(t==='cross50')return gen2_cross50(qz);
+  if(t==='countsNeeded')return gen2_countsNeeded();
+  if(t==='land')return gen2_land(qz);
+  if(t==='compare')return gen2_compare();
+  return gen2_sizeLine();
+}
 
 /* ---------- level 3: rise over run ---------- */
 const COMBOS=[[16,8,16],[16,16,16],[8,8,8],[8,4,8],[4,8,8],[16,4,16],[8,16,16],[8,8,16],[4,4,8]];
@@ -672,9 +906,13 @@ function introHTML(){const h=H();const cont=S.name&&S.unlocked>1;
 function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of 6</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
 <div role="tabpanel">${view.tab==='learn'?LEARN[view.n]()+`<div class="btn-row"><button class="btn primary" data-act="tab" data-tab="practice">Start the practice check</button></div>`:practiceHTML()}</div></section>`;}
-function fbHeader(n,ok){return ok?'Correct.':'Not quite.';}
+const FB_RIGHT=['Nailed it.','Exactly right.','That\'s it.','Yes!'];
+const FB_WRONG=['Not quite. Let\'s walk it.','Close! Here\'s the count.','Good try. Let\'s look at it together.'];
+function fbHeader(n,ok){if(n!==2)return ok?'Correct.':'Not quite.';return ok?pick(FB_RIGHT):pick(FB_WRONG);}
 function practiceHTML(){
-  if(!quiz||quiz.n!==view.n){const b=S.best[view.n];const qn=qnFor(view.n),pf=passFor(view.n);return `<div class="prose"><p>${qn} questions. Get ${pf} right to pass. You'll see the reasoning after every answer, right or wrong, and the questions change every time you run it.</p>${b!==undefined?`<p class="muted">Best score so far: ${b} / ${qn}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="begin">Start the check</button></div>`;}
+  if(!quiz||quiz.n!==view.n){const b=S.best[view.n];const qn=qnFor(view.n),pf=passFor(view.n);
+    const intro=view.n===2?'10 questions, 8 to pass. Same three moves every time: count, gut check, calculate. You\'ve got this.':`${qn} questions. Get ${pf} right to pass. You'll see the reasoning after every answer, right or wrong, and the questions change every time you run it.`;
+    return `<div class="prose"><p>${intro}</p>${b!==undefined?`<p class="muted">Best score so far: ${b} / ${qn}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="begin">Start the check</button></div>`;}
   if(quiz.done){const pf=passFor(quiz.n);const pass=quiz.score>=pf;const n=view.n;
     return `<div class="score"><span class="big">${quiz.score}</span><span class="of">/ ${qnFor(n)}</span></div>
 <p class="prompt">${pass?(n<6?`Passed. Level ${n+1} is unlocked.`:'Passed. That\'s the whole lesson.'):`You need ${pf} to pass. Look back at the lesson and run it again; you'll get new questions.`}</p>
