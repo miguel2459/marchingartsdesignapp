@@ -126,6 +126,10 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .qbar{height:4px;background:var(--line);border-radius:2px;margin-bottom:16px;overflow:hidden}
 .qbar span{display:block;height:100%;background:var(--turf)}
 .prompt{font-size:1.15rem;max-width:62ch;margin:0 0 6px}
+.fcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:10px 0;max-width:620px;font-size:.95rem}
+.fcard p{margin:2px 0;padding:2px 8px;border-left:3px solid transparent}
+.fcard.hl p{color:var(--muted)}
+.fcard.hl p.on{color:var(--ink);font-weight:700;border-left-color:var(--signal)}
 .opts{display:grid;gap:8px;margin:14px 0;max-width:620px}
 .opts.pick{grid-template-columns:repeat(4,1fr)}
 .opt{text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;line-height:1.35}
@@ -401,7 +405,7 @@ function mkExplain2(x1,x2,counts,ss){
   const co=counts>total?'more':'fewer';
   const cmp=counts>total?'smaller':'bigger';
   const gutPart=counts===total?`<b>Gut check:</b> ${counts} counts = ${total} steps, exactly an 8-to-5.`:`<b>Gut check:</b> ${counts} counts, ${co} than ${total} steps, so ${cmp} than an 8-to-5.`;
-  const calcPart=`<b>Calculate:</b> 8 × ${counts} ÷ ${total} = <b>${fmtSS(ss)}</b>, ${ssLean(ss)}.`;
+  const calcPart=`<b>Calculate:</b> Ruler × Time ÷ Distance = 8 × ${counts} ÷ ${total} = <b>${fmtSS(ss)}</b>, ${ssLean(ss)}.`;
   return `${countPart}<br>${gutPart}<br>${calcPart}`;
 }
 const P2=['countLine','gut','sizeLine','countOffset','sizeOffOn','sizeOffOff','cross50','countsNeeded','land','compare'];
@@ -413,7 +417,7 @@ function gen2_countLine(){
   const explain=`<b>Count:</b> ${gaps} gap${gaps>1?'s':''} × 8 steps = <b>${ans} steps</b>. Yard lines are always 8 steps apart.`;
   return Object.assign({prompt:`How many 8-to-5 steps from ${the(k)} to ${the(k2)}?`,
     field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1:8*k,x2:8*k2,y:h,after:true}}},
-    mc(String(ans),wrongs,{kind:'count'}),{explain});
+    mc(String(ans),wrongs,{kind:'count'}),{explain,formula:'none'});
 }
 function gen2_gut(){
   const h=H();const {x1,x2,counts,steps}=randLat2();
@@ -430,7 +434,7 @@ function gen2_gut(){
     :`<b>Gut check:</b> ${counts} counts, ${co} than ${steps} steps. Extra time = ${cmp} steps. It's <b>${ans.toLowerCase()}</b>.`;
   return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. Without calculating: is the step bigger, smaller, or exactly an 8-to-5?`,
     field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
-    mc(ans,wrongs),{explain});
+    mc(ans,wrongs),{explain,formula:'ss'});
 }
 function gen2_sizeLine(){
   const h=H();const N=pick([6,8,12,16]);const L=N===16?1:pick([1,2]);const C=N*L;
@@ -439,7 +443,7 @@ function gen2_sizeLine(){
   const wrongs=shuffle([6,8,12,16].filter(x=>x!==N)).map(x=>`${x}-to-5`);
   return Object.assign({prompt:`From ${the(k)} to ${the(k+L)} in <b>${C} counts</b>. What step size?`,
     field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1:a.x,x2:b.x,y:h}}},
-    mc(fmtSS(ss),wrongs,{kind:'ss'}),{explain});
+    mc(fmtSS(ss),wrongs,{kind:'ss'}),{explain,formula:'ss'});
 }
 function gen2_countOffset(){
   const h=H();let x1,x2,sameLinePair=Math.random()<0.34;
@@ -456,7 +460,7 @@ function gen2_countOffset(){
   const explain=`<b>Count:</b> ${sumStr} steps.${sameLinePair?' Both dots say the same yard line but you\'re crossing it — count both offsets.':''}`;
   return Object.assign({prompt:`How many 8-to-5 steps from ${latDesc(x1)} to ${latDesc(x2)}?`,
     field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h,after:true}}},
-    mc(String(ans),wrongs,{kind:'count',allowZero:sameLinePair}),{explain});
+    mc(String(ans),wrongs,{kind:'count',allowZero:sameLinePair}),{explain,formula:'none'});
 }
 function gen2_sizeOffOn(){
   const h=H();
@@ -475,7 +479,7 @@ function gen2_sizeOffOn(){
     const wrongs=uniq([wrongSS,fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
     return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. What step size?`,
       field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
-      mc(ssAns,wrongs,{kind:'ss'}),{explain});
+      mc(ssAns,wrongs,{kind:'ss'}),{explain,formula:'ss'});
   }
   return gen2_sizeLine();
 }
@@ -495,7 +499,7 @@ function gen2_sizeOffOff(){
     const wrongs=uniq([fmtSS(8*counts/(Math.abs(k2-k1)*8||1)),fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
     return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. What step size?`,
       field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
-      mc(ssAns,wrongs,{kind:'ss'}),{explain});
+      mc(ssAns,wrongs,{kind:'ss'}),{explain,formula:'ss'});
   }
   return gen2_sizeOffOn();
 }
@@ -518,14 +522,14 @@ function gen2_cross50(qz){
       const explain=`<b>Count:</b> ${sumStr} steps. Use the 50 as your anchor — yard numbers count back down after it.`;
       return Object.assign({prompt:`How many 8-to-5 steps from ${latDesc(xa)} to ${latDesc(xb)}?`,
         field:{pts:[{x:xa,y:h,label:'Start'},{x:xb,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:xa,y:h},{x:xb,y:h}]}],ruler:{x1:xa,x2:xb,y:h,after:true}}},
-        mc(String(st),wrongs,{kind:'count'}),{explain});
+        mc(String(st),wrongs,{kind:'count'}),{explain,formula:'none'});
     } else {
       const ssAns=fmtSS(ss);
       const wrongs=uniq([fmtSS(8*counts/wrongCounts50),fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
       const explain=mkExplain2(xa,xb,counts,ss);
       return Object.assign({prompt:`From ${latDesc(xa)} to ${latDesc(xb)} in <b>${counts} counts</b>. What step size?`,
         field:{pts:[{x:xa,y:h,label:'Start'},{x:xb,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:xa,y:h},{x:xb,y:h}]}],ruler:{x1:xa,x2:xb,y:h}}},
-        mc(ssAns,wrongs,{kind:'ss'}),{explain});
+        mc(ssAns,wrongs,{kind:'ss'}),{explain,formula:'ss'});
     }
   }
   return gen2_countLine();
@@ -540,10 +544,10 @@ function gen2_countsNeeded(){
     const wrongInv=Math.round(8*steps/N); // inverted
     const wrongYards=Math.round(N*Math.abs(latParts(x2).k-latParts(x1).k)); // used yard gaps not steps
     const wrongs=uniq([String(wrongInv),String(wrongYards),String(C+N),String(C-N)]).filter(w=>w!==String(C)&&+w>0).slice(0,3);
-    const explain=`<b>Count:</b> ${steps} steps. <b>Counts needed:</b> ${N} × ${steps} ÷ 8 = <b>${C} counts</b>. You're solving for counts, so rearrange: Counts = SS × Steps ÷ 8.`;
+    const explain=`<b>Count:</b> ${steps} steps. <b>Calculate:</b> Step Size × Distance ÷ 8 = ${N} × ${steps} ÷ 8 = <b>${C} counts</b>. You're solving for counts, so rearrange: Counts = Step Size × Distance ÷ 8.`;
     return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} at a <b>${N}-to-5</b>. How many counts do you need?`,
       field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1,x2,y:h}}},
-      mc(String(C),wrongs,{kind:'count'}),{explain});
+      mc(String(C),wrongs,{kind:'count'}),{explain,formula:'counts'});
   }
   return gen2_sizeLine();
 }
@@ -562,17 +566,17 @@ function gen2_land(qz){
     const flipX=round2(x1-dir*stepsRaw); // landed wrong direction
     const eightToFive=round2(x1+dir*counts); // used 8-to-5 instead of given SS
     const wrongInside=8*latParts(x2).k-(latParts(x2).off); // flipped inside/outside
-    const explain=`<b>Count:</b> ${round2(Math.abs(x2-x1))} steps. Steps = 8 × ${counts} ÷ ${N} = ${stepsRaw}. Moving ${dir>0?'toward Side 2':'toward Side 1'}: you land at <b>${latDesc(x2)}</b>.`;
+    const explain=`<b>Count:</b> ${round2(Math.abs(x2-x1))} steps. <b>Calculate:</b> 8 × Counts ÷ Step Size = 8 × ${counts} ÷ ${N} = ${stepsRaw} steps. Moving ${dir>0?'toward Side 2':'toward Side 1'}: you land at <b>${latDesc(x2)}</b>.`;
     if(useText){
       const wrongs=uniq([latDesc(flipX),latDesc(eightToFive),latDesc(round2(x1+dir*(stepsRaw+8)))]).filter(w=>w!==latDesc(x2)&&w!==latDesc(x2)).slice(0,3);
       return Object.assign({prompt:`Start: <b>${latDesc(x1)}</b>, front hash. March a <b>${N}-to-5</b> for <b>${counts} counts</b> toward Side ${dir>0?2:1}. Where do you land?`,
         field:{pts:[{...a,label:'Start'}],ruler:{x1,x2,y:h,after:true}},reveal:[{...b,cls:'reveal',label:'Here'}]},
-        mc(latDesc(x2),wrongs,{kind:'pos',x:x2}),{explain});
+        mc(latDesc(x2),wrongs,{kind:'pos',x:x2}),{explain,formula:'dist'});
     }
-    return pickPosQ({prompt:`Start: <b>${latDesc(x1)}</b>, front hash. March a <b>${N}-to-5</b> for <b>${counts} counts</b> toward Side ${dir>0?2:1}. Tap your landing dot.`,
+    return Object.assign(pickPosQ({prompt:`Start: <b>${latDesc(x1)}</b>, front hash. March a <b>${N}-to-5</b> for <b>${counts} counts</b> toward Side ${dir>0?2:1}. Tap your landing dot.`,
       field:{pts:[{...a,label:'Start'}],ruler:{x1,x2,y:h,after:true}},p:b,
       extra:[{x:flipX,y:h},{x:eightToFive,y:h}],
-      explain,reveal:[{...b,cls:'reveal',label:'Here'}]});
+      explain,reveal:[{...b,cls:'reveal',label:'Here'}]}),{formula:'dist'});
   }
   return gen2_sizeLine();
 }
@@ -596,7 +600,7 @@ function gen2_compare(){
       return Object.assign({prompt:`Move A: ${latDesc(rA.x1)} → ${latDesc(rA.x2)} in <b>${rA.counts} counts</b>. What step size is that in inches?`,
         field:{pts:[{x:rA.x1,y:h,label:'A start'},{x:rA.x2,y:h,cls:'end',label:'A end'}],paths:[{pts:[{x:rA.x1,y:h},{x:rA.x2,y:h}]}],ruler:{x1:rA.x1,x2:rA.x2,y:h}}},
         mc(inchA,[fmtIn(180/ssNearest(ssA)),fmtIn(22.5*rA.counts/rA.steps),fmtIn(22.5*(rA.steps+2)/rA.counts)].filter(w=>w!==inchA).slice(0,3),{kind:'in'}),
-        {explain:`22.5 × ${rA.steps} ÷ ${rA.counts} = <b>${inchA}</b>. Bigger step size number = physically smaller step.`});
+        {explain:`22.5 × ${rA.steps} ÷ ${rA.counts} = <b>${inchA}</b>. Bigger step size number = physically smaller step.`,formula:'ss'});
     }
     const biggerSS=ssA>ssB?'A':'B'; // bigger SS number = physically smaller step
     const smallerStep=biggerSS; // confusingly named — the one with bigger number has smaller physical step
@@ -605,7 +609,7 @@ function gen2_compare(){
     const explain=`Move A: ${fmtSS(ssA)}. Move B: ${fmtSS(ssB)}. Smaller number = bigger step. <b>${ans}</b>.`;
     const wrongs=['B has the bigger step','A has the bigger step','Same step size',"Can't tell without the math"].filter(x=>x!==ans);
     return Object.assign({prompt:`Move A: ${latDesc(rA.x1)} → ${latDesc(rA.x2)} in <b>${rA.counts} counts</b>. Move B: ${latDesc(rB.x1)} → ${latDesc(rB.x2)} in <b>${rB.counts} counts</b>. Which move takes the bigger step?`,
-      field:null},mc(ans,wrongs),{explain});
+      field:null},mc(ans,wrongs),{explain,formula:'ss'});
   }
   return gen2_sizeLine();
 }
@@ -776,7 +780,8 @@ ${fig({pts:[{...f4a,label:'Start'},{...f4b,cls:'end',label:'End'}],paths:[{pts:[
 <li><b>Fewer counts than steps:</b> you're short on time, so your steps get <b>bigger</b>.</li></ul>
 <p>This takes two seconds, and it catches almost every math mistake. If your answer and your gut check ever disagree, trust your gut and redo the math.</p>
 <h3>The formula</h3>
-<p><b>Step Size = 8 × Counts ÷ Steps</b></p>
+<p><b>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</b></p>
+<p>Ruler is always 8, because there are 8 of these steps between yard lines. Time is your counts. Distance is how many 8-to-5 steps to your dot.</p>
 <p>Why the 8? A step size tells you how many of <i>your</i> steps fit in 5 yards, and 5 yards is 8 ruler steps.</p>
 <p>Let's try one together: <b>10 steps to your dot in 12 counts.</b><br>
 Gut check first: more counts than steps, so it should be smaller than an 8-to-5.<br>
@@ -793,9 +798,9 @@ Now the math: 8 × 12 ÷ 10 = <b>9.6</b>. A 9.6-to-5. Smaller than an 8-to-5, ju
 <p>So a 9.6 sits between an 8 and a 12, closer to the 8: a little smaller than an 8-to-5. A 6.1 is basically a 6-to-5. Name the closest one, then say which way it leans.</p>
 <h3>Flip it around</h3>
 <p>Same formula, different questions.</p>
-<p><b>How many counts do I need?</b> Counts = Step Size × Steps ÷ 8<br>
+<p><b>How many counts do I need?</b> Counts = Step Size × Distance ÷ 8<br>
 12 steps at an 8-to-5: 8 × 12 ÷ 8 = <b>12 counts</b>.</p>
-<p><b>Where do I land?</b> Steps = 8 × Counts ÷ Step Size<br>
+<p><b>Where do I land?</b> Distance = 8 × Counts ÷ Step Size<br>
 Start 2 inside the S1 20 and do a 6-to-5 for 12 counts: 8 × 12 ÷ 6 = 16 steps. You land <b>2 inside the S1 30</b>.</p></div>
 ${fig({pts:[{...f5a,label:'Start'},{...f5b,cls:'end',label:'End'}],paths:[{pts:[f5a,f5b]}],ruler:{x1:34,x2:50,y:h}},'2 inside S1 20 → 2 inside S1 30 (16 steps)')}
 <div class="prose">
@@ -939,7 +944,9 @@ function practiceHTML(){
     return `<div class="score"><span class="big">${quiz.score}</span><span class="of">/ ${qnFor(n)}</span></div>
 <p class="prompt">${pass?(n<6?`Passed. Level ${n+1} is unlocked.`:'Passed. That\'s the whole lesson.'):`You need ${pf} to pass. Look back at the lesson and run it again; you'll get new questions.`}</p>
 <div class="btn-row">${pass?(n<6?`<button class="btn primary" data-act="goto" data-n="${n+1}">Go to level ${n+1}</button>`:`<button class="btn primary" data-act="results">See your results</button>`):`<button class="btn primary" data-act="tab" data-tab="learn">Review the lesson</button>`}<button class="btn" data-act="begin">${pass?'Run it again':'Try again'}</button></div>`;}
-  const q=quiz.q;let field='';
+  const q=quiz.q;let field='',card='';
+  if(q.formula){const on=k=>q.formula===k?' class="on"':'';
+    card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</p><p${on('counts')}>Counts = Step Size × Distance ÷ 8</p><p${on('dist')}>Distance = 8 × Counts ÷ Step Size</p></div>`;}
   if(q.field){const spec=JSON.parse(JSON.stringify(q.field));spec.pts=spec.pts||[];spec.extra=q.reveal||[];
     if(spec.ruler&&spec.ruler.after&&!quiz.answered)delete spec.ruler; // ruler would give the answer away
     if(quiz.answered){if(q.pick)spec.pts.forEach(p=>{if(p.opt!==undefined){p.cls+=p.opt===q.correct?' right':p.opt===quiz.choice?' wrong':' dim';}});if(q.reveal)spec.pts=spec.pts.concat(q.reveal);}
@@ -949,7 +956,7 @@ function practiceHTML(){
     return `<button class="${c}" data-act="answer" data-i="${i}"${quiz.answered?' disabled':''}>${o}</button>`;}).join('');
   const qn=qnFor(quiz.n);
   return `<div class="qmeta"><span>Question ${quiz.i+1} of ${qn}</span><span>${quiz.score} correct</span></div><div class="qbar"><span style="width:${(quiz.i/qn)*100}%"></span></div>
-<p class="prompt">${q.prompt}</p>${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
+<p class="prompt">${q.prompt}</p>${card}${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
 ${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p></div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
 function resultsHTML(){const tot=LEVELS.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
