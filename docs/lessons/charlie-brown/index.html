@@ -187,11 +187,13 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 <script>
 'use strict';
 const DEPTH=85.33, QN=8, PASS=6, KEY='cb-lesson-v1';
+const ACTIVE_LEVELS = 4; // levels past this are hidden (code kept)
 const qnFor=n=>n===2?10:QN;
 const passFor=n=>n===2?8:PASS;
 const S={name:'',hash:'college',grid:true,best:{},unlocked:1};
 function load(){try{const r=localStorage.getItem(KEY);if(r)Object.assign(S,JSON.parse(r));}catch(e){}
-  if(S.best[2]!==undefined&&S.l2v!==2){delete S.best[2];S.l2v=2;save();}}
+  if(S.best[2]!==undefined&&S.l2v!==2){delete S.best[2];S.l2v=2;save();}
+  if(S.unlocked>ACTIVE_LEVELS){S.unlocked=ACTIVE_LEVELS;save();}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const H=()=>S.hash==='hs'?28:32;
 const hashName=()=>S.hash==='hs'?'a high school field':'a college field';
@@ -738,6 +740,7 @@ const LEVELS=[
  {n:5,title:'Charlie Brown',sub:'Put it together on the full exercise.'},
  {n:6,title:'Read it and fix it',sub:'Spot your own error and recover without a lunge.'},
 ];
+const ACTIVE=LEVELS.filter(L=>L.n<=ACTIVE_LEVELS);
 function fig(spec,cap){return `<figure class="fig">${fieldSVG(spec)}${cap?`<figcaption>${cap}</figcaption>`:''}</figure>`;}
 function cpTable(rows){return `<div class="tw"><table class="t"><thead><tr><th>Count</th><th>Lateral</th><th>Depth</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="c">${r.c}</td><td>${latDesc(r.p.x)}</td><td>${depDesc(r.p.y)}</td></tr>`).join('')}</tbody></table></div>`;}
 function learn1(){const h=H();const p={x:8*6+3,y:h+4};return `<div class="prose">
@@ -923,17 +926,17 @@ ${!calc.shown&&totalSteps>0?`<div class="btn-row"><button class="btn primary" da
 /* ---------- app state + views ---------- */
 let view={name:'intro'};let quiz=null;let hero=0;
 function startQuiz(n){quiz={n,i:0,score:0,answered:false,choice:null,used:new Set(),done:false};quiz.q=GEN[n](quiz);}
-function trackHTML(){return LEVELS.map(L=>{const locked=L.n>S.unlocked;const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=passFor(L.n);
+function trackHTML(){return ACTIVE.map(L=>{const locked=L.n>S.unlocked;const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=passFor(L.n);
   return `<button class="trk${passed?' passed':''}${cur?' cur':''}" data-act="goto" data-n="${L.n}"${locked?' disabled':''}${cur?' aria-current="step"':''} aria-label="Level ${L.n}: ${L.title}${passed?', passed':''}${locked?', locked':''}"><span class="trk-n">${L.n}</span><span class="trk-t">${L.title}</span></button>`;}).join('')+
   `<button class="trk${view.name==='results'?' cur':''}" data-act="results" aria-label="Results"><span class="trk-n">✓</span><span class="trk-t">Results</span></button>`;}
 function introHTML(){const h=H();const cont=S.name&&S.unlocked>1;
   return `<section class="hero"><figure class="hero-fig">${fieldSVG({id:'hero',paths:[{pts:cbPath(V_MAIN,2)}],pts:[{x:32,y:h,label:'S1 20'}],marcher:{x:32,y:h},minW:48,grid:false,aria:'The Charlie Brown zigzag drawn on the field'})}</figure>
 <h1>Charlie Brown, count by count</h1>
 <p class="lede">Prep for the Blue Devils A Corps audition. Six short levels take you from naming your spot on the field to marching Charlie Brown with the right step on every count. Each level has a short lesson and a practice check.</p>
-<ol class="levels-list">${LEVELS.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
+<ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
 <div class="name-row"><label for="nameIn">Your name<input id="nameIn" autocomplete="given-name" value="${esc(S.name)}"></label>
-<button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(6,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
-function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of 6</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
+<button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
+function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of ${ACTIVE_LEVELS}</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
 <div role="tabpanel">${view.tab==='learn'?LEARN[view.n]()+`<div class="btn-row"><button class="btn primary" data-act="tab" data-tab="practice">Start the practice check</button></div>`:practiceHTML()}</div></section>`;}
 const FB_RIGHT=['Nailed it.','Exactly right.','That\'s it.','Yes!'];
@@ -945,8 +948,8 @@ function practiceHTML(){
     return `<div class="prose"><p>${intro}</p>${b!==undefined?`<p class="muted">Best score so far: ${b} / ${qn}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="begin">Start the check</button></div>`;}
   if(quiz.done){const pf=passFor(quiz.n);const pass=quiz.score>=pf;const n=view.n;
     return `<div class="score"><span class="big">${quiz.score}</span><span class="of">/ ${qnFor(n)}</span></div>
-<p class="prompt">${pass?(n<6?`Passed. Level ${n+1} is unlocked.`:'Passed. That\'s the whole lesson.'):`You need ${pf} to pass. Look back at the lesson and run it again; you'll get new questions.`}</p>
-<div class="btn-row">${pass?(n<6?`<button class="btn primary" data-act="goto" data-n="${n+1}">Go to level ${n+1}</button>`:`<button class="btn primary" data-act="results">See your results</button>`):`<button class="btn primary" data-act="tab" data-tab="learn">Review the lesson</button>`}<button class="btn" data-act="begin">${pass?'Run it again':'Try again'}</button></div>`;}
+<p class="prompt">${pass?(n<ACTIVE_LEVELS?`Passed. Level ${n+1} is unlocked.`:'Passed. That\'s the whole lesson.'):`You need ${pf} to pass. Look back at the lesson and run it again; you'll get new questions.`}</p>
+<div class="btn-row">${pass?(n<ACTIVE_LEVELS?`<button class="btn primary" data-act="goto" data-n="${n+1}">Go to level ${n+1}</button>`:`<button class="btn primary" data-act="results">See your results</button>`):`<button class="btn primary" data-act="tab" data-tab="learn">Review the lesson</button>`}<button class="btn" data-act="begin">${pass?'Run it again':'Try again'}</button></div>`;}
   const q=quiz.q;let field='',card='';
   if(q.formula){const on=k=>q.formula===k?' class="on"':'';
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</p><p${on('counts')}>Counts = Step Size × Distance ÷ 8</p><p${on('dist')}>Distance = 8 × Counts ÷ Step Size</p></div>`;}
@@ -961,12 +964,12 @@ function practiceHTML(){
   return `<div class="qmeta"><span>Question ${quiz.i+1} of ${qn}</span><span>${quiz.score} correct</span></div><div class="qbar"><span style="width:${(quiz.i/qn)*100}%"></span></div>
 <p class="prompt">${q.prompt}</p>${card}${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
 ${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p></div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
-function resultsHTML(){const tot=LEVELS.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+function resultsHTML(){const tot=ACTIVE.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
 <div class="report"><p><b>${esc(S.name||'Student')}</b><br><span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
 <div class="tw"><table class="t"><thead><tr><th>Level</th><th>Best</th><th>Status</th></tr></thead><tbody>
-${LEVELS.map(L=>{const b=S.best[L.n];return `<tr><td>${L.n}. ${L.title}</td><td class="c">${b===undefined?'–':`${b} / ${qnFor(L.n)}`}</td><td>${b===undefined?'Not taken':b>=passFor(L.n)?'Passed':'Not passed yet'}</td></tr>`;}).join('')}
-</tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${LEVELS.reduce((s,L)=>s+qnFor(L.n),0)}</span></div></div></section>`;}
+${ACTIVE.map(L=>{const b=S.best[L.n];return `<tr><td>${L.n}. ${L.title}</td><td class="c">${b===undefined?'–':`${b} / ${qnFor(L.n)}`}</td><td>${b===undefined?'Not taken':b>=passFor(L.n)?'Passed':'Not passed yet'}</td></tr>`;}).join('')}
+</tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${ACTIVE.reduce((s,L)=>s+qnFor(L.n),0)}</span></div></div></section>`;}
 
 function render(){
   playerStop();cancelAnimationFrame(hero);
@@ -984,14 +987,14 @@ function go(v){view=v;render();window.scrollTo(0,0);}
 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
   if(a==='home')return go({name:'intro'});
-  if(a==='start'){const ni=document.getElementById('nameIn');if(ni)S.name=ni.value.trim();save();return go({name:'level',n:Math.min(6,S.unlocked),tab:'learn'});}
-  if(a==='goto'){const n=+el.dataset.n;if(n>S.unlocked)return;return go({name:'level',n,tab:'learn'});}
+  if(a==='start'){const ni=document.getElementById('nameIn');if(ni)S.name=ni.value.trim();save();return go({name:'level',n:Math.min(ACTIVE_LEVELS,S.unlocked),tab:'learn'});}
+  if(a==='goto'){const n=+el.dataset.n;if(n>S.unlocked||n>ACTIVE_LEVELS)return;return go({name:'level',n,tab:'learn'});}
   if(a==='results')return go({name:'results'});
   if(a==='tab'){view.tab=el.dataset.tab;render();return;}
   if(a==='begin'){startQuiz(view.n);view.tab='practice';render();return;}
   if(a==='answer'&&quiz&&!quiz.answered){quiz.answered=true;quiz.choice=+el.dataset.i;if(quiz.choice===quiz.q.correct)quiz.score++;render();const nb=document.getElementById('nextBtn');if(nb)nb.focus({preventScroll:true});return;}
   if(a==='next'&&quiz){quiz.i++;quiz.answered=false;quiz.choice=null;
-    if(quiz.i>=qnFor(quiz.n)){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);if(quiz.score>=passFor(n)&&S.unlocked<=n)S.unlocked=Math.min(6,n+1);save();}
+    if(quiz.i>=qnFor(quiz.n)){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);if(quiz.score>=passFor(n)&&S.unlocked<=n)S.unlocked=Math.min(ACTIVE_LEVELS,n+1);save();}
     else quiz.q=GEN[quiz.n](quiz);
     render();window.scrollTo(0,0);return;}
   if(a==='pv'){player.mode=el.dataset.v;if(player.mode==='main')player.v={...V_MAIN};else if(player.mode==='mid')player.v={...V_MID};else player.v={fwd:player.v.fwd,over:player.v.over,leg:player.v.leg};player.t=0;playerRefresh();return;}
@@ -999,7 +1002,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
   if(a==='pstep'){playerStop();player.t=Math.max(0,Math.min(maxT(),Math.round(player.t)+(+el.dataset.d)));playerDraw();return;}
   if(a==='preset'){playerStop();player.t=0;playerDraw();return;}
   if(a==='calcshow'){calc.shown=true;calcRefresh();return;}
-  if(a==='coach'){S.unlocked=6;save();render();return;}
+  if(a==='coach'){S.unlocked=ACTIVE_LEVELS;save();render();return;}
   if(a==='reset'){if(el.dataset.armed){S.best={};S.unlocked=1;quiz=null;save();el.dataset.armed='';el.textContent='Reset progress';return go({name:'intro'});}
     el.dataset.armed='1';el.textContent='Click again to erase all scores';setTimeout(()=>{el.dataset.armed='';el.textContent='Reset progress';},4000);return;}
 });
