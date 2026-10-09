@@ -251,7 +251,7 @@ function computeView(points,minW){
 let svgSeq=0;
 function fieldSVG(spec){
   const h=H();const id=spec.id||('f'+(++svgSeq));
-  const all=[];(spec.pts||[]).forEach(p=>all.push(p));(spec.paths||[]).forEach(pa=>pa.pts.forEach(p=>all.push(p)));if(spec.marcher)all.push(spec.marcher);(spec.extra||[]).forEach(p=>all.push(p));
+  const all=[];(spec.pts||[]).forEach(p=>all.push(p));(spec.paths||[]).forEach(pa=>pa.pts.forEach(p=>all.push(p)));if(spec.marcher)all.push(spec.marcher);(spec.extra||[]).forEach(p=>all.push(p));(spec.rulers||[]).forEach(r=>all.push({x:r.x2+(r.x2>r.x1?12:-12),y:r.y})); // room for "= N steps"
   if(!all.length)all.push({x:80,y:h});
   const v=computeView(all,spec.minW||40);
   const pad=1.5,band=5;const vbX=v.x0-pad,vbY=-v.y1-pad,vbW=(v.x1-v.x0)+2*pad,top=v.y1+pad;
@@ -278,7 +278,7 @@ function fieldSVG(spec){
     if(p.label){const opt=(p.cls||'').includes('opt');const lx=p.lx!==undefined?p.lx:(opt?0:1.3),ly=p.ly!==undefined?p.ly:(opt?1.6:1.2);
       s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${opt?'middle':'start'}">${esc(p.label)}</text>`;}});
   if(spec.marcher)s+=`<circle class="marcher" id="${id}m" cx="${spec.marcher.x}" cy="${-spec.marcher.y}" r="1.15"/>`;
-  if(spec.ruler){const r=spec.ruler;const segs=rulerSegments(r.x1,r.x2);const dir=r.x2>r.x1?1:-1;
+  [spec.ruler,...(spec.rulers||[])].filter(Boolean).forEach(r=>{const segs=rulerSegments(r.x1,r.x2);const dir=r.x2>r.x1?1:-1;
     const ry=-(r.y-2.5);
     s+=`<line x1="${r.x1}" y1="${ry}" x2="${r.x2}" y2="${ry}" stroke="#fff" stroke-opacity=".85" stroke-width=".28"/>`;
     s+=`<line x1="${r.x1}" y1="${ry-.8}" x2="${r.x1}" y2="${ry+.8}" stroke="#fff" stroke-opacity=".85" stroke-width=".28"/>`;
@@ -289,7 +289,7 @@ function fieldSVG(spec){
       s+=`<text class="dot-label" x="${(cx+nx)/2}" y="${ry+2.6}" text-anchor="middle">${segs[i]}</text>`;
       cx=nx;}
     const total=segs.reduce((a,b)=>a+b,0);
-    s+=`<text class="dot-label" x="${r.x2+dir*1.8}" y="${ry+2.6}" text-anchor="${dir>0?'start':'end'}">= ${total} steps</text>`;}
+    s+=`<text class="dot-label" x="${r.x2+dir*1.8}" y="${ry+2.6}" text-anchor="${dir>0?'start':'end'}">= ${total} steps</text>`;});
   return s+'</svg>';
 }
 function legsFor(a,b,L,D,dir){
@@ -504,7 +504,7 @@ function gen2_sizeOffOff(){
   return gen2_sizeOffOn();
 }
 function gen2_cross50(qz){
-  const h=H();const askSteps=qz.i%2===0; // alternate each run
+  const h=H();const askSteps=Math.random()<0.5; // ~50/50 steps vs step size
   for(let g=0;g<200;g++){
     const off1=rnd(1,6),off2=rnd(1,6); // S1 45 side and S2 45 side
     const x1=80-8-off1; // S1 side of 50 (inside S1 45)
@@ -587,8 +587,8 @@ function gen2_compare(){
     const ssA=8*rA.counts/rA.steps,ssB=8*rB.counts/rB.steps;
     if(Math.abs(ssA-ssB)<0.01)continue; // too close, skip for A/B question
     const inA=round2(22.5*rA.steps/rA.counts),inB=round2(22.5*rB.counts/rB.counts);
-    const aA={x:rA.x1,y:h-8},bA={x:rA.x2,y:h-8}; // Move A slightly above hash
-    const aB={x:rB.x1,y:h+8},bB={x:rB.x2,y:h+8}; // Move B slightly below hash
+    const aA={x:rA.x1,y:h},bA={x:rA.x2,y:h}; // Move A on the front hash
+    const aB={x:rB.x1,y:h+8},bB={x:rB.x2,y:h+8}; // Move B 8 steps behind it
     if(askInches){
       const inchA=fmtIn(22.5*rA.steps/rA.counts);
       const inchB=fmtIn(22.5*rB.steps/rB.counts);
@@ -602,6 +602,7 @@ function gen2_compare(){
         mc(inchA,[fmtIn(180/ssNearest(ssA)),fmtIn(22.5*rA.counts/rA.steps),fmtIn(22.5*(rA.steps+2)/rA.counts)].filter(w=>w!==inchA).slice(0,3),{kind:'in'}),
         {explain:`22.5 × ${rA.steps} ÷ ${rA.counts} = <b>${inchA}</b>. Bigger step size number = physically smaller step.`,formula:'ss'});
     }
+    if([rA.x1,rA.x2,rB.x1,rB.x2].some(x=>x<12||x>148))continue; // keep ruler totals on the field
     const biggerSS=ssA>ssB?'A':'B'; // bigger SS number = physically smaller step
     const smallerStep=biggerSS; // confusingly named — the one with bigger number has smaller physical step
     const biggerStep=ssA<ssB?'A':'B'; // bigger physical step = smaller SS number
@@ -609,7 +610,9 @@ function gen2_compare(){
     const explain=`Move A: ${fmtSS(ssA)}. Move B: ${fmtSS(ssB)}. Smaller number = bigger step. <b>${ans}</b>.`;
     const wrongs=['B has the bigger step','A has the bigger step','Same step size',"Can't tell without the math"].filter(x=>x!==ans);
     return Object.assign({prompt:`Move A: ${latDesc(rA.x1)} → ${latDesc(rA.x2)} in <b>${rA.counts} counts</b>. Move B: ${latDesc(rB.x1)} → ${latDesc(rB.x2)} in <b>${rB.counts} counts</b>. Which move takes the bigger step?`,
-      field:null},mc(ans,wrongs),{explain,formula:'ss'});
+      field:{pts:[{...aA,label:'A'},{...bA,cls:'end',label:'A'},{...aB,label:'B'},{...bB,cls:'end',label:'B'}],
+        paths:[{pts:[aA,bA]},{pts:[aB,bB]}],
+        rulers:[{x1:aA.x,x2:bA.x,y:aA.y},{x1:aB.x,x2:bB.x,y:aB.y}],minW:48}},mc(ans,wrongs),{explain,formula:'ss'});
   }
   return gen2_sizeLine();
 }
