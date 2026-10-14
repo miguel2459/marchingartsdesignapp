@@ -337,17 +337,19 @@ function cbPath(v,cycles){const a=[];for(let i=0;i<=2*cycles;i++)a.push(cbPos(v,
 const cbDesc=v=>`${v.fwd} forward + ${v.over} over, then ${v.fwd} back + ${v.over} over, ${v.leg} counts per leg`;
 
 /* ---------- question building ---------- */
-// o.kind: 'ss' (N-to-5, 4–20), 'count' (positive whole number; o.allowZero permits '0'), 'in' (inches), 'pos' (lateral text, needs o.x)
+// o.kind: 'ss' (N-to-5, 4–20), 'count' (positive whole number; o.allowZero permits '0'), 'in' (inches), 'dec' (positive, one decimal), 'pos' (lateral text, needs o.x)
 function optOk(s,o){
   if(o.kind==='ss')return /^\d+(\.\d+)?-to-5$/.test(s)&&parseFloat(s)>=4&&parseFloat(s)<=20;
   if(o.kind==='count')return /^\d+$/.test(s)&&(+s>0||(o.allowZero&&s==='0'));
   if(o.kind==='in')return /^\d+(\.\d+)?"$/.test(s)&&parseFloat(s)>0;
+  if(o.kind==='dec')return /^\d+(\.\d)?$/.test(s)&&parseFloat(s)>0;
   return s!=='';
 }
 function optFill(correct,o){
   if(o.kind==='ss'){const n=parseFloat(correct);return [1,-1,2,-2,0.5,-0.5,3,-3,4,-4,1.5,-1.5].map(d=>fmtSS(n+d));}
   if(o.kind==='count'){const n=+correct;return [1,-1,2,-2,3,-3,4,-4].map(d=>String(n+d));}
   if(o.kind==='in'){const n=parseFloat(correct);return [1,-1,2,-2,3,-3,4,-4,0.5,-0.5].map(d=>fmtIn(n+d));}
+  if(o.kind==='dec'){const n=parseFloat(correct);return [1,-1,0.5,-0.5,2,-2,1.5,-1.5,3,-3].map(d=>fmtC(n+d));}
   if(o.kind==='pos'){const {k,off}=latParts(o.x);return [8*k-off,o.x+2,o.x-2,o.x+1,o.x-1,o.x+8,o.x-8,o.x+4,o.x-4].filter(x=>x>=0&&x<=160).map(x=>latDesc(round2(x)));}
   return [];
 }
@@ -685,6 +687,100 @@ function gen3(qz){const t=P3[qz.i];if(t==='concept')return pickConcept(C3,qz);co
   return Object.assign({prompt:`A move: ${moveTxt(m)}. How long is each actual step along the diagonal?`,field,
     explain:`Per count you go ${fmtFrac(a)} over and ${fmtFrac(b)} ${m.dir>0?'back':'forward'}. Your real step is the long side of that triangle: √(${fmt(a)}² + ${fmt(b)}²) = ${fmt(Math.hypot(a,b))} steps × 22.5" = <b>${fmtIn(ans)}</b>.`},
     mc(fmtIn(ans),[fmtIn(22.5*(a+b)),fmtIn(22.5*Math.max(a,b)),'22.5"','30"',fmtIn(22.5*Math.min(a,b))]));}
+
+/* ---------- level 3: diagonal step size ---------- */
+// Shared gen3 helpers
+const CLEAN_TRI=[[6,8],[8,6],[12,16],[16,12],[9,12],[12,9],[5,12],[12,5],[8,15],[15,8]];
+const DIAG_COUNTS=[4,6,8,10,12,16,24];
+function randDiag(o){
+  // Returns {x1,y1,x2,y2,A,B,C,counts,ss}; o.clean = whole-number C, o.real = C needs rounding
+  o=o||{};const h=H();
+  for(let g=0;g<500;g++){
+    let A,B;
+    if(o.clean)[A,B]=pick(CLEAN_TRI);
+    else{A=rnd(2,24);B=rnd(2,16);if(o.real&&Number.isInteger(Math.hypot(A,B)))continue;}
+    const C=Math.round(Math.hypot(A,B)*10)/10;
+    const x1=rnd(4,156),x2=x1+pick([-1,1])*A;if(x2<4||x2>156)continue;
+    const y1=h+rnd(-8,8),y2=y1+pick([-1,1])*B;if(y2<2||y2>DEPTH-2)continue;
+    const counts=pick(DIAG_COUNTS),ss=8*counts/C;if(ss<4||ss>16)continue;
+    return {x1,y1,x2,y2,A,B,C,counts,ss};
+  }
+  return {x1:56,y1:h-4,x2:72,y2:h+4,A:16,B:8,C:17.9,counts:16,ss:8*16/17.9};
+}
+const diagDir=m=>m.y2>m.y1?'back':'forward';
+function diagField(m,show){
+  // Triangle diagram; show overrides {showA,showB,showC} before answering (q.triAfter reveals them after)
+  const sx=Math.sign(m.x2-m.x1),sy=Math.sign(m.y2-m.y1);
+  return {pts:[{x:m.x1,y:m.y1,label:'Start',...(sx>0?{lx:-5.6,ly:-0.7}:{})},{x:m.x2,y:m.y2,cls:'end',label:'End',...(sx<0?{lx:-4.6}:{}),...(sy<0?{ly:-2.6}:{})}],
+    triangle:{x1:m.x1,y1:m.y1,x2:m.x2,y2:m.y2,showA:true,showB:true,showC:false,...show}};
+}
+const xAB=m=>`<b>A:</b> ${m.A} over. <b>B:</b> ${m.B} ${diagDir(m)}.`;
+const xC=m=>`<b>C:</b> √(${m.A}² + ${m.B}²) = √${m.A*m.A+m.B*m.B} = <b>${fmtC(m.C)} steps</b>.`;
+function abWrongs(m,leg){
+  // [value, kind line] pairs for real A/B mistakes
+  const h=H(),v=leg==='A'?m.A:m.B,out=[];
+  if(leg==='A'){
+    out.push([m.B,"That's B, the forward-or-back leg. A is the side-to-side leg, along the yard lines."]);
+    const {k:k1}=latParts(m.x1),{k:k2}=latParts(m.x2);
+    out.push([Math.abs(k2-k1)*8,'Looks like the offsets got skipped. Count from your dot to the line, line to line in 8s, then the line to your end dot.']);
+  } else {
+    out.push([m.A,"That's A, the side-to-side leg. B is how far you go forward or back."]);
+    out.push([round2(m.y2),'Looks like that was counted from the front sideline. Read depth from the hash: how far in front of it or behind it each dot is.']);
+    const d1=m.y1-h,d2=m.y2-h;
+    if(d1*d2<0)out.push([Math.abs(Math.abs(d2)-Math.abs(d1)),'One dot is in front of the hash and the other is behind it, so add the two distances together.']);
+  }
+  [1,-1,2,-2].forEach(d=>out.push([v+d,'Close! Recount it one step at a time.']));
+  return out.filter(([w])=>w>0&&w!==v);
+}
+function cWrongs(m){
+  // [value, kind line] pairs for real C mistakes
+  return [
+    [fmtC(m.A+m.B),"Looks like A and B got added together. On a diagonal, C is always shorter than A + B. That's the shortcut you're marching!"],
+    [fmtC(Math.max(m.A,m.B)),"That's just the longer leg. C is always longer than either leg, because the diagonal covers both moves at once."],
+    [fmtC(m.A*m.A+m.B*m.B),"So close! That's A² + B². Take the square root of it to get C."],
+    [fmtC(Math.sqrt(m.A+m.B)),'Square A and B first, then add, then take the square root: √(A² + B²), not √(A + B).']];
+}
+function mcWhy(correct,pairs,o){
+  // mc() plus q.why: option text → kind line naming the mistake
+  const why={};pairs.forEach(([v,t])=>{v=String(v);if(!(v in why))why[v]=t;});
+  return Object.assign(mc(correct,pairs.map(p=>String(p[0])),o),{why});
+}
+function gen3_findA(){
+  const m=randDiag();const segs=rulerSegments(m.x1,m.x2);
+  const explain=`<b>A:</b> ${segs.length>1?segs.join(' + ')+' = ':''}<b>${m.A} over</b>. Same ruler as Level 2: dot to the line, line to line in 8s, line to your end dot.`;
+  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. What is <b>A</b>, the steps over?`,
+    field:diagField(m,{showA:false}),triAfter:{showA:true}},
+    mcWhy(String(m.A),abWrongs(m,'A'),{kind:'count'}),{explain,formula:'ab'});
+}
+function gen3_findB(){
+  const h=H();const m=randDiag();const d1=m.y1-h,d2=m.y2-h,cross=d1*d2<0&&m.y1>=h/2&&m.y2>=h/2;
+  const explain=`<b>B:</b> From ${depDesc(m.y1)} to ${depDesc(m.y2)}${cross?`: ${Math.abs(d1)} + ${Math.abs(d2)} =`:' is'} <b>${m.B} ${diagDir(m)}</b>. Read depth from the hash, the same way you did in Level 1.`;
+  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. What is <b>B</b>, the steps forward or back?`,
+    field:diagField(m,{showB:false}),triAfter:{showB:true}},
+    mcWhy(String(m.B),abWrongs(m,'B'),{kind:'count'}),{explain,formula:'ab'});
+}
+function gen3_cRange(){
+  const m=randDiag();const mx=Math.max(m.A,m.B),sum=m.A+m.B;
+  const pairs=[[mx-Math.min(rnd(1,3),mx-1),`C is always longer than the longer leg (${mx}). The diagonal covers that whole leg and then some.`],
+    [sum,cWrongs(m)[0][1]],
+    [sum+rnd(2,6),`C can never be longer than A + B (${sum}). The diagonal is the shortcut.`]];
+  const explain=`${xAB(m)}<br><b>Gut check C:</b> C is longer than the longer leg and shorter than A + B, so it lands between ${mx} and ${sum}. Only <b>${fmtC(m.C)}</b> fits.<br>${xC(m)}`;
+  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. Which of these could C be?`,
+    field:diagField(m,{}),triAfter:{showC:true}},
+    mcWhy(fmtC(m.C),pairs,{kind:'dec'}),{explain,formula:'c'});
+}
+function gen3_cClean(){
+  const m=randDiag({clean:true});
+  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. What is <b>C</b>?`,
+    field:diagField(m,{}),triAfter:{showC:true}},
+    mcWhy(fmtC(m.C),cWrongs(m),{kind:'dec'}),{explain:`${xAB(m)}<br>${xC(m)} A clean one, no rounding needed.`,formula:'c'});
+}
+function gen3_cReal(){
+  const m=randDiag({real:true});
+  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. What is <b>C</b>? Use your phone calculator and round to one decimal.`,
+    field:diagField(m,{}),triAfter:{showC:true}},
+    mcWhy(fmtC(m.C),cWrongs(m),{kind:'dec'}),{explain:`${xAB(m)}<br>${xC(m)}`,formula:'c'});
+}
 
 /* ---------- level 4: checkpoints ---------- */
 function cpMove(){for(let g=0;g<200;g++){const m=randMove();const X=pick(m.C===8?[2,4,6]:[4,8,12,2,6,10,14]);if((X*m.L)%m.C||(X*m.D)%m.C)continue;
@@ -1082,7 +1178,7 @@ function practiceHTML(){
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</p><p${on('counts')}>Counts = Step Size × Distance ÷ 8</p><p${on('dist')}>Distance = 8 × Counts ÷ Step Size</p></div>`;}
   if(q.field){const spec=JSON.parse(JSON.stringify(q.field));spec.pts=spec.pts||[];spec.extra=q.reveal||[];
     if(spec.ruler&&spec.ruler.after&&!quiz.answered)delete spec.ruler; // ruler would give the answer away
-    if(quiz.answered){if(q.pick)spec.pts.forEach(p=>{if(p.opt!==undefined){p.cls+=p.opt===q.correct?' right':p.opt===quiz.choice?' wrong':' dim';}});if(q.reveal)spec.pts=spec.pts.concat(q.reveal);}
+    if(quiz.answered){if(q.pick)spec.pts.forEach(p=>{if(p.opt!==undefined){p.cls+=p.opt===q.correct?' right':p.opt===quiz.choice?' wrong':' dim';}});if(q.reveal)spec.pts=spec.pts.concat(q.reveal);if(q.triAfter&&spec.triangle)Object.assign(spec.triangle,q.triAfter);}
     field=`<figure class="fig">${fieldSVG(spec)}</figure>`;}
   const ok=quiz.answered&&quiz.choice===q.correct;
   const opts=q.options.map((o,i)=>{let c='opt';if(quiz.answered){if(i===q.correct)c+=' right';else if(i===quiz.choice)c+=' wrong';}
@@ -1090,7 +1186,7 @@ function practiceHTML(){
   const qn=qnFor(quiz.n);
   return `<div class="qmeta"><span>Question ${quiz.i+1} of ${qn}</span><span>${quiz.score} correct</span></div><div class="qbar"><span style="width:${(quiz.i/qn)*100}%"></span></div>
 <p class="prompt">${q.prompt}</p>${card}${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
-${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p></div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
+${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p>${!ok&&q.why&&q.why[q.options[quiz.choice]]?`<p>${q.why[q.options[quiz.choice]]}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
 function resultsHTML(){const tot=ACTIVE.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
 <div class="report"><p><b>${esc(S.name||'Student')}</b><br><span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
