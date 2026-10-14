@@ -785,11 +785,12 @@ function ssWrongs(m){
     [fmtSS(c/m.C),"Don't forget the 8! Ruler × Time ÷ Distance starts with the 8-step ruler."]];
 }
 function gen3_gut(){
-  // ~20% exactly an 8-to-5 (6-8-10 in 10 counts); ~40% counts between A and C, where comparing to A gives the wrong call
+  // ~20% exactly (6-8-10 in 10 counts); ~40% bigger (half with counts between A and C, where comparing to A gives the wrong call);
+  // ~40% smaller (12, 16 or 24 counts, clearly more than C)
   let m;const r=Math.random();
   if(r<0.2)m=randDiag({AB:pick([[6,8],[8,6]]),counts:10});
-  else if(r<0.6){for(let g=0;g<300;g++){m=randDiag();if(m.A<m.counts&&m.counts<m.C)break;}}
-  else m=randDiag();
+  else if(r<0.6){const trap=r<0.4;for(let g=0;g<300;g++){m=randDiag();if(m.counts<m.C&&(!trap||m.A<m.counts))break;}}
+  else{for(let g=0;g<300;g++){m=randDiag({counts:pick([12,16,24])});if(m.counts>=1.2*m.C)break;}}
   const ans=gutAns(m.C,m.counts),aAns=gutAns(m.A,m.counts);
   const pairs=[];
   if(aAns!==ans)pairs.push([aAns,'Looks like the counts got compared to A. On a diagonal, compare the counts to C, the path you actually march.']);
@@ -822,7 +823,7 @@ function gen3_charlieBrown(){
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
 function gen3_compare(){
-  // ~50%: A goes straight over, B covers the same A plus some B in the same counts. Otherwise two different diagonals.
+  // ~50%: one move goes straight over (A or B, at random), the other covers the same A plus some B in the same counts. Otherwise two different diagonals.
   const h=H();const CMP=['A has the bigger step','B has the bigger step','Same step size',"Can't tell without the math"];
   const straight=Math.random()<0.5;let mA,mB;
   for(let g=0;g<300;g++){
@@ -830,28 +831,33 @@ function gen3_compare(){
     if(straight){const ss=8*mB.counts/mB.A;if(ss<4||ss>16||fmtSS(ss)===fmtSS(mB.ss))continue;mA={A:mB.A,B:0,C:mB.A,counts:mB.counts,ss};break;}
     mA=randDiag();if(Math.abs(Math.round(mA.ss*10)-Math.round(mB.ss*10))>=3)break;
   }
-  const ax=rnd(12,32),ay=straight?h+rnd(-4,4):mA.y1;Object.assign(mA,{x1:ax,x2:ax+mA.A,y1:ay,y2:straight?ay:mA.y2});
-  const bx=mA.x2+rnd(8,12);Object.assign(mB,{x1:bx,x2:bx+mB.A});
+  if(straight&&Math.random()<0.5)[mA,mB]=[mB,mA]; // straight move is A or B about equally often
+  const place=(m,x)=>{const flat=m.B===0,y=flat?h+rnd(-4,4):m.y1;Object.assign(m,{x1:x,x2:x+m.A,y1:y,y2:flat?y:m.y2});};
+  place(mA,rnd(12,32));place(mB,mA.x2+rnd(8,12));
   const ans=mA.ss<mB.ss?CMP[0]:CMP[1];
   const tri=m=>({x1:m.x1,y1:m.y1,x2:m.x2,y2:m.y2,showA:true,showB:true,showC:false,noLabels:true});
   const field={pts:[{x:mA.x1,y:mA.y1,label:'A'},{x:mA.x2,y:mA.y2,cls:'end',label:'A'},{x:mB.x1,y:mB.y1,label:'B'},{x:mB.x2,y:mB.y2,cls:'end',label:'B'}],
-    triangles:[...(straight?[]:[tri(mA)]),tri(mB)],minW:48};
-  if(straight){field.paths=[{pts:[{x:mA.x1,y:mA.y1},{x:mA.x2,y:mA.y2}]}];field.rulers=[{x1:mA.x1,x2:mA.x2,y:mA.y1}];}
+    triangles:[mA,mB].filter(m=>m.B>0).map(tri),minW:48};
+  const flatM=[mA,mB].find(m=>m.B===0);
+  if(flatM){field.paths=[{pts:[{x:flatM.x1,y:flatM.y1},{x:flatM.x2,y:flatM.y2}]}];field.rulers=[{x1:flatM.x1,x2:flatM.x2,y:flatM.y1}];}
   const mv=m=>`<b>${m.A} over and ${m.B} ${diagDir(m)}</b> in <b>${m.counts} counts</b>`;
   const xMove=(n,m)=>`<b>Move ${n}:</b> C = √(${m.A}² + ${m.B}²) = ${fmtC(m.C)} steps. 8 × ${m.counts} ÷ ${fmtC(m.C)} = <b>${fmtSS(m.ss)}</b>.`;
   let prompt,explain;const pairs=[];
-  if(straight){
-    prompt=`Move A: <b>${mA.A} over</b>, straight, in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b> plus <b>${mB.B} ${diagDir(mB)}</b>, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`;
-    explain=`<b>Move A:</b> straight over, so the Distance is just ${mA.A}. 8 × ${mA.counts} ÷ ${mA.A} = <b>${fmtSS(mA.ss)}</b>.<br>${xMove('B',mB)}<br>Same counts, longer path, so B needs the bigger step. Smaller number = bigger step: <b>${ans}</b>.`;
-    pairs.push([CMP[0],'Move B covers more ground in the same counts, so it needs the bigger step. The diagonal is always longer than the straight leg.'],
-      [CMP[2],"Same counts doesn't mean same step. B's diagonal is longer than A's straight line, so B's step is bigger."],
-      [CMP[3],'You can tell without any math! Same counts, longer path: B takes the bigger step.']);
+  if(flatM){
+    const S=flatM===mA?'A':'B',D=S==='A'?'B':'A';
+    const xFlat=`<b>Move ${S}:</b> straight over, so the Distance is just ${flatM.A}. 8 × ${flatM.counts} ÷ ${flatM.A} = <b>${fmtSS(flatM.ss)}</b>.`;
+    prompt=S==='A'?`Move A: <b>${mA.A} over</b>, straight, in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b> plus <b>${mB.B} ${diagDir(mB)}</b>, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`
+      :`Move A: <b>${mA.A} over and ${mA.B} ${diagDir(mA)}</b> in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b>, straight, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`;
+    explain=`${S==='A'?xFlat:xMove('A',mA)}<br>${S==='A'?xMove('B',mB):xFlat}<br>Same counts, longer path, so ${D} needs the bigger step. Smaller number = bigger step: <b>${ans}</b>.`;
+    pairs.push([CMP[S==='A'?0:1],`Move ${D} covers more ground in the same counts, so it needs the bigger step. The diagonal is always longer than the straight leg.`],
+      [CMP[2],`Same counts doesn't mean same step. ${D}'s diagonal is longer than ${S}'s straight line, so ${D}'s step is bigger.`],
+      [CMP[3],`You can tell without any math! Same counts, longer path: ${D} takes the bigger step.`]);
   } else {
     prompt=`Move A: ${mv(mA)}. Move B: ${mv(mB)}. Which move takes the bigger step?`;
     explain=`${xMove('A',mA)}<br>${xMove('B',mB)}<br>Smaller number = bigger step: <b>${ans}</b>.`;
     const wrongMove=ans===CMP[0]?CMP[1]:CMP[0];const byA=8*mA.counts/mA.A<8*mB.counts/mB.A?CMP[0]:CMP[1];
     pairs.push([wrongMove,byA===wrongMove?'Looks like only the side-to-side legs got compared. Use C, the full diagonal, as each Distance.':'Watch the flip: the smaller step-size number is the bigger step.'],
-      [CMP[2],`Work them both out and they're not the same:${fmtSS(mA.ss)} vs ${fmtSS(mB.ss)}.`],
+      [CMP[2],`Work them both out and they're not the same: ${fmtSS(mA.ss)} vs ${fmtSS(mB.ss)}.`],
       [CMP[3],'You can tell! Work out each step size, then compare. Smaller number = bigger step.']);
   }
   return Object.assign({prompt,field},mcWhy(ans,pairs),{explain,formula:'gut'});
