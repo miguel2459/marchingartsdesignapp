@@ -270,7 +270,6 @@ function triBounds(t){const g=triGeom(t);const r=[{x:t.x1,y:t.y1},{x:t.x2,y:t.y2
 function triSVG(t,id){const g=triGeom(t);let under='',over='';
   if(g.A>0)under+=`<line class="leg" x1="${t.x1}" y1="${-t.y1}" x2="${g.cn.x}" y2="${-g.cn.y}"/>`;
   if(g.B>0)under+=`<line class="leg" x1="${g.cn.x}" y1="${-g.cn.y}" x2="${t.x2}" y2="${-t.y2}"/>`;
-  if(g.A>0&&g.B>0){const k=1.2,px=t.x2-g.sx*k,py=t.y1+g.sy*k;under+=`<polyline fill="none" stroke="#fff" stroke-width=".2" points="${px},${-t.y1} ${px},${-py} ${t.x2},${-py}"/>`;}
   under+=`<polyline class="path" points="${t.x1},${-t.y1} ${t.x2},${-t.y2}" marker-end="url(#${id}a)"/>`;
   if(g.A>0)over+=`<text class="dot-label" x="${g.m.x}" y="${g.aBelow?-t.y1+2.4:-t.y1-0.9}" text-anchor="middle">${t.showA?`A = ${fmt(g.A)}`:'A'}</text>`;
   if(g.B>0)over+=`<text class="dot-label" x="${t.x2+(g.sx<0?-1.2:1.2)}" y="${-g.m.y+0.7}" text-anchor="${g.sx<0?'end':'start'}">${t.showB?`B = ${fmt(g.B)}`:'B'}</text>`;
