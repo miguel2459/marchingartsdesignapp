@@ -902,7 +902,10 @@ Step size = 8 × 8 ÷ 8.9 = <b>7.2-to-5</b>. Still bigger than an 8-to-5, but sm
 <tr><td>Midpoint</td><td class="c">4</td><td class="c">8</td><td class="c">8.9</td><td class="c">8</td><td class="c">7.2-to-5</td></tr>
 </tbody></table></div>
 <div class="prose"><p>Know these two before you walk into the audition.</p></div>
-${triFig(cba,cbb,true,'One Charlie Brown leg: S1 20 front hash, 8 over and 8 forward',true)}`;}
+${triFig(cba,cbb,true,'One Charlie Brown leg: S1 20 front hash, 8 over and 8 forward',true)}
+<div class="prose"><h3>Try it yourself</h3>
+<p>Pick a start, an end, and your counts. Work it out on your phone first, then hit "Show me."</p></div>
+<div class="player" id="calc3">${calc3Inner()}</div>`;}
 function learn4(){const h=H();const a={x:40,y:h},b={x:56,y:h-8};const cps=[4,8,12].map(c=>({c,p:{x:a.x+c,y:a.y-c/2}}));
   return `<div class="prose"><p>A checkpoint is where you should be on a specific count. The formula:</p>
 <p><b>checkpoint = start + (count ÷ total counts) × the move</b>, done separately for lateral and depth.</p></div>
@@ -999,6 +1002,51 @@ ${results?`<div class="fb ok"><div class="prose">${results}</div></div>`:''}
 ${!calc.shown&&totalSteps>0?`<div class="btn-row"><button class="btn primary" data-act="calcshow">Show me</button></div>`:''}`;
 }
 
+/* ---------- diagonal calculator (Level 3) ---------- */
+const calc3={sk:7,soff:0,sdir:1,sdep:-4,ek:9,eoff:0,edir:1,edep:4,counts:16,shown:false};
+function calc3Refresh(){const el=document.getElementById('calc3');if(el)el.innerHTML=calc3Inner();}
+function calc3Inner(){
+  const h=H();const x1=calcX(calc3.sk,calc3.soff,calc3.sdir),x2=calcX(calc3.ek,calc3.eoff,calc3.edir);
+  const y1=h+calc3.sdep,y2=h+calc3.edep;
+  const A=round2(Math.abs(x2-x1)),B=round2(Math.abs(y2-y1)),same=A===0&&B===0;
+  const C=Math.round(Math.hypot(A,B)*10)/10;
+  const sx=Math.sign(x2-x1),sy=Math.sign(y2-y1);
+  const fspec={pts:[{x:x1,y:y1,label:'Start',...(sx>0?{lx:-5.6,ly:-0.7}:{})},{x:x2,y:y2,cls:'end',label:'End',...(sx<0?{lx:-4.6}:{}),...(sy<0?{ly:-2.6}:{})}]};
+  if(!same)fspec.triangle={x1,y1,x2,y2,showA:true,showB:true,showC:false};
+  const mkYd=(cur)=>Array.from({length:21},(_,k)=>`<option value="${k}"${k===cur?' selected':''}>${lineName(k)}</option>`).join('');
+  const mkOff=(cur)=>Array.from({length:8},(_,i)=>`<option value="${i}"${i===cur?' selected':''}>${i===0?'On the line':i+' steps'}</option>`).join('');
+  const mkDir=(k,cur)=>{const[a,b]=calcDirLabel(k);return `<option value="-1"${cur===-1?' selected':''}>${a}</option><option value="1"${cur===1?' selected':''}>${b}</option>`;};
+  const mkDep=(cur)=>Array.from({length:17},(_,i)=>{const d=i-8;return `<option value="${d}"${d===cur?' selected':''}>${d===0?'On the front hash':`${steps(Math.abs(d))} ${d<0?'in front':'behind'}`}</option>`;}).join('');
+  const countOpts=[4,6,8,12,16,24,32].map(c=>`<option value="${c}"${c===calc3.counts?' selected':''}>${c}</option>`).join('');
+  const dirS=calc3.soff>0?`<label>${calcDirLabel(calc3.sk).join('/')} <select data-calc3="sdir">${mkDir(calc3.sk,calc3.sdir)}</select></label>`:'';
+  const dirE=calc3.eoff>0?`<label>${calcDirLabel(calc3.ek).join('/')} <select data-calc3="edir">${mkDir(calc3.ek,calc3.edir)}</select></label>`:'';
+  let results='';
+  if(same){results='<p class="note">Pick two different dots.</p>';}
+  else if(calc3.shown){
+    const ss=8*calc3.counts/C;
+    results=`<p><b>A</b> = ${rulerSegments(x1,x2).length>1?rulerSumLine(x1,x2):steps(A)} over. <b>B</b> = ${steps(B)} forward or back.</p>
+<p><b>C</b> = √(A² + B²) = √(${fmt(A)}² + ${fmt(B)}²) = √${fmt(A*A+B*B)} = <b>${fmtC(C)} steps</b></p>
+${B===0?'<p class="note">This one\'s straight side to side, so it\'s just Level 2.</p>':''}
+${A===0?'<p class="note">This one\'s straight forward or back. C is just B.</p>':''}
+<p><b>Gut check:</b> ${calc3.counts} counts, ${fmtC(C)} steps. ${gutSentence(C,calc3.counts)}</p>
+<p><b>Step size:</b> 8 × ${calc3.counts} ÷ ${fmtC(C)} = <b>${fmtSS(ss)}</b> — ${ssLean(ss)}.</p>
+${ss<4?'<p class="note">That\'s a huge step. Most drill won\'t ask for this.</p>':''}`;}
+  return `<div class="custom">
+<label>Start <select data-calc3="sk">${mkYd(calc3.sk)}</select></label>
+<label>Offset <select data-calc3="soff">${mkOff(calc3.soff)}</select></label>${dirS}
+<label>Depth <select data-calc3="sdep">${mkDep(calc3.sdep)}</select></label>
+</div>
+<div class="custom">
+<label>End <select data-calc3="ek">${mkYd(calc3.ek)}</select></label>
+<label>Offset <select data-calc3="eoff">${mkOff(calc3.eoff)}</select></label>${dirE}
+<label>Depth <select data-calc3="edep">${mkDep(calc3.edep)}</select></label>
+</div>
+<div class="custom"><label>Counts <select data-calc3="counts">${countOpts}</select></label></div>
+<figure class="fig">${fieldSVG(fspec)}</figure>
+${results?`<div class="fb ok"><div class="prose">${results}</div></div>`:''}
+${!calc3.shown&&!same?`<div class="btn-row"><button class="btn primary" data-act="calc3show">Show me</button></div>`:''}`;
+}
+
 /* ---------- app state + views ---------- */
 let view={name:'intro'};let quiz=null;let hero=0;
 function startQuiz(n){quiz={n,i:0,score:0,answered:false,choice:null,used:new Set(),done:false};quiz.q=GEN[n](quiz);}
@@ -1082,6 +1130,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
   if(a==='pstep'){playerStop();player.t=Math.max(0,Math.min(maxT(),Math.round(player.t)+(+el.dataset.d)));playerDraw();return;}
   if(a==='preset'){playerStop();player.t=0;playerDraw();return;}
   if(a==='calcshow'){calc.shown=true;calcRefresh();return;}
+  if(a==='calc3show'){calc3.shown=true;calc3Refresh();return;}
   if(a==='coach'){S.unlocked=ACTIVE_LEVELS;save();render();return;}
   if(a==='reset'){if(el.dataset.armed){S.best={};S.unlocked=1;quiz=null;save();el.dataset.armed='';el.textContent='Reset progress';return go({name:'intro'});}
     el.dataset.armed='1';el.textContent='Click again to erase all scores';setTimeout(()=>{el.dataset.armed='';el.textContent='Reset progress';},4000);return;}
@@ -1091,6 +1140,7 @@ document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='hashSel'){S.hash=t.value;save();if(quiz&&!quiz.done)quiz=null;render();return;}
   if(t.dataset&&t.dataset.pc){player.v[t.dataset.pc]=+t.value;player.t=0;playerRefresh();}
   if(t.dataset&&t.dataset.calc){calc[t.dataset.calc]=+t.value;calc.shown=false;calcRefresh();}
+  if(t.dataset&&t.dataset.calc3){calc3[t.dataset.calc3]=+t.value;calc3.shown=false;calc3Refresh();}
 });
 document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nameIn'){const b=document.querySelector('[data-act="start"]');if(b)b.click();}});
