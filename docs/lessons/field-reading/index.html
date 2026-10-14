@@ -844,19 +844,65 @@ ${fig({pts:[{...f5a,label:'Start'},{...f5b,cls:'end',label:'End'}],paths:[{pts:[
 <p>Some people feel it better in inches: <b>Inches = 22.5 × Steps ÷ Counts.</b><br>
 10 steps in 12 counts: 22.5 × 10 ÷ 12 = <b>18.75"</b>. Put that next to 22.5" for an 8-to-5 and you can feel exactly how much to shorten up.</p>
 <h3>Coming up next</h3>
-<p>Notice that steps ÷ counts tells you how much ruler each count covers. 10 ÷ 12 is about 0.83 steps per count. Hold onto that idea. In Level 3 you'll do the exact same thing in two directions at once, and honestly, that's all a diagonal is.</p>
+<p>Everything so far has been straight side to side. In Level 3 we go diagonal. You'll use this exact formula; the only new trick is finding the Distance when your path isn't straight.</p>
 <h3>Try it yourself</h3>
 <p>Pick a start, an end, and your counts. Make your guess before you hit "Show me."</p></div>
 <div class="player" id="calc">${calcInner()}</div>`;}
-function learn3(){const h=H();const a={x:56,y:h-4},b={x:72,y:h+4};const rows=[0,4,8,12,16].map(c=>({c,p:{x:a.x+c,y:a.y+c/2}}));
-  return `<div class="prose"><p>A diagonal looks hard because it's one line going two directions. Split it into two straight-line moves and it's easy: one lateral, one depth. Each has its own rate per count.</p></div>
-${fig({pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],legs:legsFor(a,b,16,8,1)},'S1 35 (4 in front of the hash) to S1 45 (4 behind), 16 counts.')}
-<div class="prose"><p>Lateral: 16 steps ÷ 16 counts = <b>1 per count</b>. Depth: 8 steps ÷ 16 counts = <b>½ per count</b>. That's a 2-to-1 slope. Now every count is predictable:</p></div>
-${cpTable(rows)}
-<div class="prose"><h3>Your real step is bigger than you think</h3>
-<p>Your actual step is the long side of the triangle: √(lateral² + depth²) × 22.5". Here that's √(1² + ½²) = 1.12 steps, about <b>25.2"</b>. Marching it at a normal 22.5" step makes you late on every checkpoint.</p></div>
-<div class="tw"><table class="t"><thead><tr><th>Per count (over × depth)</th><th>Real step</th></tr></thead><tbody>
-<tr><td>1 × 0</td><td>22.5"</td></tr><tr><td>1 × ½ or ½ × 1</td><td>25.2"</td></tr><tr><td>1 × 1</td><td>31.8"</td></tr><tr><td>½ × ½</td><td>15.9"</td></tr></tbody></table></div>`;}
+function learn3(){const h=H();
+  const a={x:56,y:h-4},b={x:72,y:h+4};
+  const p6a={x:40,y:h-4},p6b={x:46,y:h+4};
+  const cba={x:32,y:h},cbb={x:40,y:h-8};
+  const triFig=(s,e,show,cap,endBelow)=>fig({pts:[{...s,label:'Start',lx:-5.6,ly:-0.7},{...e,cls:'end',label:'End',...(endBelow?{ly:-2.6}:{})}],triangle:{x1:s.x,y1:s.y,x2:e.x,y2:e.y,showA:true,showB:true,showC:show}},cap);
+  return `<div class="prose">
+<h3>Now let's go diagonal</h3>
+<p>In Level 2 you learned the formula: <b>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</b>. That works great when you're moving straight side to side, because you can count the Distance right off the yard lines.</p>
+<p>But a lot of drill isn't straight. When your path goes over <i>and</i> forward or back at the same time, it's a diagonal, and you can't count a diagonal off the yard lines. So we need one extra step to find the Distance. Good news: it's math you already know.</p>
+<h3>Every diagonal is a triangle</h3>
+<p>Look at any diagonal move and you'll see a right triangle hiding in it.</p>
+<ul><li><b>A</b> is how far you go <b>over</b> (side to side).</li>
+<li><b>B</b> is how far you go <b>forward or back</b>.</li>
+<li><b>C</b> is the diagonal, <b>the path you actually march</b>.</li></ul></div>
+${triFig(a,b,false,'S1 35, 4 in front of the front hash → S1 45, 4 behind the front hash')}
+<div class="prose"><h3>Find A and B</h3>
+<p>You already have both skills.</p>
+<p><b>A</b> is your Level 2 ruler. Count the 8-to-5 steps side to side, the same way: from your dot to the line, line to line in 8s, line to your end dot.</p>
+<p><b>B</b> is your Level 1 depth reading. How many steps forward or back? Use the hash: "4 in front" to "4 behind" is 8 steps.</p>
+<p>In our example: A = 16, B = 8.</p>
+<h3>Solve for C</h3>
+<p>This is the Pythagorean theorem: <b>A² + B² = C²</b>, so <b>C = √(A² + B²)</b>.</p>
+<p>Get your phone calculator out. Seriously, everybody on the field has one.</p>
+<p>16² + 8² = 256 + 64 = 320. √320 = <b>17.9 steps</b>.</p>
+<p>That 17.9 is your Distance, in 8-to-5 steps.</p>
+<p><b>Gut check C:</b> C is always longer than the longer leg and shorter than A + B. Here that means somewhere between 16 and 24. 17.9 fits. If your C ever lands outside that range, redo the math.</p>
+<h3>Plug C into the step size formula</h3>
+<p>Now it's just Level 2.</p>
+<p><b>Step Size = Ruler (8) × Time (counts) ÷ Distance (C)</b></p>
+<p>Say that move is 16 counts. <b>Gut check first:</b> 16 counts, fewer than 17.9 steps, so it's bigger than an 8-to-5.<br>
+<b>Calculate:</b> 8 × 16 ÷ 17.9 = <b>7.2-to-5</b>. A little bigger than an 8-to-5, just like your gut said.</p>
+<p>Remember the flip: <b>bigger than 8 means a smaller step. Smaller than 8 means a bigger step.</b> 7.2 is smaller than 8, so it's a bigger step.</p>
+<h3>The whole thing in one line</h3>
+<p><b>Find A and B → solve for C → Ruler × Time ÷ C.</b></p>
+<p>That's diagonal step size. Every time.</p>
+<h3>A perfect 8-to-5 on a diagonal</h3>
+<p>Here's a fun one. Go <b>6 over and 8 back in 10 counts.</b></p>
+<p>C = √(6² + 8²) = √100 = exactly <b>10 steps</b>.<br>
+Step size = 8 × 10 ÷ 10 = <b>8-to-5</b>.</p>
+<p>A diagonal that's a perfect 8-to-5. Counts equal the steps, so it passes the gut check too. Some triangles come out clean like this (6, 8, 10 is the famous one), but most don't. That's what the calculator is for.</p></div>
+${triFig(p6a,p6b,true,'6 over, 8 back, C = 10')}
+<div class="prose"><h3>Charlie Brown</h3>
+<p>This is where it all pays off. Remember Charlie Brown?</p>
+<p><b>Main version:</b> 8 forward and 8 over in 8 counts.<br>
+C = √(8² + 8²) = √128 = <b>11.3 steps</b>.<br>
+Step size = 8 × 8 ÷ 11.3 = <b>5.7-to-5</b>. That's a big step, way bigger than an 8-to-5. If you march it with a normal 8-to-5, you'll be late to every point.</p>
+<p><b>Midpoint version:</b> 8 forward and 4 over in 8 counts.<br>
+C = √(4² + 8²) = √80 = <b>8.9 steps</b>.<br>
+Step size = 8 × 8 ÷ 8.9 = <b>7.2-to-5</b>. Still bigger than an 8-to-5, but smaller than the main version.</p></div>
+<div class="tw"><table class="t"><thead><tr><th>Version</th><th>A</th><th>B</th><th>C</th><th>Counts</th><th>Step size</th></tr></thead><tbody>
+<tr><td>Main</td><td class="c">8</td><td class="c">8</td><td class="c">11.3</td><td class="c">8</td><td class="c">5.7-to-5</td></tr>
+<tr><td>Midpoint</td><td class="c">4</td><td class="c">8</td><td class="c">8.9</td><td class="c">8</td><td class="c">7.2-to-5</td></tr>
+</tbody></table></div>
+<div class="prose"><p>Know these two before you walk into the audition.</p></div>
+${triFig(cba,cbb,true,'One Charlie Brown leg: S1 20 front hash, 8 over and 8 forward',true)}`;}
 function learn4(){const h=H();const a={x:40,y:h},b={x:56,y:h-8};const cps=[4,8,12].map(c=>({c,p:{x:a.x+c,y:a.y-c/2}}));
   return `<div class="prose"><p>A checkpoint is where you should be on a specific count. The formula:</p>
 <p><b>checkpoint = start + (count ÷ total counts) × the move</b>, done separately for lateral and depth.</p></div>
