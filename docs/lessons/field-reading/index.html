@@ -276,12 +276,14 @@ function triSVG(t,id){const g=triGeom(t);let under='',over='';
   if(g.B>0)over+=`<text class="dot-label" x="${t.x2+(g.sx<0?-1.2:1.2)}" y="${-g.m.y+0.7}" text-anchor="${g.sx<0?'end':'start'}">${t.showB?`B = ${fmt(g.B)}`:'B'}</text>`;
   const anc=g.n.x>0.3?'start':g.n.x<-0.3?'end':'middle',dy=g.n.y<-0.3?1.6:g.n.y>0.3?0:0.7;
   over+=`<text class="dot-label" x="${g.cl.x}" y="${-g.cl.y+dy}" text-anchor="${anc}">${t.showC?`C = ${fmtC(g.C)}`:'C'}</text>`;
+  if(t.noLabels)over=''; // compare: moves are named A and B, so leg labels would clash
   return {under,over};}
 let svgSeq=0;
 function fieldSVG(spec){
   const h=H();const id=spec.id||('f'+(++svgSeq));
   const all=[];(spec.pts||[]).forEach(p=>all.push(p));(spec.paths||[]).forEach(pa=>pa.pts.forEach(p=>all.push(p)));if(spec.marcher)all.push(spec.marcher);(spec.extra||[]).forEach(p=>all.push(p));(spec.rulers||[]).forEach(r=>all.push({x:r.x2+(r.x2>r.x1?12:-12),y:r.y})); // room for "= N steps"
-  if(spec.triangle)triBounds(spec.triangle).forEach(p=>all.push(p));
+  const triSpecs=[spec.triangle,...(spec.triangles||[])].filter(Boolean); // spec.triangles: extra triangles (compare)
+  triSpecs.forEach(t=>triBounds(t).forEach(p=>all.push(p)));
   if(!all.length)all.push({x:80,y:h});
   const v=computeView(all,spec.minW||40);
   const pad=1.5,band=5;const vbX=v.x0-pad,vbY=-v.y1-pad,vbW=(v.x1-v.x0)+2*pad,top=v.y1+pad;
@@ -303,13 +305,13 @@ function fieldSVG(spec){
   s+=`<line class="sideline" x1="${vbX}" y1="0" x2="${vbX+vbW}" y2="0"/>`;
   s+=`<text class="ref-label" x="${vbX+0.6}" y="${-h-1}">Front hash</text>`;
   (spec.legs||[]).forEach(l=>{s+=`<line class="leg" x1="${l.x1}" y1="${-l.y1}" x2="${l.x2}" y2="${-l.y2}"/><text class="leg-label" x="${l.tx}" y="${-l.ty}" text-anchor="${l.anchor||'middle'}">${esc(l.label)}</text>`;});
-  const tri=spec.triangle?triSVG(spec.triangle,id):null;if(tri)s+=tri.under;
+  const tris=triSpecs.map(t=>triSVG(t,id));tris.forEach(t=>s+=t.under);
   (spec.paths||[]).forEach(pa=>{const pts=pa.pts.map(p=>`${p.x},${-p.y}`).join(' ');s+=`<polyline class="path ${pa.cls||''}" points="${pts}"${pa.arrow===false?'':` marker-end="url(#${id}a)"`}/>`;});
   (spec.pts||[]).forEach(p=>{s+=`<circle class="dot ${p.cls||''}" cx="${p.x}" cy="${-p.y}" r="${p.r||0.95}"/>`;
     if(p.label){const opt=(p.cls||'').includes('opt');const lx=p.lx!==undefined?p.lx:(opt?0:1.3),ly=p.ly!==undefined?p.ly:(opt?1.6:1.2);
       s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${opt?'middle':'start'}">${esc(p.label)}</text>`;}});
   if(spec.marcher)s+=`<circle class="marcher" id="${id}m" cx="${spec.marcher.x}" cy="${-spec.marcher.y}" r="1.15"/>`;
-  if(tri)s+=tri.over;
+  tris.forEach(t=>s+=t.over);
   [spec.ruler,...(spec.rulers||[])].filter(Boolean).forEach(r=>{const segs=rulerSegments(r.x1,r.x2);const dir=r.x2>r.x1?1:-1;
     const ry=-(r.y-2.5);
     s+=`<line x1="${r.x1}" y1="${ry}" x2="${r.x2}" y2="${ry}" stroke="#fff" stroke-opacity=".85" stroke-width=".28"/>`;
@@ -665,44 +667,30 @@ function gen2(qz){
   return gen2_sizeLine();
 }
 
-/* ---------- level 3: rise over run ---------- */
+/* ---------- straight-line moves (used by level 4 checkpoints) ---------- */
 const COMBOS=[[16,8,16],[16,16,16],[8,8,8],[8,4,8],[4,8,8],[16,4,16],[8,16,16],[8,8,16],[4,4,8]];
 function randMove(){const h=H();const [L,D,C]=pick(COMBOS);const dir=pick([1,-1]);const k=rnd(3,15-Math.ceil(L/8));
   const a={x:8*k+pick([0,0,2,-2]),y:h+(dir>0?pick([-4,0]):pick([0,4]))};const b={x:a.x+L,y:a.y+dir*D};return {L,D,C,dir,a,b};}
 const moveTxt=m=>`<b>${m.L} steps toward Side 2</b> and <b>${m.D} ${m.dir>0?'back':'forward'}</b> in <b>${m.C} counts</b>`;
 const moveField=m=>({pts:[{...m.a,label:'Start'},{...m.b,cls:'end',label:'End'}],paths:[{pts:[m.a,m.b]}],legs:legsFor(m.a,m.b,m.L,m.D,m.dir)});
-const FRSET=['¼','½','1','1½','2'];
-const C3=[
- ()=>cq('You move 8 over and 8 back in 8 counts. Compared to a 6-to-5 (30"), your step is…','Bigger, about 31.8"',['Smaller, about 22.5"','Exactly the same, 30"','Smaller, about 25.2"'],'Each count is 1 over and 1 back. √(1² + 1²) = 1.41 steps × 22.5" = <b>31.8"</b>. A 45° diagonal at that rate is bigger than a 6-to-5, and it surprises people.'),
- ()=>cq('To march a diagonal cleanly, what do you track?','Two separate per-count rates: lateral and depth',['Only the end dot','Only the angle of the line','Only how many yard lines you cross'],'A diagonal is two straight-line moves at once. Know how far you go <b>over</b> each count and how far you go <b>forward or back</b> each count, and every checkpoint falls out of that.'),
- ()=>cq('Which move takes the bigger step? A: 8 over and 4 back in 8 counts. B: 4 over and 8 back in 8 counts.','Same size step, just a different angle',['A is bigger','B is bigger','Can\'t tell without the start dot'],'A is 1 over and ½ back per count. B is ½ over and 1 back. Both come out to √(1² + ½²) = 1.12 steps, about <b>25.2"</b>. Same step, different direction.'),
-];
-const P3=['lat','dep','diag','lat','diag','concept','dep','diag'];
-function gen3(qz){const t=P3[qz.i];if(t==='concept')return pickConcept(C3,qz);const m=randMove();const a=m.L/m.C,b=m.D/m.C;const field=moveField(m);
-  if(t==='lat')return Object.assign({prompt:`A move: ${moveTxt(m)}. How many steps do you travel <b>laterally</b> on each count?`,field,
-    explain:`Lateral only: ${m.L} steps ÷ ${m.C} counts = <b>${fmtFrac(a)}</b> per count. The depth is a separate line; ignore it for this part.`},mc(fmtFrac(a),[fmtFrac(b),...shuffle(FRSET)]));
-  if(t==='dep')return Object.assign({prompt:`A move: ${moveTxt(m)}. How many steps do you travel <b>${m.dir>0?'back':'forward'}</b> on each count?`,field,
-    explain:`Depth only: ${m.D} steps ÷ ${m.C} counts = <b>${fmtFrac(b)}</b> per count.`},mc(fmtFrac(b),[fmtFrac(a),...shuffle(FRSET)]));
-  const ans=22.5*Math.hypot(a,b);
-  return Object.assign({prompt:`A move: ${moveTxt(m)}. How long is each actual step along the diagonal?`,field,
-    explain:`Per count you go ${fmtFrac(a)} over and ${fmtFrac(b)} ${m.dir>0?'back':'forward'}. Your real step is the long side of that triangle: √(${fmt(a)}² + ${fmt(b)}²) = ${fmt(Math.hypot(a,b))} steps × 22.5" = <b>${fmtIn(ans)}</b>.`},
-    mc(fmtIn(ans),[fmtIn(22.5*(a+b)),fmtIn(22.5*Math.max(a,b)),'22.5"','30"',fmtIn(22.5*Math.min(a,b))]));}
 
 /* ---------- level 3: diagonal step size ---------- */
 // Shared gen3 helpers
 const CLEAN_TRI=[[6,8],[8,6],[12,16],[16,12],[9,12],[12,9],[5,12],[12,5],[8,15],[15,8]];
 const DIAG_COUNTS=[4,6,8,10,12,16,24];
 function randDiag(o){
-  // Returns {x1,y1,x2,y2,A,B,C,counts,ss}; o.clean = whole-number C, o.real = C needs rounding
+  // Returns {x1,y1,x2,y2,A,B,C,counts,ss}; o.clean = whole-number C, o.real = C needs rounding,
+  // o.AB = fixed [A,B], o.counts = fixed counts. Both dots stay within 12 steps of the front hash.
   o=o||{};const h=H();
   for(let g=0;g<500;g++){
     let A,B;
-    if(o.clean)[A,B]=pick(CLEAN_TRI);
-    else{A=rnd(2,24);B=rnd(2,16);if(o.real&&Number.isInteger(Math.hypot(A,B)))continue;}
+    if(o.AB)[A,B]=o.AB;
+    else if(o.clean)[A,B]=pick(CLEAN_TRI);
+    else{A=rnd(2,24);B=rnd(2,16);if(o.real&&Math.round(Math.hypot(A,B)*10)%10===0)continue;} // real: C shows a decimal
     const C=Math.round(Math.hypot(A,B)*10)/10;
     const x1=rnd(4,156),x2=x1+pick([-1,1])*A;if(x2<4||x2>156)continue;
-    const y1=h+rnd(-8,8),y2=y1+pick([-1,1])*B;if(y2<2||y2>DEPTH-2)continue;
-    const counts=pick(DIAG_COUNTS),ss=8*counts/C;if(ss<4||ss>16)continue;
+    const y1=h+rnd(-8,8),y2=y1+pick([-1,1])*B;if(Math.abs(y2-h)>12)continue;
+    const counts=o.counts||pick(DIAG_COUNTS),ss=8*counts/C;if(ss<4||ss>16)continue;
     return {x1,y1,x2,y2,A,B,C,counts,ss};
   }
   return {x1:56,y1:h-4,x2:72,y2:h+4,A:16,B:8,C:17.9,counts:16,ss:8*16/17.9};
@@ -781,6 +769,97 @@ function gen3_cReal(){
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtC(m.C),cWrongs(m),{kind:'dec'}),{explain:`${xAB(m)}<br>${xC(m)}`,formula:'c'});
 }
+// Shared step-size helpers (types 6–10)
+const GUT_OPTS=['Bigger than an 8-to-5','Smaller than an 8-to-5','Exactly an 8-to-5',"Can't tell without the math"];
+const gutAns=(st,co)=>st===co?GUT_OPTS[2]:co>st?GUT_OPTS[1]:GUT_OPTS[0];
+const xGut=m=>m.counts===m.C?`<b>Gut check:</b> ${m.counts} counts = ${fmtC(m.C)} steps, exactly an 8-to-5.`
+  :`<b>Gut check:</b> ${m.counts} counts, ${m.counts>m.C?'more':'fewer'} than ${fmtC(m.C)} steps, so ${m.counts>m.C?'smaller':'bigger'} than an 8-to-5.`;
+const xSS=m=>{const r=Math.round(m.ss*10)/10;
+  return `<b>Step size:</b> Ruler × Time ÷ C = 8 × ${m.counts} ÷ ${fmtC(m.C)} = <b>${fmtSS(m.ss)}</b>, ${ssLean(m.ss)}.${r<8?' (Smaller than 8 means a bigger step.)':r>8?' (Bigger than 8 means a smaller step.)':''}`;};
+function ssWrongs(m){
+  // [value, kind line] pairs for real step size mistakes
+  const c=m.counts;return [
+    [fmtSS(8*c/m.A),'Looks like A got used as the Distance, like a straight side-to-side move. On a diagonal, the Distance is C.'],
+    [fmtSS(8*c/(m.A+m.B)),"Looks like A + B got used as the Distance. You march the diagonal, so the Distance is C, and C is shorter than A + B."],
+    [fmtSS(8*m.C/c),"The formula got flipped. It's Ruler × Time ÷ Distance: 8 × counts ÷ C."],
+    [fmtSS(c/m.C),"Don't forget the 8! Ruler × Time ÷ Distance starts with the 8-step ruler."]];
+}
+function gen3_gut(){
+  // ~20% exactly an 8-to-5 (6-8-10 in 10 counts); ~40% counts between A and C, where comparing to A gives the wrong call
+  let m;const r=Math.random();
+  if(r<0.2)m=randDiag({AB:pick([[6,8],[8,6]]),counts:10});
+  else if(r<0.6){for(let g=0;g<300;g++){m=randDiag();if(m.A<m.counts&&m.counts<m.C)break;}}
+  else m=randDiag();
+  const ans=gutAns(m.C,m.counts),aAns=gutAns(m.A,m.counts);
+  const pairs=[];
+  if(aAns!==ans)pairs.push([aAns,'Looks like the counts got compared to A. On a diagonal, compare the counts to C, the path you actually march.']);
+  pairs.push([GUT_OPTS[3],'You can tell! Find C, then compare: more counts than steps means smaller, fewer counts means bigger.']);
+  pairs.push([GUT_OPTS[2],'Exactly an 8-to-5 only happens when the counts match C.']);
+  GUT_OPTS.slice(0,2).forEach(o=>pairs.push([o,'Watch the flip: more counts than steps means a smaller step, fewer counts means a bigger step.']));
+  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. <b>${m.counts} counts</b>. Without working out the step size: is it bigger, smaller, or exactly an 8-to-5?`,
+    field:diagField(m,{}),triAfter:{showC:true}},
+    mcWhy(ans,pairs),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}`,formula:'gut'});
+}
+function gen3_ssClean(){
+  const m=randDiag({clean:true});
+  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}, in <b>${m.counts} counts</b>. What step size?`,
+    field:diagField(m,{}),triAfter:{showC:true}},
+    mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
+}
+function gen3_ssFull(){
+  const m=randDiag({real:true});
+  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. <b>${m.counts} counts</b>. Find A, B, and C, then the step size.`,
+    field:diagField(m,{showA:false,showB:false}),triAfter:{showA:true,showB:true,showC:true}},
+    mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
+}
+function gen3_charlieBrown(){
+  // One leg from the S1 20 front hash; usually 8 counts, sometimes 6
+  const h=H();const v=pick([V_MAIN,V_MID]);const counts=Math.random()<0.3?6:8;
+  const A=v.over,B=v.fwd,C=Math.round(Math.hypot(A,B)*10)/10;
+  const m={x1:32,y1:h,x2:32+A,y2:h-B,A,B,C,counts,ss:8*counts/C};
+  return Object.assign({prompt:`Charlie Brown, ${v.label}: from the S1 20 front hash, <b>${B} forward and ${A} over</b> in <b>${counts} counts</b>. What step size?`,
+    field:diagField(m,{}),triAfter:{showC:true}},
+    mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
+}
+function gen3_compare(){
+  // ~50%: A goes straight over, B covers the same A plus some B in the same counts. Otherwise two different diagonals.
+  const h=H();const CMP=['A has the bigger step','B has the bigger step','Same step size',"Can't tell without the math"];
+  const straight=Math.random()<0.5;let mA,mB;
+  for(let g=0;g<300;g++){
+    mB=randDiag();
+    if(straight){const ss=8*mB.counts/mB.A;if(ss<4||ss>16||fmtSS(ss)===fmtSS(mB.ss))continue;mA={A:mB.A,B:0,C:mB.A,counts:mB.counts,ss};break;}
+    mA=randDiag();if(Math.abs(Math.round(mA.ss*10)-Math.round(mB.ss*10))>=3)break;
+  }
+  const ax=rnd(12,32),ay=straight?h+rnd(-4,4):mA.y1;Object.assign(mA,{x1:ax,x2:ax+mA.A,y1:ay,y2:straight?ay:mA.y2});
+  const bx=mA.x2+rnd(8,12);Object.assign(mB,{x1:bx,x2:bx+mB.A});
+  const ans=mA.ss<mB.ss?CMP[0]:CMP[1];
+  const tri=m=>({x1:m.x1,y1:m.y1,x2:m.x2,y2:m.y2,showA:true,showB:true,showC:false,noLabels:true});
+  const field={pts:[{x:mA.x1,y:mA.y1,label:'A'},{x:mA.x2,y:mA.y2,cls:'end',label:'A'},{x:mB.x1,y:mB.y1,label:'B'},{x:mB.x2,y:mB.y2,cls:'end',label:'B'}],
+    triangles:[...(straight?[]:[tri(mA)]),tri(mB)],minW:48};
+  if(straight){field.paths=[{pts:[{x:mA.x1,y:mA.y1},{x:mA.x2,y:mA.y2}]}];field.rulers=[{x1:mA.x1,x2:mA.x2,y:mA.y1}];}
+  const mv=m=>`<b>${m.A} over and ${m.B} ${diagDir(m)}</b> in <b>${m.counts} counts</b>`;
+  const xMove=(n,m)=>`<b>Move ${n}:</b> C = √(${m.A}² + ${m.B}²) = ${fmtC(m.C)} steps. 8 × ${m.counts} ÷ ${fmtC(m.C)} = <b>${fmtSS(m.ss)}</b>.`;
+  let prompt,explain;const pairs=[];
+  if(straight){
+    prompt=`Move A: <b>${mA.A} over</b>, straight, in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b> plus <b>${mB.B} ${diagDir(mB)}</b>, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`;
+    explain=`<b>Move A:</b> straight over, so the Distance is just ${mA.A}. 8 × ${mA.counts} ÷ ${mA.A} = <b>${fmtSS(mA.ss)}</b>.<br>${xMove('B',mB)}<br>Same counts, longer path, so B needs the bigger step. Smaller number = bigger step: <b>${ans}</b>.`;
+    pairs.push([CMP[0],'Move B covers more ground in the same counts, so it needs the bigger step. The diagonal is always longer than the straight leg.'],
+      [CMP[2],"Same counts doesn't mean same step. B's diagonal is longer than A's straight line, so B's step is bigger."],
+      [CMP[3],'You can tell without any math! Same counts, longer path: B takes the bigger step.']);
+  } else {
+    prompt=`Move A: ${mv(mA)}. Move B: ${mv(mB)}. Which move takes the bigger step?`;
+    explain=`${xMove('A',mA)}<br>${xMove('B',mB)}<br>Smaller number = bigger step: <b>${ans}</b>.`;
+    const wrongMove=ans===CMP[0]?CMP[1]:CMP[0];const byA=8*mA.counts/mA.A<8*mB.counts/mB.A?CMP[0]:CMP[1];
+    pairs.push([wrongMove,byA===wrongMove?'Looks like only the side-to-side legs got compared. Use C, the full diagonal, as each Distance.':'Watch the flip: the smaller step-size number is the bigger step.'],
+      [CMP[2],`Work them both out and they're not the same:${fmtSS(mA.ss)} vs ${fmtSS(mB.ss)}.`],
+      [CMP[3],'You can tell! Work out each step size, then compare. Smaller number = bigger step.']);
+  }
+  return Object.assign({prompt,field},mcWhy(ans,pairs),{explain,formula:'gut'});
+}
+const P3=['findA','findB','cRange','cClean','cReal','gut','ssClean','ssFull','charlieBrown','compare'];
+const GEN3={findA:gen3_findA,findB:gen3_findB,cRange:gen3_cRange,cClean:gen3_cClean,cReal:gen3_cReal,
+  gut:gen3_gut,ssClean:gen3_ssClean,ssFull:gen3_ssFull,charlieBrown:gen3_charlieBrown,compare:gen3_compare};
+function gen3(qz){return (GEN3[P3[qz.i]]||gen3_ssFull)();}
 
 /* ---------- level 4: checkpoints ---------- */
 function cpMove(){for(let g=0;g<200;g++){const m=randMove();const X=pick(m.C===8?[2,4,6]:[4,8,12,2,6,10,14]);if((X*m.L)%m.C||(X*m.D)%m.C)continue;
