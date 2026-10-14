@@ -216,7 +216,7 @@ const fmtSS=n=>{const s=Math.round(n*10)/10;return (s===Math.floor(s)?String(Mat
 const fmtSPC=v=>{let s=String(Math.round(v*100)/100);if(s.includes('.'))s=s.replace(/\.?0+$/,'');return s;};
 const CLEAN_SS=[6,8,12,16];
 const ssNearest=n=>CLEAN_SS.reduce((a,b)=>Math.abs(b-n)<Math.abs(a-n)?b:a);
-const ssLean=n=>{const near=ssNearest(n);if(Math.abs(n-near)<=0.2)return `about a ${near}-to-5`;return `a little ${n>near?'smaller':'bigger'} than a ${near}-to-5`;};
+const ssLean=n=>{const near=ssNearest(n),art=near===8?'an':'a';if(Math.abs(n-near)<=0.2)return `about ${art} ${near}-to-5`;return `a little ${n>near?'smaller':'bigger'} than ${art} ${near}-to-5`;};
 const gutSentence=(st,co)=>st===co?'Same counts as steps: exactly an 8-to-5.':co>st?'More counts than steps, so smaller than an 8-to-5.':'Fewer counts than steps, so bigger than an 8-to-5.';
 const gcd=(a,b)=>b?gcd(b,a%b):a;
 const fracStr=(a,b)=>{const g=gcd(a,b);return `${a/g}/${b/g}`;};
@@ -997,7 +997,7 @@ ${ss<4?'<p class="note">That\'s a huge step. Most drill won\'t ask for this.</p>
 </div>
 <div class="custom"><label>Counts <select data-calc="counts">${countOpts}</select></label></div>
 <figure class="fig">${fieldSVG(fspec)}</figure>
-${totalSteps>0?`<p><b>${rulerSumLine(x1,x2)}</b></p>`:''}
+${totalSteps>0?`<p><b>${rulerSegments(x1,x2).length>1?rulerSumLine(x1,x2):steps(totalSteps)}</b></p>`:''}
 ${results?`<div class="fb ok"><div class="prose">${results}</div></div>`:''}
 ${!calc.shown&&totalSteps>0?`<div class="btn-row"><button class="btn primary" data-act="calcshow">Show me</button></div>`:''}`;
 }
