@@ -168,6 +168,8 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .foot{max-width:880px;margin:0 auto;padding:18px 16px 30px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;font-size:.9rem;color:var(--muted)}
 .foot label{display:flex;align-items:center;gap:6px}
 .foot select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 6px}
+.coach-note{max-width:880px;margin:10px auto 0;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--signal);border-radius:8px}
+.coach-note[hidden]{display:none}
 @media (max-width:520px){.tempo{margin-left:0}.opts.pick .opt{font-size:1.3rem}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
@@ -177,11 +179,10 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
   <div class="brand"><button class="brand-title" data-act="home">Field Reading &amp; Step Size</button><span class="who" id="who"></span></div>
   <nav class="track" id="track" aria-label="Levels"></nav>
 </div></header>
+<div class="coach-note" id="coachNote" role="status" hidden><span>Coach mode: all levels unlocked</span><button class="linkbtn" data-act="coachx" aria-label="Dismiss">✕</button></div>
 <main id="app"></main>
 <footer class="foot">
-  <label><input type="checkbox" id="gridT"> Show step grid</label>
   <label>Field <select id="hashSel"><option value="college">College hashes (32 steps)</option><option value="hs">High school hashes (28 steps)</option></select></label>
-  <button class="linkbtn" data-act="coach">Coach: unlock all levels</button>
   <button class="linkbtn" data-act="reset" id="resetBtn">Reset progress</button>
 </footer>
 <script>
@@ -286,7 +287,7 @@ function fieldSVG(spec){
   if(!all.length)all.push({x:80,y:h});
   const v=computeView(all,spec.minW||40);
   const pad=1.5,band=5;const vbX=v.x0-pad,vbY=-v.y1-pad,vbW=(v.x1-v.x0)+2*pad,top=v.y1+pad;
-  const grid=spec.grid===undefined?S.grid:spec.grid;
+  const grid=spec.grid===undefined?true:spec.grid;
   let s=`<svg class="field" id="${id}" viewBox="${vbX} ${vbY} ${vbW} ${top+band}" role="img" aria-label="${esc(spec.aria||'Top-down view of the field')}" preserveAspectRatio="xMidYMid meet">`;
   s+=`<defs><marker id="${id}a" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F2C230"/></marker></defs>`;
   s+=`<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${top}" fill="var(--turf)"/>`;
@@ -962,7 +963,7 @@ function learn1(){const h=H();const p={x:8*6+3,y:h+4};return `<div class="prose"
 <ul><li><b>In front of</b> the hash means toward the audience. <b>Behind</b> means toward the back sideline.</li>
 <li>The small hash ticks are 1 yard apart (1.6 steps). Use them to estimate between yard lines.</li></ul></div>
 ${fig({pts:[{...p,r:1.1}],minW:40},`This dot: <b>${posDesc(p)}</b>.`)}
-<p class="note">A real field has no step grid. The grid is here to train your eye; turn it off at the bottom of the page once this feels easy.</p>`;}
+<p class="note">A real field has no step grid. The grid is here to train your eye; on the real field you'll count from the yard lines and hashes instead.</p>`;}
 function learn2(){const h=H();
   const f1a={x:48,y:h},f1b={x:64,y:h};
   const f2a={x:46,y:h},f2b={x:64,y:h};
@@ -1264,7 +1265,7 @@ function render(){
   playerStop();cancelAnimationFrame(hero);
   document.getElementById('track').innerHTML=trackHTML();
   document.getElementById('who').textContent=S.name?S.name:'';
-  document.getElementById('gridT').checked=!!S.grid;document.getElementById('hashSel').value=S.hash;
+  document.getElementById('hashSel').value=S.hash;
   const app=document.getElementById('app');
   app.innerHTML=view.name==='intro'?introHTML():view.name==='results'?resultsHTML():levelHTML();
   if(view.name==='intro')heroAnim();
@@ -1293,12 +1294,11 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
   if(a==='preset'){playerStop();player.t=0;playerDraw();return;}
   if(a==='calcshow'){calc.shown=true;calcRefresh();return;}
   if(a==='calc3show'){calc3.shown=true;calc3Refresh();return;}
-  if(a==='coach'){S.unlocked=ACTIVE_LEVELS;save();render();return;}
+  if(a==='coachx'){document.getElementById('coachNote').hidden=true;return;}
   if(a==='reset'){if(el.dataset.armed){S.best={};S.unlocked=1;quiz=null;save();el.dataset.armed='';el.textContent='Reset progress';return go({name:'intro'});}
     el.dataset.armed='1';el.textContent='Click again to erase all scores';setTimeout(()=>{el.dataset.armed='';el.textContent='Reset progress';},4000);return;}
 });
 document.addEventListener('change',e=>{const t=e.target;
-  if(t.id==='gridT'){S.grid=t.checked;save();if(view.name==='level'&&view.n===5&&view.tab==='learn'){render();}else render();return;}
   if(t.id==='hashSel'){S.hash=t.value;save();if(quiz&&!quiz.done)quiz=null;render();return;}
   if(t.dataset&&t.dataset.pc){player.v[t.dataset.pc]=+t.value;player.t=0;playerRefresh();}
   if(t.dataset&&t.dataset.calc){calc[t.dataset.calc]=+t.value;calc.shown=false;calcRefresh();}
@@ -1307,7 +1307,14 @@ document.addEventListener('change',e=>{const t=e.target;
 document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nameIn'){const b=document.querySelector('[data-act="start"]');if(b)b.click();}});
 
-load();render();
+const COACH_WORD='YOURWORD'; // ?coach=<this> unlocks all levels
+function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
+  if(!u.searchParams.has('coach'))return;
+  const ok=u.searchParams.get('coach')===COACH_WORD;
+  if(!ok)return;
+  S.unlocked=ACTIVE_LEVELS;save();document.getElementById('coachNote').hidden=false;
+  u.searchParams.delete('coach');history.replaceState(null,'',u.pathname+u.search+u.hash);}
+load();coachUnlock();render();
 window.__CB={GEN,S,posDesc,cbPos};
 </script>
 </body>
