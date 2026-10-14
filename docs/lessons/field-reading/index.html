@@ -806,19 +806,16 @@ function gen3_ssClean(){
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
+function gen3_ssReal(){
+  const m=randDiag({real:true});
+  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}, in <b>${m.counts} counts</b>. What step size?`,
+    field:diagField(m,{}),triAfter:{showC:true}},
+    mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
+}
 function gen3_ssFull(){
   const m=randDiag({real:true});
   return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. <b>${m.counts} counts</b>. Find A, B, and C, then the step size.`,
     field:diagField(m,{showA:false,showB:false}),triAfter:{showA:true,showB:true,showC:true}},
-    mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
-}
-function gen3_charlieBrown(){
-  // One leg from the S1 20 front hash; usually 8 counts, sometimes 6
-  const h=H();const v=pick([V_MAIN,V_MID]);const counts=Math.random()<0.3?6:8;
-  const A=v.over,B=v.fwd,C=Math.round(Math.hypot(A,B)*10)/10;
-  const m={x1:32,y1:h,x2:32+A,y2:h-B,A,B,C,counts,ss:8*counts/C};
-  return Object.assign({prompt:`Charlie Brown, ${v.label}: from the S1 20 front hash, <b>${B} forward and ${A} over</b> in <b>${counts} counts</b>. What step size?`,
-    field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
 function gen3_compare(){
@@ -861,9 +858,9 @@ function gen3_compare(){
   }
   return Object.assign({prompt,field},mcWhy(ans,pairs),{explain,formula:'gut'});
 }
-const P3=['findA','findB','cRange','cClean','cReal','gut','ssClean','ssFull','charlieBrown','compare'];
+const P3=['findA','findB','cRange','cClean','cReal','gut','ssClean','ssReal','ssFull','compare'];
 const GEN3={findA:gen3_findA,findB:gen3_findB,cRange:gen3_cRange,cClean:gen3_cClean,cReal:gen3_cReal,
-  gut:gen3_gut,ssClean:gen3_ssClean,ssFull:gen3_ssFull,charlieBrown:gen3_charlieBrown,compare:gen3_compare};
+  gut:gen3_gut,ssClean:gen3_ssClean,ssReal:gen3_ssReal,ssFull:gen3_ssFull,compare:gen3_compare};
 function gen3(qz){return (GEN3[P3[qz.i]]||gen3_ssFull)();}
 
 /* ---------- level 4: checkpoints ---------- */
@@ -1031,8 +1028,7 @@ ${fig({pts:[{...f5a,label:'Start'},{...f5b,cls:'end',label:'End'}],paths:[{pts:[
 function learn3(){const h=H();
   const a={x:56,y:h-4},b={x:72,y:h+4};
   const p6a={x:40,y:h-4},p6b={x:46,y:h+4};
-  const cba={x:32,y:h},cbb={x:40,y:h-8};
-  const triFig=(s,e,show,cap,endBelow)=>fig({pts:[{...s,label:'Start',lx:-5.6,ly:-0.7},{...e,cls:'end',label:'End',...(endBelow?{ly:-2.6}:{})}],triangle:{x1:s.x,y1:s.y,x2:e.x,y2:e.y,showA:true,showB:true,showC:show}},cap);
+  const triFig=(s,e,show,cap)=>fig({pts:[{...s,label:'Start',lx:-5.6,ly:-0.7},{...e,cls:'end',label:'End'}],triangle:{x1:s.x,y1:s.y,x2:e.x,y2:e.y,showA:true,showB:true,showC:show}},cap);
   return `<div class="prose">
 <h3>Now let's go diagonal</h3>
 <p>In Level 2 you learned the formula: <b>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</b>. That works great when you're moving straight side to side, because you can count the Distance right off the yard lines.</p>
@@ -1069,20 +1065,6 @@ ${triFig(a,b,false,'S1 35, 4 in front of the front hash → S1 45, 4 behind the 
 Step size = 8 × 10 ÷ 10 = <b>8-to-5</b>.</p>
 <p>A diagonal that's a perfect 8-to-5. Counts equal the steps, so it passes the gut check too. Some triangles come out clean like this (6, 8, 10 is the famous one), but most don't. That's what the calculator is for.</p></div>
 ${triFig(p6a,p6b,true,'6 over, 8 back, C = 10')}
-<div class="prose"><h3>Charlie Brown</h3>
-<p>This is where it all pays off. Remember Charlie Brown?</p>
-<p><b>Main version:</b> 8 forward and 8 over in 8 counts.<br>
-C = √(8² + 8²) = √128 = <b>11.3 steps</b>.<br>
-Step size = 8 × 8 ÷ 11.3 = <b>5.7-to-5</b>. That's a big step, way bigger than an 8-to-5. If you march it with a normal 8-to-5, you'll be late to every point.</p>
-<p><b>Midpoint version:</b> 8 forward and 4 over in 8 counts.<br>
-C = √(4² + 8²) = √80 = <b>8.9 steps</b>.<br>
-Step size = 8 × 8 ÷ 8.9 = <b>7.2-to-5</b>. Still bigger than an 8-to-5, but smaller than the main version.</p></div>
-<div class="tw"><table class="t"><thead><tr><th>Version</th><th>A</th><th>B</th><th>C</th><th>Counts</th><th>Step size</th></tr></thead><tbody>
-<tr><td>Main</td><td class="c">8</td><td class="c">8</td><td class="c">11.3</td><td class="c">8</td><td class="c">5.7-to-5</td></tr>
-<tr><td>Midpoint</td><td class="c">4</td><td class="c">8</td><td class="c">8.9</td><td class="c">8</td><td class="c">7.2-to-5</td></tr>
-</tbody></table></div>
-<div class="prose"><p>Know these two before you walk into the audition.</p></div>
-${triFig(cba,cbb,true,'One Charlie Brown leg: S1 20 front hash, 8 over and 8 forward',true)}
 <div class="prose"><h3>Try it yourself</h3>
 <p>Pick a start, an end, and your counts. Work it out on your phone first, then hit "Show me."</p></div>
 <div class="player" id="calc3">${calc3Inner()}</div>`;}
