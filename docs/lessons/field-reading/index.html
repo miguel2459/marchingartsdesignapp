@@ -12,6 +12,7 @@
   --paper:#EEF2F5; --surface:#FFFFFF; --ink:#132139; --muted:#566275; --line:#D2D9E1;
   --turf:#2D6B40; --turf-2:#29633B; --apron:#1D3828; --signal:#F2C230;
   --good:#1D7448; --bad:#B3372B; --good-bg:#E2F2E9; --bad-bg:#F8E5E2; --focus:#2F6FDB;
+  --start-ink:#1A73B0; --end-ink:#7A3FC4; /* field's #6EC8FF / #C77DFF, deepened for text on light paper */
   --display:'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
   --body:'Atkinson Hyperlegible', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   box-sizing:border-box;
@@ -22,11 +23,13 @@
   :root:not([data-theme="light"]){
     --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
     --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+    --start-ink:#6EC8FF; --end-ink:#C77DFF;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
   --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+  --start-ink:#6EC8FF; --end-ink:#C77DFF;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 90px);-webkit-text-size-adjust:100%}
@@ -111,21 +114,34 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .field .path.ghost{stroke-opacity:.55;stroke-dasharray:1 .7}
 .field .leg{stroke:#fff;stroke-width:.25;stroke-dasharray:.8 .5}
 .field .leg-label{fill:#fff;font-family:var(--body);font-weight:700;font-size:1.6px;paint-order:stroke;stroke:#14301F;stroke-width:.4}
-.field .dot{fill:#fff;stroke:#132139;stroke-width:.3}
-.field .dot.end{stroke:var(--signal);stroke-width:.45}
-.field .dot.cp,.field .dot.reveal{fill:var(--signal);stroke:#132139}
-.field .dot.opt.right{fill:#62D99A}
-.field .dot.opt.wrong{fill:#F0796B}
-.field .dot.opt.dim{opacity:.45}
+.field .dot{--dc:#6EC8FF}
+.field .dot.end{--dc:#C77DFF}
+.field .dot.opt{--dc:#fff}
+.field .dot.cp,.field .dot.reveal{--dc:var(--signal)}
+.field .dot.opt.right{--dc:#62D99A}
+.field .dot.opt.dim{opacity:.4}
+.field .dot .xo{fill:none;stroke:#0B1526;stroke-width:.46;stroke-linecap:round}
+.field .dot .xc{fill:none;stroke:var(--dc);stroke-width:.22;stroke-linecap:round}
+.field .dot.start .dot-label,.field .dot.end .dot-label,.field .dot.opt .dot-label{fill:var(--dc)}
 .field .dot-label{fill:#fff;font-family:var(--display);font-weight:700;font-size:2px;paint-order:stroke;stroke:#132139;stroke-width:.4}
 .field .dot-label.opt{font-size:2.4px}
-.field .marcher{fill:var(--signal);stroke:#132139;stroke-width:.35}
+.field .marcher .mo{fill:none;stroke:#0B1526;stroke-width:.4}
+.field .marcher .mr{fill:none;stroke:var(--signal);stroke-width:.2}
+.field .marcher .mc{fill:var(--signal);stroke:#0B1526;stroke-width:.08}
+.field .dot.opt.wrong{--dc:#FF3B3B}
 
 /* practice */
 .qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:.95rem;margin-bottom:8px}
 .qbar{height:4px;background:var(--line);border-radius:2px;margin-bottom:16px;overflow:hidden}
 .qbar span{display:block;height:100%;background:var(--turf)}
 .prompt{font-size:1.15rem;max-width:62ch;margin:0 0 6px}
+.givens{list-style:disc;margin:0 0 10px;padding-left:1.25em;max-width:62ch;font-size:1.05rem;line-height:1.45}
+.givens li{margin:2px 0;overflow-wrap:anywhere}
+.givens li::marker{color:var(--muted)}
+.givens .gl{font-weight:700}
+.givens .gl.start{color:var(--start-ink)}
+.givens .gl.end{color:var(--end-ink)}
+.prompt.ask{font-weight:700;border-left:3px solid var(--signal);padding:2px 0 2px 10px}
 .fcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:10px 0;max-width:620px;font-size:.95rem}
 .fcard p{margin:2px 0;padding:2px 8px;border-left:3px solid transparent}
 .fcard.hl p{color:var(--muted)}
@@ -168,6 +184,8 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .foot{max-width:880px;margin:0 auto;padding:18px 16px 30px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;font-size:.9rem;color:var(--muted)}
 .foot label{display:flex;align-items:center;gap:6px}
 .foot select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 6px}
+.coach-note{max-width:880px;margin:10px auto 0;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--signal);border-radius:8px}
+.coach-note[hidden]{display:none}
 @media (max-width:520px){.tempo{margin-left:0}.opts.pick .opt{font-size:1.3rem}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
@@ -177,11 +195,10 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
   <div class="brand"><button class="brand-title" data-act="home">Field Reading &amp; Step Size</button><span class="who" id="who"></span></div>
   <nav class="track" id="track" aria-label="Levels"></nav>
 </div></header>
+<div class="coach-note" id="coachNote" role="status" hidden><span>Coach mode: all levels unlocked</span><button class="linkbtn" data-act="coachx" aria-label="Dismiss">✕</button></div>
 <main id="app"></main>
 <footer class="foot">
-  <label><input type="checkbox" id="gridT"> Show step grid</label>
   <label>Field <select id="hashSel"><option value="college">College hashes (32 steps)</option><option value="hs">High school hashes (28 steps)</option></select></label>
-  <button class="linkbtn" data-act="coach">Coach: unlock all levels</button>
   <button class="linkbtn" data-act="reset" id="resetBtn">Reset progress</button>
 </footer>
 <script>
@@ -270,13 +287,46 @@ function triBounds(t){const g=triGeom(t);const r=[{x:t.x1,y:t.y1},{x:t.x2,y:t.y2
 function triSVG(t,id){const g=triGeom(t);let under='',over='';
   if(g.A>0)under+=`<line class="leg" x1="${t.x1}" y1="${-t.y1}" x2="${g.cn.x}" y2="${-g.cn.y}"/>`;
   if(g.B>0)under+=`<line class="leg" x1="${g.cn.x}" y1="${-g.cn.y}" x2="${t.x2}" y2="${-t.y2}"/>`;
-  under+=`<polyline class="path" points="${t.x1},${-t.y1} ${t.x2},${-t.y2}" marker-end="url(#${id}a)"/>`;
+  under+=gradPath([{x:t.x1,y:t.y1},{x:t.x2,y:t.y2}],id+'g','');
   if(g.A>0)over+=`<text class="dot-label" x="${g.m.x}" y="${g.aBelow?-t.y1+2.4:-t.y1-0.9}" text-anchor="middle">${t.showA?`A = ${fmt(g.A)}`:'A'}</text>`;
   if(g.B>0)over+=`<text class="dot-label" x="${t.x2+(g.sx<0?-1.2:1.2)}" y="${-g.m.y+0.7}" text-anchor="${g.sx<0?'end':'start'}">${t.showB?`B = ${fmt(g.B)}`:'B'}</text>`;
   const anc=g.n.x>0.3?'start':g.n.x<-0.3?'end':'middle',dy=g.n.y<-0.3?1.6:g.n.y>0.3?0:0.7;
   over+=`<text class="dot-label" x="${g.cl.x}" y="${-g.cl.y+dy}" text-anchor="${anc}">${t.showC?`C = ${fmtC(g.C)}`:'C'}</text>`;
   if(t.noLabels)over=''; // compare: moves are named A and B, so leg labels would clash
   return {under,over};}
+// Start → end path, stroked with a blue→purple gradient laid along the actual direction of travel.
+function gradPath(pts,gid,cls){const a=pts[0],b=pts[pts.length-1];
+  return `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${a.x}" y1="${-a.y}" x2="${b.x}" y2="${-b.y}"><stop offset="0" stop-color="#6EC8FF"/><stop offset="1" stop-color="#C77DFF"/></linearGradient>`+
+    `<polyline class="path ${cls||''}" points="${pts.map(p=>`${p.x},${-p.y}`).join(' ')}" style="stroke:url(#${gid})"/>`;}
+// Dot = thin X centered on its coordinate (arms 0.6 steps), dark outline underneath.
+function xDot(p){const d=0.6/Math.SQRT2,x=p.x,y=-p.y;const cls=p.cls||'';
+  const kind=/\b(end|opt|cp|reveal)\b/.test(cls)?'':' start';
+  const xp=`M${x-d},${y-d}L${x+d},${y+d}M${x-d},${y+d}L${x+d},${y-d}`;
+  let s=`<g class="dot ${cls}${kind}"><path class="xo" d="${xp}"/><path class="xc" d="${xp}"/>`;
+  if(p.label){const opt=cls.includes('opt');const lx=p.lx!==undefined?p.lx:(opt?0:1.3),ly=p.ly!==undefined?p.ly:(opt?1.6:1.2);
+    s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${p.anchor||(opt?'middle':'start')}">${esc(p.label)}</text>`;}
+  return s+'</g>';}
+// Pick-the-dot: move Start/End labels off answer dots and their letters (field coords, y up).
+// v = visible area in field coords {x0,x1,y0,y1}; anything outside it counts as blocked.
+function placeLabels(pts,v){
+  const isOpt=p=>(p.cls||'').includes('opt');
+  if(!pts.some(isOpt))return;
+  const ov=(a,b)=>Math.max(0,Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0))*Math.max(0,Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0));
+  const area=b=>(b.x1-b.x0)*(b.y1-b.y0),outside=b=>area(b)-ov(b,v);
+  const pad=0.25,obs=pts.map(p=>({x0:p.x-0.8,x1:p.x+0.8,y0:p.y-0.8,y1:p.y+0.8,own:p})); // every X
+  const place=(p,C,w,hi,fs)=>{ // hi = text height above baseline, fs = font-size scale for descent
+    const box=([lx,ly,a])=>{const x0=a==='start'?p.x+lx:a==='end'?p.x+lx-w:p.x+lx-w/2;return {x0:x0-pad,x1:x0+w+pad,y0:p.y+ly-0.4*fs-pad,y1:p.y+ly+hi+pad};};
+    let best=C[0],bestA=Infinity;
+    for(const c of C){const b=box(c);const a=obs.reduce((s,o)=>s+(o.own===p?0:ov(b,o)),0)+3*outside(b);if(a<bestA){best=c;bestA=a;}if(a===0)break;}
+    [p.lx,p.ly,p.anchor]=best;obs.push(box(best));};
+  // Answer letters first (default above the X), then Start/End labels around everything.
+  const CL=[[0,1.6,'middle'],[0,-3.4,'middle'],[1.4,-0.9,'start'],[-1.4,-0.9,'end'],[2.4,-0.9,'start'],[-2.4,-0.9,'end'],[0,2.8,'middle'],[0,-4.6,'middle'],[1.4,1.2,'start'],[-1.4,1.2,'end']];
+  pts.filter(isOpt).forEach(p=>{if(p.label&&p.lx===undefined&&p.ly===undefined)place(p,CL,1.4,2.4,1.2);});
+  // Nearest first; the default (up-right) leads so uncrowded figures don't change.
+  const C=[[1.3,1.2,'start'],[-1.3,1.2,'end'],[1.3,-2.6,'start'],[-1.3,-2.6,'end'],[1.6,-0.7,'start'],[-1.6,-0.7,'end'],[0,1.6,'middle'],[0,-3.2,'middle']];
+  [2.6,4].forEach(d=>C.push([d,-0.7,'start'],[-d,-0.7,'end'],[d,d,'start'],[-d,d,'end'],[d,-d-1.6,'start'],[-d,-d-1.6,'end'],[0,d+0.6,'middle'],[0,-d-2.2,'middle']));
+  pts.forEach(p=>{if(p.label&&!isOpt(p)&&p.lx===undefined&&p.ly===undefined)place(p,C,0.9*p.label.length,2,1);});}
+function moveMarcher(m,x,y){m.setAttribute('transform',`translate(${x},${y})`);}
 let svgSeq=0;
 function fieldSVG(spec){
   const h=H();const id=spec.id||('f'+(++svgSeq));
@@ -286,9 +336,8 @@ function fieldSVG(spec){
   if(!all.length)all.push({x:80,y:h});
   const v=computeView(all,spec.minW||40);
   const pad=1.5,band=5;const vbX=v.x0-pad,vbY=-v.y1-pad,vbW=(v.x1-v.x0)+2*pad,top=v.y1+pad;
-  const grid=spec.grid===undefined?S.grid:spec.grid;
+  const grid=spec.grid===undefined?true:spec.grid;
   let s=`<svg class="field" id="${id}" viewBox="${vbX} ${vbY} ${vbW} ${top+band}" role="img" aria-label="${esc(spec.aria||'Top-down view of the field')}" preserveAspectRatio="xMidYMid meet">`;
-  s+=`<defs><marker id="${id}a" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F2C230"/></marker></defs>`;
   s+=`<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${top}" fill="var(--turf)"/>`;
   for(let k=Math.floor(vbX/8);k*8<vbX+vbW;k++){if(k%2===0)s+=`<rect x="${Math.max(vbX,8*k)}" y="${vbY}" width="${Math.min(8,vbX+vbW-8*k)}" height="${top}" fill="var(--turf-2)"/>`;}
   s+=`<rect x="${vbX}" y="0" width="${vbW}" height="${band}" fill="var(--apron)"/>`;
@@ -304,12 +353,10 @@ function fieldSVG(spec){
   s+=`<line class="sideline" x1="${vbX}" y1="0" x2="${vbX+vbW}" y2="0"/>`;
   s+=`<text class="ref-label" x="${vbX+0.6}" y="${-h-1}">Front hash</text>`;
   (spec.legs||[]).forEach(l=>{s+=`<line class="leg" x1="${l.x1}" y1="${-l.y1}" x2="${l.x2}" y2="${-l.y2}"/><text class="leg-label" x="${l.tx}" y="${-l.ty}" text-anchor="${l.anchor||'middle'}">${esc(l.label)}</text>`;});
-  const tris=triSpecs.map(t=>triSVG(t,id));tris.forEach(t=>s+=t.under);
-  (spec.paths||[]).forEach(pa=>{const pts=pa.pts.map(p=>`${p.x},${-p.y}`).join(' ');s+=`<polyline class="path ${pa.cls||''}" points="${pts}"${pa.arrow===false?'':` marker-end="url(#${id}a)"`}/>`;});
-  (spec.pts||[]).forEach(p=>{s+=`<circle class="dot ${p.cls||''}" cx="${p.x}" cy="${-p.y}" r="${p.r||0.95}"/>`;
-    if(p.label){const opt=(p.cls||'').includes('opt');const lx=p.lx!==undefined?p.lx:(opt?0:1.3),ly=p.ly!==undefined?p.ly:(opt?1.6:1.2);
-      s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${opt?'middle':'start'}">${esc(p.label)}</text>`;}});
-  if(spec.marcher)s+=`<circle class="marcher" id="${id}m" cx="${spec.marcher.x}" cy="${-spec.marcher.y}" r="1.15"/>`;
+  const tris=triSpecs.map((t,i)=>triSVG(t,id+'t'+i));tris.forEach(t=>s+=t.under);
+  (spec.paths||[]).forEach((pa,i)=>{s+=gradPath(pa.pts,id+'p'+i,pa.cls);});
+  placeLabels(spec.pts||[],{x0:vbX,x1:vbX+vbW,y0:0,y1:top});(spec.pts||[]).forEach(p=>{s+=xDot(p);});
+  if(spec.marcher)s+=`<g class="marcher" id="${id}m" data-y="${-spec.marcher.y}" transform="translate(${spec.marcher.x},${-spec.marcher.y})"><circle class="mo" r=".75"/><circle class="mr" r=".75"/><circle class="mc" r=".17"/></g>`;
   tris.forEach(t=>s+=t.over);
   [spec.ruler,...(spec.rulers||[])].filter(Boolean).forEach(r=>{const segs=rulerSegments(r.x1,r.x2);const dir=r.x2>r.x1?1:-1;
     const ry=-(r.y-2.5);
@@ -379,13 +426,18 @@ function posDistractors(p,n,extra,o){
   let g=0;while(out.length<n&&g++<300)tryAdd({x:p.x+rnd(-6,6),y:p.y+rnd(-5,5)});
   return out;
 }
-function textPosQ(o){const ds=posDistractors(o.p,3,o.extra);return Object.assign({prompt:o.prompt,field:o.field,explain:o.explain,reveal:o.reveal},mc(posDesc(o.p),ds.map(posDesc)));}
+// Prompt = optional bulleted givens + one highlighted question. q.givens undefined → plain prompt (older levels).
+const G=(label,value,cls)=>({label,value,cls}),gStart=v=>G('Start',v,'start'),gEnd=v=>G('End',v,'end'),gCounts=c=>G('Counts',c);
+function promptHTML(q){if(!q.givens)return `<p class="prompt">${q.prompt}</p>`;
+  const li=q.givens.map(g=>`<li><span class="gl ${g.cls||''}">${g.label}:</span> ${g.value}</li>`).join('');
+  return `${li?`<ul class="givens">${li}</ul>`:''}<p class="prompt ask">${q.prompt}</p>`;}
+function textPosQ(o){const ds=posDistractors(o.p,3,o.extra);return Object.assign({prompt:o.prompt,givens:o.givens,field:o.field,explain:o.explain,reveal:o.reveal},mc(posDesc(o.p),ds.map(posDesc)));}
 function pickPosQ(o){
   const field=o.field||{pts:[]};field.pts=field.pts||[];
   const ds=posDistractors(o.p,3,o.extra,{near:true,minSep:2.2,avoid:field.pts});
   const all=shuffle([{p:o.p,c:1},...ds.map(d=>({p:d,c:0}))]);const L='ABCD';
   field.pts=field.pts.concat(all.map((it,i)=>({x:it.p.x,y:it.p.y,label:L[i],cls:'opt',opt:i})));
-  return {prompt:o.prompt,field,options:all.map((it,i)=>L[i]),correct:all.findIndex(it=>it.c),explain:o.explain,pick:true};
+  return {prompt:o.prompt,givens:o.givens,field,options:all.map((it,i)=>L[i]),correct:all.findIndex(it=>it.c),explain:o.explain,pick:true};
 }
 
 /* ---------- level 1: where am I ---------- */
@@ -399,10 +451,10 @@ const C1=[
  ()=>cq('The small hash ticks are 1 yard apart. How many 8-to-5 steps is that?','1.6',['1','2','0.8'],'8 steps cover 5 yards, so 1 yard is 8 ÷ 5 = <b>1.6 steps</b>. Use the ticks to estimate when you\'re between yard lines.'),
 ];
 const P1=['name','find','concept','name','find','name','concept','find'];
-function gen1(qz){const t=P1[qz.i];if(t==='concept')return pickConcept(C1,qz);const p=randDot();
+function gen1(qz){const t=P1[qz.i];if(t==='concept')return Object.assign(pickConcept(C1,qz),{givens:[]});const p=randDot();
   const explain=`${explainLat(p.x)} ${explainDep(p.y)} Answer: <b>${posDesc(p)}</b>.`;
-  if(t==='name')return textPosQ({prompt:'Name this dot. Lateral first, then depth.',field:{pts:[{x:p.x,y:p.y,r:1.1}]},p,explain});
-  return pickPosQ({prompt:`Find this spot: <b>${posDesc(p)}</b>`,field:{pts:[]},p,explain});}
+  if(t==='name')return textPosQ({prompt:'Name this dot. Lateral first, then depth.',givens:[],field:{pts:[{x:p.x,y:p.y,r:1.1}]},p,explain});
+  return pickPosQ({prompt:'Find this spot.',givens:[G('Spot',posDesc(p))],field:{pts:[]},p,explain});}
 
 /* ---------- level 2: step size ---------- */
 // Shared gen2 helpers
@@ -450,7 +502,7 @@ function gen2_countLine(){
   const ans=gaps*8;const a={x:8*k,y:h},b={x:8*k2,y:h};
   const wrongs=[ans+8,ans-8,gaps*5,gaps*6].filter(v=>v>0&&v!==ans).map(String);
   const explain=`<b>Count:</b> ${gaps} gap${gaps>1?'s':''} × 8 steps = <b>${ans} steps</b>. Yard lines are always 8 steps apart.`;
-  return Object.assign({prompt:`How many 8-to-5 steps from ${the(k)} to ${the(k2)}?`,
+  return Object.assign({prompt:'How many 8-to-5 steps from start to end?',givens:[gStart(latDesc(a.x)),gEnd(latDesc(b.x))],
     field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1:8*k,x2:8*k2,y:h,after:true}}},
     mc(String(ans),wrongs,{kind:'count'}),{explain,formula:'none'});
 }
@@ -467,7 +519,7 @@ function gen2_gut(){
   const explain=counts===steps
     ?`<b>Gut check:</b> ${counts} counts = ${steps} steps — exactly an 8-to-5. No math needed.`
     :`<b>Gut check:</b> ${counts} counts, ${co} than ${steps} steps. Extra time = ${cmp} steps. It's <b>${ans.toLowerCase()}</b>.`;
-  return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. Without calculating: is the step bigger, smaller, or exactly an 8-to-5?`,
+  return Object.assign({prompt:'Without calculating: is the step bigger, smaller, or exactly an 8-to-5?',givens:[gStart(latDesc(x1)),gEnd(latDesc(x2)),gCounts(counts)],
     field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
     mc(ans,wrongs),{explain,formula:'ss'});
 }
@@ -476,7 +528,7 @@ function gen2_sizeLine(){
   const k=rnd(2,18-L);const a={x:8*k,y:h},b={x:8*(k+L),y:h};
   const ss=N;const explain=mkExplain2(a.x,b.x,C,ss);
   const wrongs=shuffle([6,8,12,16].filter(x=>x!==N)).map(x=>`${x}-to-5`);
-  return Object.assign({prompt:`From ${the(k)} to ${the(k+L)} in <b>${C} counts</b>. What step size?`,
+  return Object.assign({prompt:'What step size?',givens:[gStart(latDesc(a.x)),gEnd(latDesc(b.x)),gCounts(C)],
     field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1:a.x,x2:b.x,y:h}}},
     mc(fmtSS(ss),wrongs,{kind:'ss'}),{explain,formula:'ss'});
 }
@@ -493,7 +545,7 @@ function gen2_countOffset(){
   const segs=rulerSegments(x1,x2);
   const sumStr=segs.length>1?segs.join(' + ')+' = '+ans:''+ans;
   const explain=`<b>Count:</b> ${sumStr} steps.${sameLinePair?' Both dots say the same yard line but you\'re crossing it — count both offsets.':''}`;
-  return Object.assign({prompt:`How many 8-to-5 steps from ${latDesc(x1)} to ${latDesc(x2)}?`,
+  return Object.assign({prompt:'How many 8-to-5 steps from start to end?',givens:[gStart(latDesc(x1)),gEnd(latDesc(x2))],
     field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h,after:true}}},
     mc(String(ans),wrongs,{kind:'count',allowZero:sameLinePair}),{explain,formula:'none'});
 }
@@ -512,7 +564,7 @@ function gen2_sizeOffOn(){
     const ssAns=fmtSS(ss);
     const wrongSS=fmtSS(8*counts/Math.abs(8*k2-8*k1||1)); // ignored offset
     const wrongs=uniq([wrongSS,fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
-    return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. What step size?`,
+    return Object.assign({prompt:'What step size?',givens:[gStart(latDesc(x1)),gEnd(latDesc(x2)),gCounts(counts)],
       field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
       mc(ssAns,wrongs,{kind:'ss'}),{explain,formula:'ss'});
   }
@@ -532,7 +584,7 @@ function gen2_sizeOffOff(){
     const explain=mkExplain2(x1,x2,counts,ss);
     const ssAns=fmtSS(ss);
     const wrongs=uniq([fmtSS(8*counts/(Math.abs(k2-k1)*8||1)),fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
-    return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} in <b>${counts} counts</b>. What step size?`,
+    return Object.assign({prompt:'What step size?',givens:[gStart(latDesc(x1)),gEnd(latDesc(x2)),gCounts(counts)],
       field:{pts:[{x:x1,y:h,label:'Start'},{x:x2,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:x1,y:h},{x:x2,y:h}]}],ruler:{x1,x2,y:h}}},
       mc(ssAns,wrongs,{kind:'ss'}),{explain,formula:'ss'});
   }
@@ -555,14 +607,14 @@ function gen2_cross50(qz){
     if(askSteps){
       const wrongs=uniq([String(wrongCounts50),String(st+8),String(st-4)]).filter(w=>w!==String(st)).slice(0,3);
       const explain=`<b>Count:</b> ${sumStr} steps. Use the 50 as your anchor — yard numbers count back down after it.`;
-      return Object.assign({prompt:`How many 8-to-5 steps from ${latDesc(xa)} to ${latDesc(xb)}?`,
+      return Object.assign({prompt:'How many 8-to-5 steps from start to end?',givens:[gStart(latDesc(xa)),gEnd(latDesc(xb))],
         field:{pts:[{x:xa,y:h,label:'Start'},{x:xb,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:xa,y:h},{x:xb,y:h}]}],ruler:{x1:xa,x2:xb,y:h,after:true}}},
         mc(String(st),wrongs,{kind:'count'}),{explain,formula:'none'});
     } else {
       const ssAns=fmtSS(ss);
       const wrongs=uniq([fmtSS(8*counts/wrongCounts50),fmtSS(counts/st),fmtSS(8*st/counts)]).filter(w=>w!==ssAns).slice(0,3);
       const explain=mkExplain2(xa,xb,counts,ss);
-      return Object.assign({prompt:`From ${latDesc(xa)} to ${latDesc(xb)} in <b>${counts} counts</b>. What step size?`,
+      return Object.assign({prompt:'What step size?',givens:[gStart(latDesc(xa)),gEnd(latDesc(xb)),gCounts(counts)],
         field:{pts:[{x:xa,y:h,label:'Start'},{x:xb,y:h,cls:'end',label:'End'}],paths:[{pts:[{x:xa,y:h},{x:xb,y:h}]}],ruler:{x1:xa,x2:xb,y:h}}},
         mc(ssAns,wrongs,{kind:'ss'}),{explain,formula:'ss'});
     }
@@ -580,7 +632,7 @@ function gen2_countsNeeded(){
     const wrongYards=Math.round(N*Math.abs(latParts(x2).k-latParts(x1).k)); // used yard gaps not steps
     const wrongs=uniq([String(wrongInv),String(wrongYards),String(C+N),String(C-N)]).filter(w=>w!==String(C)&&+w>0).slice(0,3);
     const explain=`<b>Count:</b> ${steps} steps. <b>Calculate:</b> Step Size × Distance ÷ 8 = ${N} × ${steps} ÷ 8 = <b>${C} counts</b>. You're solving for counts, so rearrange: Counts = Step Size × Distance ÷ 8.`;
-    return Object.assign({prompt:`From ${latDesc(x1)} to ${latDesc(x2)} at a <b>${N}-to-5</b>. How many counts do you need?`,
+    return Object.assign({prompt:'How many counts do you need?',givens:[gStart(latDesc(x1)),gEnd(latDesc(x2)),G('Step size',`${N}-to-5`)],
       field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}],ruler:{x1,x2,y:h}}},
       mc(String(C),wrongs,{kind:'count'}),{explain,formula:'counts'});
   }
@@ -602,13 +654,14 @@ function gen2_land(qz){
     const eightToFive=round2(x1+dir*counts); // used 8-to-5 instead of given SS
     const wrongInside=8*latParts(x2).k-(latParts(x2).off); // flipped inside/outside
     const explain=`<b>Count:</b> ${round2(Math.abs(x2-x1))} steps. <b>Calculate:</b> 8 × Counts ÷ Step Size = 8 × ${counts} ÷ ${N} = ${stepsRaw} steps. Moving ${dir>0?'toward Side 2':'toward Side 1'}: you land at <b>${latDesc(x2)}</b>.`;
+    const givens=[gStart(`${latDesc(x1)}, front hash`),G('Step size',`${N}-to-5`),gCounts(counts),G('Direction',`Toward Side ${dir>0?2:1}`)];
     if(useText){
       const wrongs=uniq([latDesc(flipX),latDesc(eightToFive),latDesc(round2(x1+dir*(stepsRaw+8)))]).filter(w=>w!==latDesc(x2)&&w!==latDesc(x2)).slice(0,3);
-      return Object.assign({prompt:`Start: <b>${latDesc(x1)}</b>, front hash. March a <b>${N}-to-5</b> for <b>${counts} counts</b> toward Side ${dir>0?2:1}. Where do you land?`,
+      return Object.assign({prompt:'Where do you land?',givens,
         field:{pts:[{...a,label:'Start'}],ruler:{x1,x2,y:h,after:true}},reveal:[{...b,cls:'reveal',label:'Here'}]},
         mc(latDesc(x2),wrongs,{kind:'pos',x:x2}),{explain,formula:'dist'});
     }
-    return Object.assign(pickPosQ({prompt:`Start: <b>${latDesc(x1)}</b>, front hash. March a <b>${N}-to-5</b> for <b>${counts} counts</b> toward Side ${dir>0?2:1}. Tap your landing dot.`,
+    return Object.assign(pickPosQ({prompt:'Tap your landing dot.',givens,
       field:{pts:[{...a,label:'Start'}],ruler:{x1,x2,y:h,after:true}},p:b,
       extra:[{x:flipX,y:h},{x:eightToFive,y:h}],
       explain,reveal:[{...b,cls:'reveal',label:'Here'}]}),{formula:'dist'});
@@ -632,7 +685,7 @@ function gen2_compare(){
       // inch question — ask about move A only for simplicity
       const cA=fmtSS(ssA);
       const wrongs=uniq([fmtSS(ssB),fmtSS(8*rA.counts/rA.steps*1.1),fmtSS(ssA+1)]).filter(w=>w!==cA).slice(0,3);
-      return Object.assign({prompt:`Move A: ${latDesc(rA.x1)} → ${latDesc(rA.x2)} in <b>${rA.counts} counts</b>. What step size is that in inches?`,
+      return Object.assign({prompt:'What step size is that in inches?',givens:[G('Move A',`${latDesc(rA.x1)} → ${latDesc(rA.x2)} in ${rA.counts} counts`)],
         field:{pts:[{x:rA.x1,y:h,label:'A start'},{x:rA.x2,y:h,cls:'end',label:'A end'}],paths:[{pts:[{x:rA.x1,y:h},{x:rA.x2,y:h}]}],ruler:{x1:rA.x1,x2:rA.x2,y:h}}},
         mc(inchA,[fmtIn(180/ssNearest(ssA)),fmtIn(22.5*rA.counts/rA.steps),fmtIn(22.5*(rA.steps+2)/rA.counts)].filter(w=>w!==inchA).slice(0,3),{kind:'in'}),
         {explain:`22.5 × ${rA.steps} ÷ ${rA.counts} = <b>${inchA}</b>. Bigger step size number = physically smaller step.`,formula:'ss'});
@@ -644,7 +697,7 @@ function gen2_compare(){
     const ans=ssA<ssB?'A has the bigger step':'B has the bigger step';
     const explain=`Move A: ${fmtSS(ssA)}. Move B: ${fmtSS(ssB)}. Smaller number = bigger step. <b>${ans}</b>.`;
     const wrongs=['B has the bigger step','A has the bigger step','Same step size',"Can't tell without the math"].filter(x=>x!==ans);
-    return Object.assign({prompt:`Move A: ${latDesc(rA.x1)} → ${latDesc(rA.x2)} in <b>${rA.counts} counts</b>. Move B: ${latDesc(rB.x1)} → ${latDesc(rB.x2)} in <b>${rB.counts} counts</b>. Which move takes the bigger step?`,
+    return Object.assign({prompt:'Which move takes the bigger step?',givens:[G('Move A',`${latDesc(rA.x1)} → ${latDesc(rA.x2)} in ${rA.counts} counts`),G('Move B',`${latDesc(rB.x1)} → ${latDesc(rB.x2)} in ${rB.counts} counts`)],
       field:{pts:[{...aA,label:'A'},{...bA,cls:'end',label:'A'},{...aB,label:'B'},{...bB,cls:'end',label:'B'}],
         paths:[{pts:[aA,bA]},{pts:[aB,bB]}],
         rulers:[{x1:aA.x,x2:bA.x,y:aA.y},{x1:aB.x,x2:bB.x,y:aB.y}],minW:48}},mc(ans,wrongs),{explain,formula:'ss'});
@@ -701,6 +754,7 @@ function diagField(m,show){
   return {pts:[{x:m.x1,y:m.y1,label:'Start',...(sx>0?{lx:-5.6,ly:-0.7}:{})},{x:m.x2,y:m.y2,cls:'end',label:'End',...(sx<0?{lx:-4.6}:{}),...(sy<0?{ly:-2.6}:{})}],
     triangle:{x1:m.x1,y1:m.y1,x2:m.x2,y2:m.y2,showA:true,showB:true,showC:false,...show}};
 }
+const gSE=m=>[gStart(posDesc({x:m.x1,y:m.y1})),gEnd(posDesc({x:m.x2,y:m.y2}))],gAB=m=>[G('A',m.A),G('B',m.B)];
 const xAB=m=>`<b>A:</b> ${m.A} over. <b>B:</b> ${m.B} ${diagDir(m)}.`;
 const xC=m=>`<b>C:</b> √(${m.A}² + ${m.B}²) = √${m.A*m.A+m.B*m.B} = <b>${fmtC(m.C)} steps</b>.`;
 function abWrongs(m,leg){
@@ -735,14 +789,14 @@ function mcWhy(correct,pairs,o){
 function gen3_findA(){
   const m=randDiag();const segs=rulerSegments(m.x1,m.x2);
   const explain=`<b>A:</b> ${segs.length>1?segs.join(' + ')+' = ':''}<b>${m.A} over</b>. Same ruler as Level 2: dot to the line, line to line in 8s, line to your end dot.`;
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. What is <b>A</b>, the steps over?`,
+  return Object.assign({prompt:'What is A, the steps over?',givens:gSE(m),
     field:diagField(m,{showA:false}),triAfter:{showA:true}},
     mcWhy(String(m.A),abWrongs(m,'A'),{kind:'count'}),{explain,formula:'ab'});
 }
 function gen3_findB(){
   const h=H();const m=randDiag();const d1=m.y1-h,d2=m.y2-h,cross=d1*d2<0&&m.y1>=h/2&&m.y2>=h/2;
   const explain=`<b>B:</b> From ${depDesc(m.y1)} to ${depDesc(m.y2)}${cross?`: ${Math.abs(d1)} + ${Math.abs(d2)} =`:' is'} <b>${m.B} ${diagDir(m)}</b>. Read depth from the hash, the same way you did in Level 1.`;
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. What is <b>B</b>, the steps forward or back?`,
+  return Object.assign({prompt:'What is B, the steps forward or back?',givens:gSE(m),
     field:diagField(m,{showB:false}),triAfter:{showB:true}},
     mcWhy(String(m.B),abWrongs(m,'B'),{kind:'count'}),{explain,formula:'ab'});
 }
@@ -752,19 +806,19 @@ function gen3_cRange(){
     [sum,cWrongs(m)[0][1]],
     [sum+rnd(2,6),`C can never be longer than A + B (${sum}). The diagonal is the shortcut.`]];
   const explain=`${xAB(m)}<br><b>Gut check C:</b> C is longer than the longer leg and shorter than A + B, so it lands between ${mx} and ${sum}. Only <b>${fmtC(m.C)}</b> fits.<br>${xC(m)}`;
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. Which of these could C be?`,
+  return Object.assign({prompt:'Which of these could C be?',givens:gAB(m),
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtC(m.C),pairs,{kind:'dec'}),{explain,formula:'c'});
 }
 function gen3_cClean(){
   const m=randDiag({clean:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. What is <b>C</b>?`,
+  return Object.assign({prompt:'What is C?',givens:gAB(m),
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtC(m.C),cWrongs(m),{kind:'dec'}),{explain:`${xAB(m)}<br>${xC(m)} A clean one, no rounding needed.`,formula:'c'});
 }
 function gen3_cReal(){
   const m=randDiag({real:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. What is <b>C</b>? Use your phone calculator and round to one decimal.`,
+  return Object.assign({prompt:'What is C? Use your phone calculator and round to one decimal.',givens:gAB(m),
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtC(m.C),cWrongs(m),{kind:'dec'}),{explain:`${xAB(m)}<br>${xC(m)}`,formula:'c'});
 }
@@ -796,25 +850,25 @@ function gen3_gut(){
   pairs.push([GUT_OPTS[3],'You can tell! Find C, then compare: more counts than steps means smaller, fewer counts means bigger.']);
   pairs.push([GUT_OPTS[2],'Exactly an 8-to-5 only happens when the counts match C.']);
   GUT_OPTS.slice(0,2).forEach(o=>pairs.push([o,'Watch the flip: more counts than steps means a smaller step, fewer counts means a bigger step.']));
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. <b>${m.counts} counts</b>. Without working out the step size: is it bigger, smaller, or exactly an 8-to-5?`,
+  return Object.assign({prompt:'Without working out the step size: is it bigger, smaller, or exactly an 8-to-5?',givens:[...gSE(m),gCounts(m.counts)],
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(ans,pairs),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}`,formula:'gut'});
 }
 function gen3_ssClean(){
   const m=randDiag({clean:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}, in <b>${m.counts} counts</b>. What step size?`,
+  return Object.assign({prompt:'What step size?',givens:[...gAB(m),gCounts(m.counts)],
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
 function gen3_ssReal(){
   const m=randDiag({real:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}, in <b>${m.counts} counts</b>. What step size?`,
+  return Object.assign({prompt:'What step size?',givens:[...gAB(m),gCounts(m.counts)],
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
 function gen3_ssFull(){
   const m=randDiag({real:true});
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. <b>${m.counts} counts</b>. Find A, B, and C, then the step size.`,
+  return Object.assign({prompt:'Find A, B, and C, then the step size.',givens:[...gSE(m),gCounts(m.counts)],
     field:diagField(m,{showA:false,showB:false}),triAfter:{showA:true,showB:true,showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
@@ -836,27 +890,27 @@ function gen3_compare(){
     triangles:[mA,mB].filter(m=>m.B>0).map(tri),minW:48};
   const flatM=[mA,mB].find(m=>m.B===0);
   if(flatM){field.paths=[{pts:[{x:flatM.x1,y:flatM.y1},{x:flatM.x2,y:flatM.y2}]}];field.rulers=[{x1:flatM.x1,x2:flatM.x2,y:flatM.y1}];}
-  const mv=m=>`<b>${m.A} over and ${m.B} ${diagDir(m)}</b> in <b>${m.counts} counts</b>`;
+  const mv=m=>`${m.A} over and ${m.B} ${diagDir(m)} in ${m.counts} counts`;
   const xMove=(n,m)=>`<b>Move ${n}:</b> C = √(${m.A}² + ${m.B}²) = ${fmtC(m.C)} steps. 8 × ${m.counts} ÷ ${fmtC(m.C)} = <b>${fmtSS(m.ss)}</b>.`;
-  let prompt,explain;const pairs=[];
+  const prompt='Which move takes the bigger step?';let givens,explain;const pairs=[];
   if(flatM){
     const S=flatM===mA?'A':'B',D=S==='A'?'B':'A';
     const xFlat=`<b>Move ${S}:</b> straight over, so the Distance is just ${flatM.A}. 8 × ${flatM.counts} ÷ ${flatM.A} = <b>${fmtSS(flatM.ss)}</b>.`;
-    prompt=S==='A'?`Move A: <b>${mA.A} over</b>, straight, in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b> plus <b>${mB.B} ${diagDir(mB)}</b>, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`
-      :`Move A: <b>${mA.A} over and ${mA.B} ${diagDir(mA)}</b> in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b>, straight, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`;
+    givens=S==='A'?[G('Move A',`${mA.A} over, straight, in ${mA.counts} counts`),G('Move B',`the same ${mB.A} over plus ${mB.B} ${diagDir(mB)}, also in ${mB.counts} counts`)]
+      :[G('Move A',mv(mA)),G('Move B',`the same ${mB.A} over, straight, also in ${mB.counts} counts`)];
     explain=`${S==='A'?xFlat:xMove('A',mA)}<br>${S==='A'?xMove('B',mB):xFlat}<br>Same counts, longer path, so ${D} needs the bigger step. Smaller number = bigger step: <b>${ans}</b>.`;
     pairs.push([CMP[S==='A'?0:1],`Move ${D} covers more ground in the same counts, so it needs the bigger step. The diagonal is always longer than the straight leg.`],
       [CMP[2],`Same counts doesn't mean same step. ${D}'s diagonal is longer than ${S}'s straight line, so ${D}'s step is bigger.`],
       [CMP[3],`You can tell without any math! Same counts, longer path: ${D} takes the bigger step.`]);
   } else {
-    prompt=`Move A: ${mv(mA)}. Move B: ${mv(mB)}. Which move takes the bigger step?`;
+    givens=[G('Move A',mv(mA)),G('Move B',mv(mB))];
     explain=`${xMove('A',mA)}<br>${xMove('B',mB)}<br>Smaller number = bigger step: <b>${ans}</b>.`;
     const wrongMove=ans===CMP[0]?CMP[1]:CMP[0];const byA=8*mA.counts/mA.A<8*mB.counts/mB.A?CMP[0]:CMP[1];
     pairs.push([wrongMove,byA===wrongMove?'Looks like only the side-to-side legs got compared. Use C, the full diagonal, as each Distance.':'Watch the flip: the smaller step-size number is the bigger step.'],
       [CMP[2],`Work them both out and they're not the same: ${fmtSS(mA.ss)} vs ${fmtSS(mB.ss)}.`],
       [CMP[3],'You can tell! Work out each step size, then compare. Smaller number = bigger step.']);
   }
-  return Object.assign({prompt,field},mcWhy(ans,pairs),{explain,formula:'gut'});
+  return Object.assign({prompt,givens,field},mcWhy(ans,pairs),{explain,formula:'gut'});
 }
 const P3=['findA','findB','cRange','cClean','cReal','gut','ssClean','ssReal','ssFull','compare'];
 const GEN3={findA:gen3_findA,findB:gen3_findB,cRange:gen3_cRange,cClean:gen3_cClean,cReal:gen3_cReal,
@@ -870,16 +924,18 @@ const P4=['text','pick','text','when','pick','text','pick','when'];
 function gen4(qz){const t=P4[qz.i];const h=H();
   if(t==='when'){const L=pick([16,8]),C=16,r=L/C;const s=pick([2,4,6]);const tc=(8-s)/r;const k=rnd(3,13);const D=pick([0,8]);const dir=pick([1,-1]);
     const a={x:8*k+s,y:h+(D?(dir>0?-4:4):pick([0,4,-4]))};const b={x:a.x+L,y:a.y+dir*D};const cross={x:8*(k+1),y:a.y+dir*D*tc/C};
-    return Object.assign({prompt:`Start: <b>${posDesc(a)}</b>. Move <b>${L} steps toward Side 2</b>${D?` and <b>${D} ${dir>0?'back':'forward'}</b>`:''} in <b>${C} counts</b>. On which count do you cross ${the(k+1)}?`,
+    return Object.assign({prompt:`On which count do you cross ${the(k+1)}?`,
+      givens:[gStart(posDesc(a)),G('Lateral',`${L} steps toward Side 2`),...(D?[G('Depth',`${D} ${dir>0?'back':'forward'}`)]:[]),gCounts(C)],
       field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}]},reveal:[{...cross,cls:'reveal',label:`Count ${tc}`}],
       explain:`You start ${steps(8-s)} from ${the(k+1)} and travel ${fmtFrac(r)} lateral step${r===1?'':'s'} per count. ${8-s} ÷ ${fmtFrac(r)} = <b>count ${tc}</b>. Depth doesn't matter for when you cross a yard line; only the lateral rate does.`},
       mc(`Count ${tc}`,[tc+2,tc-2,tc*2,C/2,tc+4].filter(x=>x>0&&x<=C&&x!==tc).map(x=>`Count ${x}`)));}
   const m=cpMove();const field=moveField(m);delete field.legs;
   const extra=[{x:m.p.x,y:m.a.y},{x:m.p.x,y:m.b.y},{x:m.a.x+m.D*m.X/m.C,y:m.a.y+m.dir*m.L*m.X/m.C}];
   const explain=`Count ${m.X} of ${m.C} is ${fracStr(m.X,m.C)} of the move. Lateral: ${m.L} × ${fracStr(m.X,m.C)} = ${fmt(m.L*m.X/m.C)} steps toward Side 2. Depth: ${m.D} × ${fracStr(m.X,m.C)} = ${fmt(m.D*m.X/m.C)} steps ${m.dir>0?'back':'forward'}. Add both to the start: <b>${posDesc(m.p)}</b>.`;
-  const prompt=`Start: <b>${posDesc(m.a)}</b>. Move ${moveTxt(m)}. Where should you be on <b>count ${m.X}</b>?`;
-  if(t==='text')return textPosQ({prompt,field,p:m.p,extra,explain,reveal:[{...m.p,cls:'reveal',label:`Count ${m.X}`}]});
-  return pickPosQ({prompt,field,p:m.p,extra,explain});}
+  const prompt=`Where should you be on count ${m.X}?`;
+  const givens=[gStart(posDesc(m.a)),G('Lateral',`${m.L} steps toward Side 2`),G('Depth',`${m.D} ${m.dir>0?'back':'forward'}`),gCounts(m.C)];
+  if(t==='text')return textPosQ({prompt,givens,field,p:m.p,extra,explain,reveal:[{...m.p,cls:'reveal',label:`Count ${m.X}`}]});
+  return pickPosQ({prompt,givens,field,p:m.p,extra,explain});}
 
 /* ---------- level 5: Charlie Brown ---------- */
 const C5=[
@@ -962,7 +1018,7 @@ function learn1(){const h=H();const p={x:8*6+3,y:h+4};return `<div class="prose"
 <ul><li><b>In front of</b> the hash means toward the audience. <b>Behind</b> means toward the back sideline.</li>
 <li>The small hash ticks are 1 yard apart (1.6 steps). Use them to estimate between yard lines.</li></ul></div>
 ${fig({pts:[{...p,r:1.1}],minW:40},`This dot: <b>${posDesc(p)}</b>.`)}
-<p class="note">A real field has no step grid. The grid is here to train your eye; turn it off at the bottom of the page once this feels easy.</p>`;}
+<p class="note">A real field has no step grid. The grid is here to train your eye; on the real field you'll count from the yard lines and hashes instead.</p>`;}
 function learn2(){const h=H();
   const f1a={x:48,y:h},f1b={x:64,y:h};
   const f2a={x:46,y:h},f2b={x:64,y:h};
@@ -1115,7 +1171,7 @@ ${fieldSVG({id:'pf',paths:[{pts:path}],pts:[{x:32,y:h,label:'Start'},...cps],mar
 <div class="pstats"><span>Lateral per count <b>${fmtFrac(a)}</b></span><span>Depth per count <b>${fmtFrac(b)}</b></span><span>Real step <b>${fmtIn(22.5*Math.hypot(a,b))}</b></span></div>
 <h3>Checkpoints for one cycle</h3>${cpTable(rows)}</div>`;}
 function maxT(){return 4*player.v.leg;}
-function playerDraw(){const m=document.getElementById('pfm');if(!m)return;const p=cbPos(player.v,player.t);m.setAttribute('cx',p.x);m.setAttribute('cy',-p.y);
+function playerDraw(){const m=document.getElementById('pfm');if(!m)return;const p=cbPos(player.v,player.t);moveMarcher(m,p.x,-p.y);
   const c=Math.floor(player.t+1e-6);if(c!==player.shown){player.shown=c;const pc=document.getElementById('pcount'),pp=document.getElementById('ppos');if(pc)pc.textContent=c;if(pp)pp.textContent=posDesc(cbPos(player.v,c));}}
 function playerStop(){player.playing=false;cancelAnimationFrame(player.raf);const b=document.getElementById('pplay');if(b)b.textContent='Play';}
 function playerPlay(){if(player.t>=maxT())player.t=0;player.playing=true;player.last=performance.now();const b=document.getElementById('pplay');if(b)b.textContent='Pause';
@@ -1251,7 +1307,7 @@ function practiceHTML(){
     return `<button class="${c}" data-act="answer" data-i="${i}"${quiz.answered?' disabled':''}>${o}</button>`;}).join('');
   const qn=qnFor(quiz.n);
   return `<div class="qmeta"><span>Question ${quiz.i+1} of ${qn}</span><span>${quiz.score} correct</span></div><div class="qbar"><span style="width:${(quiz.i/qn)*100}%"></span></div>
-<p class="prompt">${q.prompt}</p>${card}${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
+${promptHTML(q)}${card}${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
 ${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p>${!ok&&q.why&&q.why[q.options[quiz.choice]]?`<p>${q.why[q.options[quiz.choice]]}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
 function resultsHTML(){const tot=ACTIVE.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
@@ -1264,7 +1320,7 @@ function render(){
   playerStop();cancelAnimationFrame(hero);
   document.getElementById('track').innerHTML=trackHTML();
   document.getElementById('who').textContent=S.name?S.name:'';
-  document.getElementById('gridT').checked=!!S.grid;document.getElementById('hashSel').value=S.hash;
+  document.getElementById('hashSel').value=S.hash;
   const app=document.getElementById('app');
   app.innerHTML=view.name==='intro'?introHTML():view.name==='results'?resultsHTML():levelHTML();
   if(view.name==='intro')heroAnim();
@@ -1272,7 +1328,7 @@ function render(){
 }
 const HERO={x1:37,x2:58}; // 3 outside the S1 25 → 2 inside the S1 35: 3 + 8 + 8 + 2 = 21 steps
 function heroAnim(){const m=document.getElementById('herom');if(!m||reduced)return;let t=0,last=performance.now();const L=HERO.x2-HERO.x1;
-  const loop=now=>{t+=(now-last)/1000*2;last=now;if(t>L+4)t=0;m.setAttribute('cx',HERO.x1+Math.min(L,t));hero=requestAnimationFrame(loop);};hero=requestAnimationFrame(loop);}
+  const loop=now=>{t+=(now-last)/1000*2;last=now;if(t>L+4)t=0;moveMarcher(m,HERO.x1+Math.min(L,t),+m.dataset.y);hero=requestAnimationFrame(loop);};hero=requestAnimationFrame(loop);}
 function go(v){view=v;render();window.scrollTo(0,0);}
 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
@@ -1293,12 +1349,11 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
   if(a==='preset'){playerStop();player.t=0;playerDraw();return;}
   if(a==='calcshow'){calc.shown=true;calcRefresh();return;}
   if(a==='calc3show'){calc3.shown=true;calc3Refresh();return;}
-  if(a==='coach'){S.unlocked=ACTIVE_LEVELS;save();render();return;}
+  if(a==='coachx'){document.getElementById('coachNote').hidden=true;return;}
   if(a==='reset'){if(el.dataset.armed){S.best={};S.unlocked=1;quiz=null;save();el.dataset.armed='';el.textContent='Reset progress';return go({name:'intro'});}
     el.dataset.armed='1';el.textContent='Click again to erase all scores';setTimeout(()=>{el.dataset.armed='';el.textContent='Reset progress';},4000);return;}
 });
 document.addEventListener('change',e=>{const t=e.target;
-  if(t.id==='gridT'){S.grid=t.checked;save();if(view.name==='level'&&view.n===5&&view.tab==='learn'){render();}else render();return;}
   if(t.id==='hashSel'){S.hash=t.value;save();if(quiz&&!quiz.done)quiz=null;render();return;}
   if(t.dataset&&t.dataset.pc){player.v[t.dataset.pc]=+t.value;player.t=0;playerRefresh();}
   if(t.dataset&&t.dataset.calc){calc[t.dataset.calc]=+t.value;calc.shown=false;calcRefresh();}
@@ -1307,7 +1362,14 @@ document.addEventListener('change',e=>{const t=e.target;
 document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nameIn'){const b=document.querySelector('[data-act="start"]');if(b)b.click();}});
 
-load();render();
+const COACH_WORD='EUROPE2015'; // ?coach=<this> unlocks all levels
+function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
+  if(!u.searchParams.has('coach'))return;
+  const ok=u.searchParams.get('coach')===COACH_WORD;
+  if(!ok)return;
+  S.unlocked=ACTIVE_LEVELS;save();document.getElementById('coachNote').hidden=false;
+  u.searchParams.delete('coach');history.replaceState(null,'',u.pathname+u.search+u.hash);}
+load();coachUnlock();render();
 window.__CB={GEN,S,posDesc,cbPos};
 </script>
 </body>
