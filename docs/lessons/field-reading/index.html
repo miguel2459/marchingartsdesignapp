@@ -11,7 +11,7 @@
 :root{
   --paper:#EEF2F5; --surface:#FFFFFF; --ink:#132139; --muted:#566275; --line:#D2D9E1;
   --turf:#2D6B40; --turf-2:#29633B; --apron:#1D3828; --signal:#F2C230;
-  --good:#1D7448; --bad:#B3372B; --good-bg:#E2F2E9; --bad-bg:#F8E5E2; --focus:#2F6FDB;
+  --good:#1D7448; --bad:#7A3FC4; --good-bg:#E2F2E9; --bad-bg:#F0E6FB; --focus:#2F6FDB; /* wrong = purple; red is reserved for End */
   --start-ink:#1A73B0; --end-ink:#D21F1F; /* field's #6EC8FF / #FF3B3B, deepened for text on light paper */
   --display:'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
   --body:'Atkinson Hyperlegible', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -22,13 +22,13 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
-    --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+    --good:#62CC96; --bad:#B46BFF; --good-bg:#15362A; --bad-bg:#2C2142; --focus:#7FB0FF;
     --start-ink:#6EC8FF; --end-ink:#FF3B3B;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
-  --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+  --good:#62CC96; --bad:#B46BFF; --good-bg:#15362A; --bad-bg:#2C2142; --focus:#7FB0FF;
   --start-ink:#6EC8FF; --end-ink:#FF3B3B;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -125,7 +125,10 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .field .dot.start .dot-label,.field .dot.end .dot-label,.field .dot.opt .dot-label{fill:var(--dc)}
 .field .dot-label{fill:#fff;font-family:var(--display);font-weight:700;font-size:2px;paint-order:stroke;stroke:#132139;stroke-width:.4}
 .field .dot-label.opt{font-size:2.4px}
-.field .marcher{fill:var(--signal);stroke:#132139;stroke-width:.35}
+.field .marcher .mo{fill:none;stroke:#0B1526;stroke-width:.4}
+.field .marcher .mr{fill:none;stroke:var(--signal);stroke-width:.2}
+.field .marcher .mc{fill:var(--signal);stroke:#0B1526;stroke-width:.08}
+.field .dot.opt.wrong{--dc:#B46BFF}
 
 /* practice */
 .qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:.95rem;margin-bottom:8px}
@@ -301,8 +304,29 @@ function xDot(p){const d=0.6/Math.SQRT2,x=p.x,y=-p.y;const cls=p.cls||'';
   const xp=`M${x-d},${y-d}L${x+d},${y+d}M${x-d},${y+d}L${x+d},${y-d}`;
   let s=`<g class="dot ${cls}${kind}"><path class="xo" d="${xp}"/><path class="xc" d="${xp}"/>`;
   if(p.label){const opt=cls.includes('opt');const lx=p.lx!==undefined?p.lx:(opt?0:1.3),ly=p.ly!==undefined?p.ly:(opt?1.6:1.2);
-    s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${opt?'middle':'start'}">${esc(p.label)}</text>`;}
+    s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${p.anchor||(opt?'middle':'start')}">${esc(p.label)}</text>`;}
   return s+'</g>';}
+// Pick-the-dot: move Start/End labels off answer dots and their letters (field coords, y up).
+// v = visible area in field coords {x0,x1,y0,y1}; anything outside it counts as blocked.
+function placeLabels(pts,v){
+  const isOpt=p=>(p.cls||'').includes('opt');
+  if(!pts.some(isOpt))return;
+  const ov=(a,b)=>Math.max(0,Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0))*Math.max(0,Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0));
+  const area=b=>(b.x1-b.x0)*(b.y1-b.y0),outside=b=>area(b)-ov(b,v);
+  const pad=0.25,obs=pts.map(p=>({x0:p.x-0.8,x1:p.x+0.8,y0:p.y-0.8,y1:p.y+0.8,own:p})); // every X
+  const place=(p,C,w,hi,fs)=>{ // hi = text height above baseline, fs = font-size scale for descent
+    const box=([lx,ly,a])=>{const x0=a==='start'?p.x+lx:a==='end'?p.x+lx-w:p.x+lx-w/2;return {x0:x0-pad,x1:x0+w+pad,y0:p.y+ly-0.4*fs-pad,y1:p.y+ly+hi+pad};};
+    let best=C[0],bestA=Infinity;
+    for(const c of C){const b=box(c);const a=obs.reduce((s,o)=>s+(o.own===p?0:ov(b,o)),0)+3*outside(b);if(a<bestA){best=c;bestA=a;}if(a===0)break;}
+    [p.lx,p.ly,p.anchor]=best;obs.push(box(best));};
+  // Answer letters first (default above the X), then Start/End labels around everything.
+  const CL=[[0,1.6,'middle'],[0,-3.4,'middle'],[1.4,-0.9,'start'],[-1.4,-0.9,'end']];
+  pts.filter(isOpt).forEach(p=>{if(p.label&&p.lx===undefined&&p.ly===undefined)place(p,CL,1.4,2.4,1.2);});
+  // Nearest first; the default (up-right) leads so uncrowded figures don't change.
+  const C=[[1.3,1.2,'start'],[-1.3,1.2,'end'],[1.3,-2.6,'start'],[-1.3,-2.6,'end'],[1.6,-0.7,'start'],[-1.6,-0.7,'end'],[0,1.6,'middle'],[0,-3.2,'middle']];
+  [2.6,4].forEach(d=>C.push([d,-0.7,'start'],[-d,-0.7,'end'],[d,d,'start'],[-d,d,'end'],[d,-d-1.6,'start'],[-d,-d-1.6,'end'],[0,d+0.6,'middle'],[0,-d-2.2,'middle']));
+  pts.forEach(p=>{if(p.label&&!isOpt(p)&&p.lx===undefined&&p.ly===undefined)place(p,C,0.9*p.label.length,2,1);});}
+function moveMarcher(m,x,y){m.setAttribute('transform',`translate(${x},${y})`);}
 let svgSeq=0;
 function fieldSVG(spec){
   const h=H();const id=spec.id||('f'+(++svgSeq));
@@ -331,8 +355,8 @@ function fieldSVG(spec){
   (spec.legs||[]).forEach(l=>{s+=`<line class="leg" x1="${l.x1}" y1="${-l.y1}" x2="${l.x2}" y2="${-l.y2}"/><text class="leg-label" x="${l.tx}" y="${-l.ty}" text-anchor="${l.anchor||'middle'}">${esc(l.label)}</text>`;});
   const tris=triSpecs.map((t,i)=>triSVG(t,id+'t'+i));tris.forEach(t=>s+=t.under);
   (spec.paths||[]).forEach((pa,i)=>{s+=gradPath(pa.pts,id+'p'+i,pa.cls);});
-  (spec.pts||[]).forEach(p=>{s+=xDot(p);});
-  if(spec.marcher)s+=`<circle class="marcher" id="${id}m" cx="${spec.marcher.x}" cy="${-spec.marcher.y}" r="1.15"/>`;
+  placeLabels(spec.pts||[],{x0:vbX,x1:vbX+vbW,y0:0,y1:top});(spec.pts||[]).forEach(p=>{s+=xDot(p);});
+  if(spec.marcher)s+=`<g class="marcher" id="${id}m" data-y="${-spec.marcher.y}" transform="translate(${spec.marcher.x},${-spec.marcher.y})"><circle class="mo" r=".75"/><circle class="mr" r=".75"/><circle class="mc" r=".17"/></g>`;
   tris.forEach(t=>s+=t.over);
   [spec.ruler,...(spec.rulers||[])].filter(Boolean).forEach(r=>{const segs=rulerSegments(r.x1,r.x2);const dir=r.x2>r.x1?1:-1;
     const ry=-(r.y-2.5);
@@ -1144,7 +1168,7 @@ ${fieldSVG({id:'pf',paths:[{pts:path}],pts:[{x:32,y:h,label:'Start'},...cps],mar
 <div class="pstats"><span>Lateral per count <b>${fmtFrac(a)}</b></span><span>Depth per count <b>${fmtFrac(b)}</b></span><span>Real step <b>${fmtIn(22.5*Math.hypot(a,b))}</b></span></div>
 <h3>Checkpoints for one cycle</h3>${cpTable(rows)}</div>`;}
 function maxT(){return 4*player.v.leg;}
-function playerDraw(){const m=document.getElementById('pfm');if(!m)return;const p=cbPos(player.v,player.t);m.setAttribute('cx',p.x);m.setAttribute('cy',-p.y);
+function playerDraw(){const m=document.getElementById('pfm');if(!m)return;const p=cbPos(player.v,player.t);moveMarcher(m,p.x,-p.y);
   const c=Math.floor(player.t+1e-6);if(c!==player.shown){player.shown=c;const pc=document.getElementById('pcount'),pp=document.getElementById('ppos');if(pc)pc.textContent=c;if(pp)pp.textContent=posDesc(cbPos(player.v,c));}}
 function playerStop(){player.playing=false;cancelAnimationFrame(player.raf);const b=document.getElementById('pplay');if(b)b.textContent='Play';}
 function playerPlay(){if(player.t>=maxT())player.t=0;player.playing=true;player.last=performance.now();const b=document.getElementById('pplay');if(b)b.textContent='Pause';
@@ -1273,7 +1297,7 @@ function practiceHTML(){
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</p><p${on('counts')}>Counts = Step Size × Distance ÷ 8</p><p${on('dist')}>Distance = 8 × Counts ÷ Step Size</p></div>`;}
   if(q.field){const spec=JSON.parse(JSON.stringify(q.field));spec.pts=spec.pts||[];spec.extra=q.reveal||[];
     if(spec.ruler&&spec.ruler.after&&!quiz.answered)delete spec.ruler; // ruler would give the answer away
-    if(quiz.answered){if(q.pick)spec.pts.forEach(p=>{if(p.opt!==undefined){p.cls+=p.opt===q.correct?' right':' dim';}});if(q.reveal)spec.pts=spec.pts.concat(q.reveal);if(q.triAfter&&spec.triangle)Object.assign(spec.triangle,q.triAfter);}
+    if(quiz.answered){if(q.pick)spec.pts.forEach(p=>{if(p.opt!==undefined){p.cls+=p.opt===q.correct?' right':p.opt===quiz.choice?' wrong':' dim';}});if(q.reveal)spec.pts=spec.pts.concat(q.reveal);if(q.triAfter&&spec.triangle)Object.assign(spec.triangle,q.triAfter);}
     field=`<figure class="fig">${fieldSVG(spec)}</figure>`;}
   const ok=quiz.answered&&quiz.choice===q.correct;
   const opts=q.options.map((o,i)=>{let c='opt';if(quiz.answered){if(i===q.correct)c+=' right';else if(i===quiz.choice)c+=' wrong';}
@@ -1301,7 +1325,7 @@ function render(){
 }
 const HERO={x1:37,x2:58}; // 3 outside the S1 25 → 2 inside the S1 35: 3 + 8 + 8 + 2 = 21 steps
 function heroAnim(){const m=document.getElementById('herom');if(!m||reduced)return;let t=0,last=performance.now();const L=HERO.x2-HERO.x1;
-  const loop=now=>{t+=(now-last)/1000*2;last=now;if(t>L+4)t=0;m.setAttribute('cx',HERO.x1+Math.min(L,t));hero=requestAnimationFrame(loop);};hero=requestAnimationFrame(loop);}
+  const loop=now=>{t+=(now-last)/1000*2;last=now;if(t>L+4)t=0;moveMarcher(m,HERO.x1+Math.min(L,t),+m.dataset.y);hero=requestAnimationFrame(loop);};hero=requestAnimationFrame(loop);}
 function go(v){view=v;render();window.scrollTo(0,0);}
 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
