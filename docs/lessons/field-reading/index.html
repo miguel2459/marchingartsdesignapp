@@ -11,8 +11,8 @@
 :root{
   --paper:#EEF2F5; --surface:#FFFFFF; --ink:#132139; --muted:#566275; --line:#D2D9E1;
   --turf:#2D6B40; --turf-2:#29633B; --apron:#1D3828; --signal:#F2C230;
-  --good:#1D7448; --bad:#7A3FC4; --good-bg:#E2F2E9; --bad-bg:#F0E6FB; --focus:#2F6FDB; /* wrong = purple; red is reserved for End */
-  --start-ink:#1A73B0; --end-ink:#D21F1F; /* field's #6EC8FF / #FF3B3B, deepened for text on light paper */
+  --good:#1D7448; --bad:#B3372B; --good-bg:#E2F2E9; --bad-bg:#F8E5E2; --focus:#2F6FDB;
+  --start-ink:#1A73B0; --end-ink:#7A3FC4; /* field's #6EC8FF / #C77DFF, deepened for text on light paper */
   --display:'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
   --body:'Atkinson Hyperlegible', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   box-sizing:border-box;
@@ -22,14 +22,14 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
-    --good:#62CC96; --bad:#B46BFF; --good-bg:#15362A; --bad-bg:#2C2142; --focus:#7FB0FF;
-    --start-ink:#6EC8FF; --end-ink:#FF3B3B;
+    --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+    --start-ink:#6EC8FF; --end-ink:#C77DFF;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
-  --good:#62CC96; --bad:#B46BFF; --good-bg:#15362A; --bad-bg:#2C2142; --focus:#7FB0FF;
-  --start-ink:#6EC8FF; --end-ink:#FF3B3B;
+  --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+  --start-ink:#6EC8FF; --end-ink:#C77DFF;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 90px);-webkit-text-size-adjust:100%}
@@ -115,7 +115,7 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .field .leg{stroke:#fff;stroke-width:.25;stroke-dasharray:.8 .5}
 .field .leg-label{fill:#fff;font-family:var(--body);font-weight:700;font-size:1.6px;paint-order:stroke;stroke:#14301F;stroke-width:.4}
 .field .dot{--dc:#6EC8FF}
-.field .dot.end{--dc:#FF3B3B}
+.field .dot.end{--dc:#C77DFF}
 .field .dot.opt{--dc:#fff}
 .field .dot.cp,.field .dot.reveal{--dc:var(--signal)}
 .field .dot.opt.right{--dc:#62D99A}
@@ -128,7 +128,7 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .field .marcher .mo{fill:none;stroke:#0B1526;stroke-width:.4}
 .field .marcher .mr{fill:none;stroke:var(--signal);stroke-width:.2}
 .field .marcher .mc{fill:var(--signal);stroke:#0B1526;stroke-width:.08}
-.field .dot.opt.wrong{--dc:#B46BFF}
+.field .dot.opt.wrong{--dc:#FF3B3B}
 
 /* practice */
 .qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:.95rem;margin-bottom:8px}
@@ -294,9 +294,9 @@ function triSVG(t,id){const g=triGeom(t);let under='',over='';
   over+=`<text class="dot-label" x="${g.cl.x}" y="${-g.cl.y+dy}" text-anchor="${anc}">${t.showC?`C = ${fmtC(g.C)}`:'C'}</text>`;
   if(t.noLabels)over=''; // compare: moves are named A and B, so leg labels would clash
   return {under,over};}
-// Start → end path, stroked with a blue→red gradient laid along the actual direction of travel.
+// Start → end path, stroked with a blue→purple gradient laid along the actual direction of travel.
 function gradPath(pts,gid,cls){const a=pts[0],b=pts[pts.length-1];
-  return `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${a.x}" y1="${-a.y}" x2="${b.x}" y2="${-b.y}"><stop offset="0" stop-color="#6EC8FF"/><stop offset="1" stop-color="#FF3B3B"/></linearGradient>`+
+  return `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${a.x}" y1="${-a.y}" x2="${b.x}" y2="${-b.y}"><stop offset="0" stop-color="#6EC8FF"/><stop offset="1" stop-color="#C77DFF"/></linearGradient>`+
     `<polyline class="path ${cls||''}" points="${pts.map(p=>`${p.x},${-p.y}`).join(' ')}" style="stroke:url(#${gid})"/>`;}
 // Dot = thin X centered on its coordinate (arms 0.6 steps), dark outline underneath.
 function xDot(p){const d=0.6/Math.SQRT2,x=p.x,y=-p.y;const cls=p.cls||'';
