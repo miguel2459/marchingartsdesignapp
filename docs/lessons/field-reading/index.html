@@ -320,7 +320,7 @@ function placeLabels(pts,v){
     for(const c of C){const b=box(c);const a=obs.reduce((s,o)=>s+(o.own===p?0:ov(b,o)),0)+3*outside(b);if(a<bestA){best=c;bestA=a;}if(a===0)break;}
     [p.lx,p.ly,p.anchor]=best;obs.push(box(best));};
   // Answer letters first (default above the X), then Start/End labels around everything.
-  const CL=[[0,1.6,'middle'],[0,-3.4,'middle'],[1.4,-0.9,'start'],[-1.4,-0.9,'end']];
+  const CL=[[0,1.6,'middle'],[0,-3.4,'middle'],[1.4,-0.9,'start'],[-1.4,-0.9,'end'],[2.4,-0.9,'start'],[-2.4,-0.9,'end'],[0,2.8,'middle'],[0,-4.6,'middle'],[1.4,1.2,'start'],[-1.4,1.2,'end']];
   pts.filter(isOpt).forEach(p=>{if(p.label&&p.lx===undefined&&p.ly===undefined)place(p,CL,1.4,2.4,1.2);});
   // Nearest first; the default (up-right) leads so uncrowded figures don't change.
   const C=[[1.3,1.2,'start'],[-1.3,1.2,'end'],[1.3,-2.6,'start'],[-1.3,-2.6,'end'],[1.6,-0.7,'start'],[-1.6,-0.7,'end'],[0,1.6,'middle'],[0,-3.2,'middle']];
@@ -754,6 +754,7 @@ function diagField(m,show){
   return {pts:[{x:m.x1,y:m.y1,label:'Start',...(sx>0?{lx:-5.6,ly:-0.7}:{})},{x:m.x2,y:m.y2,cls:'end',label:'End',...(sx<0?{lx:-4.6}:{}),...(sy<0?{ly:-2.6}:{})}],
     triangle:{x1:m.x1,y1:m.y1,x2:m.x2,y2:m.y2,showA:true,showB:true,showC:false,...show}};
 }
+const gSE=m=>[gStart(posDesc({x:m.x1,y:m.y1})),gEnd(posDesc({x:m.x2,y:m.y2}))],gAB=m=>[G('A',m.A),G('B',m.B)];
 const xAB=m=>`<b>A:</b> ${m.A} over. <b>B:</b> ${m.B} ${diagDir(m)}.`;
 const xC=m=>`<b>C:</b> √(${m.A}² + ${m.B}²) = √${m.A*m.A+m.B*m.B} = <b>${fmtC(m.C)} steps</b>.`;
 function abWrongs(m,leg){
@@ -788,14 +789,14 @@ function mcWhy(correct,pairs,o){
 function gen3_findA(){
   const m=randDiag();const segs=rulerSegments(m.x1,m.x2);
   const explain=`<b>A:</b> ${segs.length>1?segs.join(' + ')+' = ':''}<b>${m.A} over</b>. Same ruler as Level 2: dot to the line, line to line in 8s, line to your end dot.`;
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. What is <b>A</b>, the steps over?`,
+  return Object.assign({prompt:'What is A, the steps over?',givens:gSE(m),
     field:diagField(m,{showA:false}),triAfter:{showA:true}},
     mcWhy(String(m.A),abWrongs(m,'A'),{kind:'count'}),{explain,formula:'ab'});
 }
 function gen3_findB(){
   const h=H();const m=randDiag();const d1=m.y1-h,d2=m.y2-h,cross=d1*d2<0&&m.y1>=h/2&&m.y2>=h/2;
   const explain=`<b>B:</b> From ${depDesc(m.y1)} to ${depDesc(m.y2)}${cross?`: ${Math.abs(d1)} + ${Math.abs(d2)} =`:' is'} <b>${m.B} ${diagDir(m)}</b>. Read depth from the hash, the same way you did in Level 1.`;
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. What is <b>B</b>, the steps forward or back?`,
+  return Object.assign({prompt:'What is B, the steps forward or back?',givens:gSE(m),
     field:diagField(m,{showB:false}),triAfter:{showB:true}},
     mcWhy(String(m.B),abWrongs(m,'B'),{kind:'count'}),{explain,formula:'ab'});
 }
@@ -805,19 +806,19 @@ function gen3_cRange(){
     [sum,cWrongs(m)[0][1]],
     [sum+rnd(2,6),`C can never be longer than A + B (${sum}). The diagonal is the shortcut.`]];
   const explain=`${xAB(m)}<br><b>Gut check C:</b> C is longer than the longer leg and shorter than A + B, so it lands between ${mx} and ${sum}. Only <b>${fmtC(m.C)}</b> fits.<br>${xC(m)}`;
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. Which of these could C be?`,
+  return Object.assign({prompt:'Which of these could C be?',givens:gAB(m),
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtC(m.C),pairs,{kind:'dec'}),{explain,formula:'c'});
 }
 function gen3_cClean(){
   const m=randDiag({clean:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. What is <b>C</b>?`,
+  return Object.assign({prompt:'What is C?',givens:gAB(m),
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtC(m.C),cWrongs(m),{kind:'dec'}),{explain:`${xAB(m)}<br>${xC(m)} A clean one, no rounding needed.`,formula:'c'});
 }
 function gen3_cReal(){
   const m=randDiag({real:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}. What is <b>C</b>? Use your phone calculator and round to one decimal.`,
+  return Object.assign({prompt:'What is C? Use your phone calculator and round to one decimal.',givens:gAB(m),
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtC(m.C),cWrongs(m),{kind:'dec'}),{explain:`${xAB(m)}<br>${xC(m)}`,formula:'c'});
 }
@@ -849,25 +850,25 @@ function gen3_gut(){
   pairs.push([GUT_OPTS[3],'You can tell! Find C, then compare: more counts than steps means smaller, fewer counts means bigger.']);
   pairs.push([GUT_OPTS[2],'Exactly an 8-to-5 only happens when the counts match C.']);
   GUT_OPTS.slice(0,2).forEach(o=>pairs.push([o,'Watch the flip: more counts than steps means a smaller step, fewer counts means a bigger step.']));
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. <b>${m.counts} counts</b>. Without working out the step size: is it bigger, smaller, or exactly an 8-to-5?`,
+  return Object.assign({prompt:'Without working out the step size: is it bigger, smaller, or exactly an 8-to-5?',givens:[...gSE(m),gCounts(m.counts)],
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(ans,pairs),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}`,formula:'gut'});
 }
 function gen3_ssClean(){
   const m=randDiag({clean:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}, in <b>${m.counts} counts</b>. What step size?`,
+  return Object.assign({prompt:'What step size?',givens:[...gAB(m),gCounts(m.counts)],
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
 function gen3_ssReal(){
   const m=randDiag({real:true});
-  return Object.assign({prompt:`A = ${m.A} and B = ${m.B}, in <b>${m.counts} counts</b>. What step size?`,
+  return Object.assign({prompt:'What step size?',givens:[...gAB(m),gCounts(m.counts)],
     field:diagField(m,{}),triAfter:{showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
 function gen3_ssFull(){
   const m=randDiag({real:true});
-  return Object.assign({prompt:`Start: <b>${posDesc({x:m.x1,y:m.y1})}</b>. End: <b>${posDesc({x:m.x2,y:m.y2})}</b>. <b>${m.counts} counts</b>. Find A, B, and C, then the step size.`,
+  return Object.assign({prompt:'Find A, B, and C, then the step size.',givens:[...gSE(m),gCounts(m.counts)],
     field:diagField(m,{showA:false,showB:false}),triAfter:{showA:true,showB:true,showC:true}},
     mcWhy(fmtSS(m.ss),ssWrongs(m),{kind:'ss'}),{explain:`${xAB(m)}<br>${xC(m)}<br>${xGut(m)}<br>${xSS(m)}`,formula:'ss'});
 }
@@ -889,27 +890,27 @@ function gen3_compare(){
     triangles:[mA,mB].filter(m=>m.B>0).map(tri),minW:48};
   const flatM=[mA,mB].find(m=>m.B===0);
   if(flatM){field.paths=[{pts:[{x:flatM.x1,y:flatM.y1},{x:flatM.x2,y:flatM.y2}]}];field.rulers=[{x1:flatM.x1,x2:flatM.x2,y:flatM.y1}];}
-  const mv=m=>`<b>${m.A} over and ${m.B} ${diagDir(m)}</b> in <b>${m.counts} counts</b>`;
+  const mv=m=>`${m.A} over and ${m.B} ${diagDir(m)} in ${m.counts} counts`;
   const xMove=(n,m)=>`<b>Move ${n}:</b> C = √(${m.A}² + ${m.B}²) = ${fmtC(m.C)} steps. 8 × ${m.counts} ÷ ${fmtC(m.C)} = <b>${fmtSS(m.ss)}</b>.`;
-  let prompt,explain;const pairs=[];
+  const prompt='Which move takes the bigger step?';let givens,explain;const pairs=[];
   if(flatM){
     const S=flatM===mA?'A':'B',D=S==='A'?'B':'A';
     const xFlat=`<b>Move ${S}:</b> straight over, so the Distance is just ${flatM.A}. 8 × ${flatM.counts} ÷ ${flatM.A} = <b>${fmtSS(flatM.ss)}</b>.`;
-    prompt=S==='A'?`Move A: <b>${mA.A} over</b>, straight, in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b> plus <b>${mB.B} ${diagDir(mB)}</b>, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`
-      :`Move A: <b>${mA.A} over and ${mA.B} ${diagDir(mA)}</b> in <b>${mA.counts} counts</b>. Move B: the same <b>${mB.A} over</b>, straight, also in <b>${mB.counts} counts</b>. Which move takes the bigger step?`;
+    givens=S==='A'?[G('Move A',`${mA.A} over, straight, in ${mA.counts} counts`),G('Move B',`the same ${mB.A} over plus ${mB.B} ${diagDir(mB)}, also in ${mB.counts} counts`)]
+      :[G('Move A',mv(mA)),G('Move B',`the same ${mB.A} over, straight, also in ${mB.counts} counts`)];
     explain=`${S==='A'?xFlat:xMove('A',mA)}<br>${S==='A'?xMove('B',mB):xFlat}<br>Same counts, longer path, so ${D} needs the bigger step. Smaller number = bigger step: <b>${ans}</b>.`;
     pairs.push([CMP[S==='A'?0:1],`Move ${D} covers more ground in the same counts, so it needs the bigger step. The diagonal is always longer than the straight leg.`],
       [CMP[2],`Same counts doesn't mean same step. ${D}'s diagonal is longer than ${S}'s straight line, so ${D}'s step is bigger.`],
       [CMP[3],`You can tell without any math! Same counts, longer path: ${D} takes the bigger step.`]);
   } else {
-    prompt=`Move A: ${mv(mA)}. Move B: ${mv(mB)}. Which move takes the bigger step?`;
+    givens=[G('Move A',mv(mA)),G('Move B',mv(mB))];
     explain=`${xMove('A',mA)}<br>${xMove('B',mB)}<br>Smaller number = bigger step: <b>${ans}</b>.`;
     const wrongMove=ans===CMP[0]?CMP[1]:CMP[0];const byA=8*mA.counts/mA.A<8*mB.counts/mB.A?CMP[0]:CMP[1];
     pairs.push([wrongMove,byA===wrongMove?'Looks like only the side-to-side legs got compared. Use C, the full diagonal, as each Distance.':'Watch the flip: the smaller step-size number is the bigger step.'],
       [CMP[2],`Work them both out and they're not the same: ${fmtSS(mA.ss)} vs ${fmtSS(mB.ss)}.`],
       [CMP[3],'You can tell! Work out each step size, then compare. Smaller number = bigger step.']);
   }
-  return Object.assign({prompt,field},mcWhy(ans,pairs),{explain,formula:'gut'});
+  return Object.assign({prompt,givens,field},mcWhy(ans,pairs),{explain,formula:'gut'});
 }
 const P3=['findA','findB','cRange','cClean','cReal','gut','ssClean','ssReal','ssFull','compare'];
 const GEN3={findA:gen3_findA,findB:gen3_findB,cRange:gen3_cRange,cClean:gen3_cClean,cReal:gen3_cReal,
@@ -923,16 +924,18 @@ const P4=['text','pick','text','when','pick','text','pick','when'];
 function gen4(qz){const t=P4[qz.i];const h=H();
   if(t==='when'){const L=pick([16,8]),C=16,r=L/C;const s=pick([2,4,6]);const tc=(8-s)/r;const k=rnd(3,13);const D=pick([0,8]);const dir=pick([1,-1]);
     const a={x:8*k+s,y:h+(D?(dir>0?-4:4):pick([0,4,-4]))};const b={x:a.x+L,y:a.y+dir*D};const cross={x:8*(k+1),y:a.y+dir*D*tc/C};
-    return Object.assign({prompt:`Start: <b>${posDesc(a)}</b>. Move <b>${L} steps toward Side 2</b>${D?` and <b>${D} ${dir>0?'back':'forward'}</b>`:''} in <b>${C} counts</b>. On which count do you cross ${the(k+1)}?`,
+    return Object.assign({prompt:`On which count do you cross ${the(k+1)}?`,
+      givens:[gStart(posDesc(a)),G('Lateral',`${L} steps toward Side 2`),...(D?[G('Depth',`${D} ${dir>0?'back':'forward'}`)]:[]),gCounts(C)],
       field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}]},reveal:[{...cross,cls:'reveal',label:`Count ${tc}`}],
       explain:`You start ${steps(8-s)} from ${the(k+1)} and travel ${fmtFrac(r)} lateral step${r===1?'':'s'} per count. ${8-s} ÷ ${fmtFrac(r)} = <b>count ${tc}</b>. Depth doesn't matter for when you cross a yard line; only the lateral rate does.`},
       mc(`Count ${tc}`,[tc+2,tc-2,tc*2,C/2,tc+4].filter(x=>x>0&&x<=C&&x!==tc).map(x=>`Count ${x}`)));}
   const m=cpMove();const field=moveField(m);delete field.legs;
   const extra=[{x:m.p.x,y:m.a.y},{x:m.p.x,y:m.b.y},{x:m.a.x+m.D*m.X/m.C,y:m.a.y+m.dir*m.L*m.X/m.C}];
   const explain=`Count ${m.X} of ${m.C} is ${fracStr(m.X,m.C)} of the move. Lateral: ${m.L} × ${fracStr(m.X,m.C)} = ${fmt(m.L*m.X/m.C)} steps toward Side 2. Depth: ${m.D} × ${fracStr(m.X,m.C)} = ${fmt(m.D*m.X/m.C)} steps ${m.dir>0?'back':'forward'}. Add both to the start: <b>${posDesc(m.p)}</b>.`;
-  const prompt=`Start: <b>${posDesc(m.a)}</b>. Move ${moveTxt(m)}. Where should you be on <b>count ${m.X}</b>?`;
-  if(t==='text')return textPosQ({prompt,field,p:m.p,extra,explain,reveal:[{...m.p,cls:'reveal',label:`Count ${m.X}`}]});
-  return pickPosQ({prompt,field,p:m.p,extra,explain});}
+  const prompt=`Where should you be on count ${m.X}?`;
+  const givens=[gStart(posDesc(m.a)),G('Lateral',`${m.L} steps toward Side 2`),G('Depth',`${m.D} ${m.dir>0?'back':'forward'}`),gCounts(m.C)];
+  if(t==='text')return textPosQ({prompt,givens,field,p:m.p,extra,explain,reveal:[{...m.p,cls:'reveal',label:`Count ${m.X}`}]});
+  return pickPosQ({prompt,givens,field,p:m.p,extra,explain});}
 
 /* ---------- level 5: Charlie Brown ---------- */
 const C5=[
