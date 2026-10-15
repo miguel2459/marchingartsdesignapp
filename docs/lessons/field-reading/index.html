@@ -1327,7 +1327,7 @@ function render(){
   if(view.name==='level'&&view.tab==='learn'&&view.n===5){player.shown=-1;playerDraw();}
 }
 const HERO={x1:37,x2:58}; // 3 outside the S1 25 → 2 inside the S1 35: 3 + 8 + 8 + 2 = 21 steps
-function heroAnim(){const m=document.getElementById('herom');if(!m||reduced)return;let t=0,last=performance.now();const L=HERO.x2-HERO.x1;
+function heroAnim(){const m=document.getElementById('herom');if(!m)return;let t=0,last=performance.now();const L=HERO.x2-HERO.x1;
   const loop=now=>{t+=(now-last)/1000*2;last=now;if(t>L+4)t=0;moveMarcher(m,HERO.x1+Math.min(L,t),+m.dataset.y);hero=requestAnimationFrame(loop);};hero=requestAnimationFrame(loop);}
 function go(v){view=v;render();window.scrollTo(0,0);}
 
