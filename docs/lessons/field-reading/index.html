@@ -1307,7 +1307,7 @@ document.addEventListener('change',e=>{const t=e.target;
 document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nameIn'){const b=document.querySelector('[data-act="start"]');if(b)b.click();}});
 
-const COACH_WORD='YOURWORD'; // ?coach=<this> unlocks all levels
+const COACH_WORD='EUROPE2015'; // ?coach=<this> unlocks all levels
 function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
   if(!u.searchParams.has('coach'))return;
   const ok=u.searchParams.get('coach')===COACH_WORD;
