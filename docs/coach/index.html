@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Coach sign-up · MPR Studios Lessons</title>
+<link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
+<link rel="shortcut icon" href="/favicon/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF2F5; --surface:#FFFFFF; --ink:#132139; --muted:#566275; --line:#D2D9E1;
+  --turf:#2D6B40; --signal:#F2C230;
+  --good:#1D7448; --bad:#B3372B; --good-bg:#E2F2E9; --bad-bg:#F8E5E2; --focus:#2F6FDB;
+  --display:'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  --body:'Atkinson Hyperlegible', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
+    --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1522; --surface:#162034; --ink:#E7ECF4; --muted:#9DA9BB; --line:#2B3955;
+  --good:#62CC96; --bad:#F2897C; --good-bg:#15362A; --bad-bg:#3B201C; --focus:#7FB0FF;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+a{color:var(--focus)}
+
+.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{max-width:880px;margin:0 auto;padding:12px 16px}
+.brand-title{font-family:var(--display);font-weight:700;font-size:1.25rem;letter-spacing:.01em;color:inherit;text-decoration:none}
+
+main{max-width:880px;margin:0 auto;padding:20px 16px 40px}
+h1,h2{font-family:var(--display);font-weight:700;line-height:1.05;margin:0}
+h1{font-size:clamp(2.3rem,7vw,3.6rem);letter-spacing:-.005em}
+h2{font-size:1.9rem}
+p{margin:.6em 0}
+.lede{font-size:1.1rem;max-width:58ch}
+.muted{color:var(--muted)}
+.note{color:var(--muted);font-size:.95rem;border-left:3px solid var(--signal);padding-left:12px;max-width:620px}
+
+.report{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:620px;margin:18px 0}
+.fld{display:flex;flex-direction:column;gap:4px;margin:0 0 16px}
+.fld>label,.fld>legend{font-weight:700;font-size:.95rem;padding:0}
+.fld input[type=text],.fld input[type=email],.fld input[type=number],.fld select,.fld textarea{
+  width:100%;border:1.5px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;font-size:1rem}
+.fld textarea{min-height:96px;resize:vertical}
+.fld [aria-invalid="true"]{border-color:var(--bad)}
+.hint{color:var(--muted);font-size:.88rem;margin:0}
+.req{color:var(--muted);font-weight:400}
+.tag{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;background:var(--signal);color:#132139;font-size:.75rem;font-weight:700;vertical-align:1px}
+.tag[hidden]{display:none}
+.err{color:var(--bad);font-size:.88rem;margin:0}
+.err:empty{display:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+
+fieldset.fld{border:0;margin:0 0 16px;padding:0;min-width:0}
+.choice{display:grid;grid-template-columns:22px 1fr;gap:2px 10px;align-items:start;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px;cursor:pointer}
+.choice:has(input:checked){border-color:var(--ink)}
+.choice input{margin:4px 0 0;width:18px;height:18px;accent-color:var(--turf)}
+.choice .hint{grid-column:2}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:700;font-size:.95rem;cursor:pointer}
+.check input{margin:4px 0 0;width:18px;height:18px;flex:none;accent-color:var(--turf)}
+
+.hp{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
+
+.btn{border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:10px 16px;cursor:pointer;font-weight:700}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn:disabled{opacity:.6;cursor:progress}
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.fb{border-left:4px solid var(--bad);background:var(--bad-bg);padding:10px 14px;border-radius:0 8px 8px 0;margin:0 0 14px}
+.fb[hidden]{display:none}
+.thanks{border-left:4px solid var(--good)}
+.thanks h2{color:var(--good)}
+
+.foot{max-width:880px;margin:0 auto;padding:18px 16px 30px;border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
+.foot a{color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="brand-title" href="/lessons/">MPR Studios Lessons</a></div></header>
+<main>
+  <h1>Coach sign-up</h1>
+  <p class="lede">Track your students' progress in Field Reading &amp; Step Size. Sign up, and we'll email you your class link once it's approved (usually within a day or two).</p>
+
+  <form class="report" id="form" novalidate>
+    <div class="fb" id="formErr" role="alert" hidden></div>
+
+    <div class="fld">
+      <label for="coachName">Your name</label>
+      <input type="text" id="coachName" name="coachName" autocomplete="name" maxlength="100" required>
+      <p class="err" id="coachName-err"></p>
+    </div>
+    <div class="fld">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" autocomplete="email" inputmode="email" maxlength="200" required>
+      <p class="err" id="email-err"></p>
+    </div>
+    <div class="fld">
+      <label for="groupName">School or group name</label>
+      <input type="text" id="groupName" name="groupName" autocomplete="organization" maxlength="120" placeholder="Golden Valley High School" required>
+      <p class="err" id="groupName-err"></p>
+    </div>
+    <div class="fld">
+      <label for="section">Section</label>
+      <select id="section" name="section" required>
+        <option value="">Choose one…</option>
+        <option value="Full band">Full band</option>
+        <option value="Visual / marching">Visual / marching</option>
+        <option value="Winds">Winds</option>
+        <option value="Percussion">Percussion</option>
+        <option value="Front ensemble">Front ensemble</option>
+        <option value="Color guard">Color guard</option>
+        <option value="Leadership">Leadership</option>
+        <option value="Other">Other</option>
+      </select>
+      <p class="err" id="section-err"></p>
+    </div>
+    <div class="two">
+      <div class="fld">
+        <label for="location">City / state <span class="req">(optional)</span></label>
+        <input type="text" id="location" name="location" autocomplete="address-level2" maxlength="100">
+      </div>
+      <div class="fld">
+        <label for="estStudents">About how many students? <span class="req">(optional)</span></label>
+        <input type="number" id="estStudents" name="estStudents" min="1" max="1000" step="1" inputmode="numeric">
+        <p class="err" id="estStudents-err"></p>
+      </div>
+    </div>
+
+    <fieldset class="fld" id="access">
+      <legend>How do you want to see results?</legend>
+      <label class="choice">
+        <input type="radio" name="access" value="google" required>
+        <span>A Google Sheet shared with my email (needs a Google account for this email)</span>
+        <span class="hint">School Google account or Gmail works. Don't have one? You can make a free Google account using this same email, no Gmail needed: <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">accounts.google.com/signup</a></span>
+      </label>
+      <label class="choice">
+        <input type="radio" name="access" value="email">
+        <span>Weekly email reports (no Google account needed)</span>
+        <span class="hint">Every Monday you'll get a progress summary. With this option, list your students below and we'll set them up for you.</span>
+      </label>
+      <p class="err" id="access-err"></p>
+    </fieldset>
+
+    <div class="fld">
+      <label for="students">Student names <span class="req">(optional)</span><span class="tag" id="recTag" hidden>recommended</span></label>
+      <textarea id="students" name="students" maxlength="10000" aria-describedby="students-hint"></textarea>
+      <p class="hint" id="students-hint">One per line. First name + last initial is plenty. Please don't include emails or student ID numbers.</p>
+    </div>
+    <div class="fld">
+      <label for="notes">Anything else? <span class="req">(optional)</span></label>
+      <textarea id="notes" name="notes" maxlength="2000"></textarea>
+    </div>
+
+    <div class="hp" aria-hidden="true">
+      <label for="website">Website</label>
+      <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div class="fld">
+      <label class="check"><input type="checkbox" id="confirm" required> I'm a coach or director for this group.</label>
+      <p class="err" id="confirm-err"></p>
+    </div>
+
+    <div class="btn-row"><button class="btn primary" type="submit" id="submitBtn">Sign up</button></div>
+  </form>
+
+  <p class="note" id="privacy">We store only the names you give us and practice scores. Results are visible only to you and MPR Studios.</p>
+</main>
+<footer class="foot"><a href="/">MPR Studios</a> · <a href="/lessons/">Lessons</a></footer>
+<script>
+const SIGNUP_URL = 'https://script.google.com/macros/s/AKfycbz615SkdpqE7nBRc185t21znFZLjKnR7_vadW_L_WEXDEohgY9ZHUJEyO7nbOvOt4swzQ/exec';
+
+const $ = id => document.getElementById(id);
+const form = $('form'), btn = $('submitBtn'), formErr = $('formErr');
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MSG_INVALID = 'Please check your name, email, and group name.';
+const MSG_LATER = "Couldn't send right now. Please try again in a few minutes.";
+
+const val = id => $(id).value.trim();
+const access = () => (form.querySelector('input[name=access]:checked') || {}).value || '';
+
+function setErr(id, msg){
+  const el = $(id + '-err');
+  if (el) el.textContent = msg || '';
+  const input = id === 'access' ? null : $(id);
+  if (input) {
+    if (msg) { input.setAttribute('aria-invalid', 'true'); input.setAttribute('aria-errormessage', id + '-err'); }
+    else input.removeAttribute('aria-invalid');
+  }
+}
+
+function validate(){
+  const errs = {};
+  if (!val('coachName')) errs.coachName = 'Please enter your name.';
+  if (!val('email')) errs.email = 'Please enter your email.';
+  else if (!EMAIL_RE.test(val('email'))) errs.email = 'That email doesn\'t look right.';
+  if (!val('groupName')) errs.groupName = 'Please enter your school or group name.';
+  if (!val('section')) errs.section = 'Please choose a section.';
+  const n = val('estStudents');
+  if (n && !(/^\d+$/.test(n) && +n >= 1 && +n <= 1000)) errs.estStudents = 'Enter a number from 1 to 1000.';
+  if (!access()) errs.access = 'Please choose how you want to see results.';
+  if (!$('confirm').checked) errs.confirm = 'Please confirm you coach or direct this group.';
+  ['coachName','email','groupName','section','estStudents','access','confirm'].forEach(k => setErr(k, errs[k]));
+  const first = Object.keys(errs)[0];
+  if (first) {
+    const target = first === 'access' ? form.querySelector('input[name=access]') : $(first);
+    target.focus();
+  }
+  return !first;
+}
+
+function showFormErr(msg){
+  formErr.textContent = msg;
+  formErr.hidden = !msg;
+  if (msg) formErr.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+// clear a field's error as soon as it's fixed
+form.addEventListener('input', e => {
+  const id = e.target.name === 'access' ? 'access' : e.target.id;
+  if ($(id + '-err') && $(id + '-err').textContent) setErr(id, '');
+});
+form.addEventListener('change', () => { $('recTag').hidden = access() !== 'email'; });
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  showFormErr('');
+  if (!validate()) return;
+
+  const payload = {
+    type: 'signup',
+    coachName: val('coachName'), email: val('email'), groupName: val('groupName'),
+    section: val('section'), location: val('location'), estStudents: val('estStudents'),
+    access: access(), students: $('students').value.trim(), notes: val('notes'),
+    website: $('website').value,
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const res = await fetch(SIGNUP_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data && data.ok) return showThanks();
+    showFormErr(data && data.error === 'invalid' ? MSG_INVALID : MSG_LATER);
+  } catch (err) {
+    showFormErr(MSG_LATER);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Sign up';
+});
+
+function showThanks(){
+  const card = document.createElement('section');
+  card.className = 'report thanks';
+  card.setAttribute('role', 'status');
+  card.tabIndex = -1;
+  card.innerHTML = '<h2>Thanks!</h2>' +
+    '<p>Check your email for a confirmation. We\'ll send your class link once it\'s approved.</p>' +
+    '<p class="muted">Don\'t see it? Check your spam or junk folder.</p>';
+  form.replaceWith(card);
+  card.focus();
+}
+</script>
+</body>
+</html>
