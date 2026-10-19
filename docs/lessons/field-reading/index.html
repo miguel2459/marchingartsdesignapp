@@ -1292,7 +1292,7 @@ function introHTML(){const h=H();const cont=S.name&&S.unlocked>1;
 <h1>Field Reading &amp; Step Size</h1>
 <p class="lede">Prep for the Blue Devils A Corps audition. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
 <ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
-<div class="name-row"><label for="nameIn">Your name<input id="nameIn" autocomplete="given-name" value="${esc(S.name)}"></label>
+<div class="name-row">${CLS?`<p style="flex-basis:100%;margin:0">Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})</p>`:`<label for="nameIn">Your name<input id="nameIn" autocomplete="given-name" value="${esc(S.name)}"></label>`}
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
 function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of ${ACTIVE_LEVELS}</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
@@ -1389,6 +1389,8 @@ function classLoad(){try{const r=localStorage.getItem(CLASS_KEY);CLS=r?JSON.pars
 function classSave(){try{localStorage.setItem(CLASS_KEY,JSON.stringify(CLS));}catch(e){}}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},5000);}
 function classRender(){const c=document.getElementById('clsChip');
+  if(CLS&&S.name!==CLS.name){S.name=CLS.name;save();} // roster name wins so the results card matches the coach's sheet
+  if(view.name==='intro')render();else document.getElementById('who').textContent=S.name||'';
   c.textContent=CLS?`Joined: ${CLS.name} · ${CLS.classCode}`:'Join a class';
   const p=document.getElementById('clsPanel');if(!p.hidden)classPanelFill();}
 function classPanelFill(){const p=document.getElementById('clsPanel');
@@ -1420,8 +1422,6 @@ async function classBoot(){classLoad();classRender();let u;try{u=new URL(locatio
   const cls=(u.searchParams.get('class')||'').trim().toUpperCase(),code=(u.searchParams.get('code')||'').trim().toUpperCase();
   if(!cls||!code)return;
   const strip=()=>{u.searchParams.delete('class');u.searchParams.delete('code');history.replaceState(null,'',u.pathname+u.search+u.hash);};
-  // The link carries only class + join code, so "already joined" means the same class on this device.
-  if(CLS&&CLS.classCode===cls){strip();return;}
   const res=await classJoin(cls,code);
   if(res==='ok')strip();
   else if(res==='not_found')toast(MSG_NOT_FOUND);
