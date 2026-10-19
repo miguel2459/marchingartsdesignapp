@@ -600,6 +600,7 @@ function doGet(e) {
   const p = (e && e.parameter) || {};
   try {
     if (p.action === 'join') return json_(join_(p));
+    if (p.action === 'progress') return json_(progress_(p));
     if (p.action === 'ping') return json_({ ok: true });
     return json_({ ok: false, error: 'unknown_action' });
   } catch (err) {
@@ -624,6 +625,34 @@ function join_(p) {
   const st = getStudents_().find(s => s.classCode === classCode && s.code === code && s.active);
   if (!st) { log_('join_failed', classCode + ' / ' + code); return { ok: false, error: 'not_found' }; }
   return { ok: true, studentId: st.id, name: st.name, classCode: classCode };
+}
+
+/**
+ * The student's saved progress, so any device shows the same unlocked levels.
+ * GET ?action=progress&class=CODE&student=S… -> {ok, best:{level:score}, attempts:{level:n}, lastSent}
+ */
+function progress_(p) {
+  const classCode = normCode_(p.class);
+  const sid = String(p.student || '').trim();
+  if (!/^[A-Z0-9-]{3,20}$/.test(classCode) || !/^S[a-f0-9]{12}$/.test(sid)) return { ok: false, error: 'not_found' };
+  const cls = findClass_(classCode);
+  if (!cls || !cls.active) return { ok: false, error: 'not_found' };
+  const st = getStudents_().find(s => s.id === sid && s.classCode === classCode);
+  if (!st || !st.active) return { ok: false, error: 'unknown_student' };
+
+  const rs = SpreadsheetApp.openById(cls.sheetId).getSheetByName(COACH.RESULTS);
+  const n = rs.getLastRow() - 1;
+  const best = {}, attempts = {};
+  let last = null;
+  if (n > 0) rs.getRange(2, 1, n, COACH.RESULTS_HEADERS.length).getValues().forEach(r => {
+    if (String(r[9]).trim() !== sid) return;
+    const L = Number(r[2]), score = Number(r[3]), att = Number(r[6]) || 0;
+    if (!(L >= 1)) return;
+    best[L] = Math.max(best[L] || 0, score);
+    attempts[L] = Math.max(attempts[L] || 0, att);
+    if (r[0] instanceof Date && (!last || r[0] > last)) last = r[0];
+  });
+  return { ok: true, best: best, attempts: attempts, lastSent: last ? last.toISOString() : null };
 }
 
 /** JSON body sent as Content-Type: text/plain. type = 'result' (lesson) or 'signup' (coach page). */

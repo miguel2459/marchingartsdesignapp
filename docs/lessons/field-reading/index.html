@@ -220,14 +220,18 @@ const DEPTH=85.33, QN=8, PASS=6, KEY='cb-lesson-v1';
 const ACTIVE_LEVELS = 4; // levels past this are hidden (code kept)
 const RESULTS_URL = 'https://script.google.com/macros/s/AKfycbz615SkdpqE7nBRc185t21znFZLjKnR7_vadW_L_WEXDEohgY9ZHUJEyO7nbOvOt4swzQ/exec';
 const LESSON_ID = 'field-reading'; const APP_VERSION = '1.0';
-const CLASS_KEY = 'mpr-class-v1'; // {classCode, studentId, name, joinedAt}; separate from KEY so leaving a class keeps progress
+const CLASS_KEY = 'mpr-class-v1'; // {classCode, studentId, name, joinedAt, attempts, lastSent}; progress in KEY is tied to the student via S.owner
 const qnFor=n=>n===2||n===3?10:QN;
 const passFor=n=>n===2||n===3?8:PASS;
-const S={name:'',hash:'college',grid:true,best:{},unlocked:1};
+const S={name:'',hash:'college',grid:true,best:{},unlocked:1,owner:''}; // owner: studentId the progress belongs to ('' = solo)
 function load(){try{const r=localStorage.getItem(KEY);if(r)Object.assign(S,JSON.parse(r));}catch(e){}
   if(S.best[2]!==undefined&&S.l2v!==2){delete S.best[2];S.l2v=2;save();}
   if(S.best[3]!==undefined&&S.l3v!==3){delete S.best[3];S.l3v=3;save();}
-  if(S.unlocked>ACTIVE_LEVELS){S.unlocked=ACTIVE_LEVELS;save();}}
+  if(S.unlocked>calcUnlocked()){S.unlocked=calcUnlocked();save();}} // also undoes old saved coach unlocks
+// 1 + consecutive passed levels from Level 1, capped at ACTIVE_LEVELS.
+function calcUnlocked(){let u=1;while(u<ACTIVE_LEVELS&&(S.best[u]||0)>=passFor(u))u++;return u;}
+let COACH=false; // ?coach= unlock; session only, never saved
+const levelOpen=n=>n<=ACTIVE_LEVELS&&(n<=S.unlocked||COACH);
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const H=()=>S.hash==='hs'?28:32;
 const hashName=()=>S.hash==='hs'?'a high school field':'a college field';
@@ -1284,7 +1288,7 @@ ${!calc3.shown&&!same?`<div class="btn-row"><button class="btn primary" data-act
 /* ---------- app state + views ---------- */
 let view={name:'intro'};let quiz=null;let hero=0;
 function startQuiz(n){quiz={n,i:0,score:0,answered:false,choice:null,used:new Set(),missed:new Set(),done:false};quiz.q=GEN[n](quiz);}
-function trackHTML(){return ACTIVE.map(L=>{const locked=L.n>S.unlocked;const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=passFor(L.n);
+function trackHTML(){return ACTIVE.map(L=>{const locked=!levelOpen(L.n);const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=passFor(L.n);
   return `<button class="trk${passed?' passed':''}${cur?' cur':''}" data-act="goto" data-n="${L.n}"${locked?' disabled':''}${cur?' aria-current="step"':''} aria-label="Level ${L.n}: ${L.title}${passed?', passed':''}${locked?', locked':''}"><span class="trk-n">${L.n}</span><span class="trk-t">${L.title}</span></button>`;}).join('')+
   `<button class="trk${view.name==='results'?' cur':''}" data-act="results" aria-label="Results"><span class="trk-n">✓</span><span class="trk-t">Results</span></button>`;}
 function introHTML(){const h=H();const cont=S.unlocked>1;
@@ -1326,12 +1330,16 @@ function practiceHTML(){
 ${promptHTML(q)}${card}${field}<div class="opts${q.pick?' pick':''}" role="group" aria-label="Answers">${opts}</div>
 ${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p>${!ok&&q.why&&q.why[q.options[quiz.choice]]?`<p>${q.why[q.options[quiz.choice]]}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
 function resultsHTML(){const tot=ACTIVE.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
-  return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
+  return `<section><h2>Results</h2>
 <div class="report"><p>${S.name?`<b>${esc(S.name)}</b><br>`:''}<span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
 <div class="tw"><table class="t"><thead><tr><th>Level</th><th>Best</th><th>Status</th></tr></thead><tbody>
 ${ACTIVE.map(L=>{const b=S.best[L.n];return `<tr><td>${L.n}. ${L.title}</td><td class="c">${b===undefined?'–':`${b} / ${qnFor(L.n)}`}</td><td>${b===undefined?'Not taken':b>=passFor(L.n)?'Passed':'Not passed yet'}</td></tr>`;}).join('')}
 </tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${ACTIVE.reduce((s,L)=>s+qnFor(L.n),0)}</span></div></div>
-${CLS?`<p class="muted">${queuePending()?"Saved; will send when you're back online":'Sent to your coach ✓'}</p>`:''}</section>`;}
+${CLS?`<p class="muted">${sendStatus()}</p>`:''}</section>`;}
+function sendStatus(){const pending=queuePending(),checks=pending||!!CLS.lastSent||Object.values(CLS.attempts||{}).some(v=>v>0);
+  if(!checks)return 'Nothing to send yet…';
+  if(pending)return "Saved; will send when you're back online";
+  return CLS.lastSent?`Last sent to coach: ${new Date(CLS.lastSent).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`:'Sent to your coach ✓';}
 
 function render(){
   playerStop();cancelAnimationFrame(hero);
@@ -1351,13 +1359,13 @@ function go(v){view=v;render();window.scrollTo(0,0);}
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
   if(a==='home')return go({name:'intro'});
   if(a==='start')return go({name:'level',n:Math.min(ACTIVE_LEVELS,S.unlocked),tab:'learn'});
-  if(a==='goto'){const n=+el.dataset.n;if(n>S.unlocked||n>ACTIVE_LEVELS)return;return go({name:'level',n,tab:'learn'});}
+  if(a==='goto'){const n=+el.dataset.n;if(!levelOpen(n))return;return go({name:'level',n,tab:'learn'});}
   if(a==='results')return go({name:'results'});
   if(a==='tab'){view.tab=el.dataset.tab;render();return;}
   if(a==='begin'){startQuiz(view.n);view.tab='practice';render();return;}
   if(a==='answer'&&quiz&&!quiz.answered){quiz.answered=true;quiz.choice=+el.dataset.i;if(quiz.choice===quiz.q.correct)quiz.score++;else quiz.missed.add(skillLabel(quiz.n,quiz.i));render();const nb=document.getElementById('nextBtn');if(nb)nb.focus({preventScroll:true});return;}
   if(a==='next'&&quiz){quiz.i++;quiz.answered=false;quiz.choice=null;
-    if(quiz.i>=qnFor(quiz.n)){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);if(quiz.score>=passFor(n)&&S.unlocked<=n)S.unlocked=Math.min(ACTIVE_LEVELS,n+1);save();
+    if(quiz.i>=qnFor(quiz.n)){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);S.unlocked=calcUnlocked();save();
       if(CLS)queueResult({level:n,score:quiz.score,total:qnFor(n),passed:quiz.score>=passFor(n),missed:[...quiz.missed]});}
     else quiz.q=GEN[quiz.n](quiz);
     render();window.scrollTo(0,0);return;}
@@ -1370,7 +1378,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
   if(a==='coachx'){document.getElementById('coachNote').hidden=true;return;}
   if(a==='clsopen'){const p=document.getElementById('clsPanel');p.hidden?classPanelOpen():classPanelClose();return;}
   if(a==='clsjoin'){classSubmit();return;}
-  if(a==='clsleave'){try{localStorage.removeItem(CLASS_KEY);}catch(e){}CLS=null;classRender();classPanelOpen();return;}
+  if(a==='clsleave'){classLeave();classRender();progressRender();classPanelOpen();return;}
   if(a==='reset'){if(el.dataset.armed){S.best={};S.unlocked=1;quiz=null;save();el.dataset.armed='';el.textContent='Reset progress';return go({name:'intro'});}
     el.dataset.armed='1';el.textContent='Click again to erase all scores';setTimeout(()=>{el.dataset.armed='';el.textContent='Reset progress';},4000);return;}
 });
@@ -1389,6 +1397,25 @@ let CLS=null,joining=false,toastT=0;
 function classLoad(){try{const r=localStorage.getItem(CLASS_KEY);CLS=r?JSON.parse(r):null;}catch(e){CLS=null;}
   if(CLS&&!(CLS.studentId&&CLS.classCode))CLS=null;}
 function classSave(){try{localStorage.setItem(CLASS_KEY,JSON.stringify(CLS));}catch(e){}}
+// Leaving (or being removed) clears local progress; the student's progress stays on the hub.
+function classLeave(){try{localStorage.removeItem(CLASS_KEY);}catch(e){}CLS=null;S.best={};S.unlocked=1;S.owner='';quiz=null;save();}
+// Local progress belongs to one student; a different student starts empty until the hub's progress arrives.
+function classOwn(){if(!CLS||S.owner===CLS.studentId)return;S.best={};S.unlocked=1;S.owner=CLS.studentId;quiz=null;save();}
+const newer=(a,b)=>!a?b||null:!b?a:(Date.parse(b)>Date.parse(a)?b:a);
+function progressRender(){if(view.name==='level'&&!levelOpen(view.n))view={name:'intro'};render();}
+// Hub progress is the source of truth when joined, max-merged with local and still-queued scores. Network errors keep local values.
+async function classProgress(){if(!CLS)return;const sid=CLS.studentId;
+  const u=RESULTS_URL+'?'+new URLSearchParams({action:'progress',class:CLS.classCode,student:sid});
+  let d;try{const r=await fetch(u);d=await r.json();}catch(e){return;}
+  if(!d||!CLS||CLS.studentId!==sid)return;
+  if(!d.ok){if(d.error==='unknown_student'){classLeave();toast('Your coach removed this join. Ask for a new link.');classRender();progressRender();}return;}
+  const qb={};queueLoad().forEach(r=>{if(r.studentId===sid&&r.type==='result')qb[r.level]=Math.max(qb[r.level]||0,r.score||0);});
+  const best=d.best||{},att=d.attempts||{};
+  new Set([...Object.keys(best),...Object.keys(S.best),...Object.keys(qb)].map(Number).filter(n=>n>0)).forEach(L=>{
+    S.best[L]=Math.max(+best[L]||0,S.best[L]||0,qb[L]||0);});
+  S.unlocked=calcUnlocked();save();
+  CLS.attempts=CLS.attempts||{};Object.keys(att).forEach(L=>{CLS.attempts[L]=Math.max(CLS.attempts[L]||0,+att[L]||0);});
+  CLS.lastSent=newer(CLS.lastSent,d.lastSent);classSave();progressRender();}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},5000);}
 // The only source of S.name: the roster name when joined, otherwise empty (clears names typed in older versions).
 function classSyncName(){const nm=CLS&&CLS.name||'';if(S.name!==nm){S.name=nm;save();}}
@@ -1414,8 +1441,8 @@ document.addEventListener('keydown',e=>{const p=document.getElementById('clsPane
 async function classJoin(cls,code){
   const u=RESULTS_URL+'?'+new URLSearchParams({action:'join',class:cls,code});
   let d;try{const r=await fetch(u);d=await r.json();}catch(e){return 'try_later';}
-  if(d&&d.ok&&d.studentId){CLS={classCode:d.classCode||cls,studentId:d.studentId,name:d.name||'',joinedAt:new Date().toISOString()};classSave();classRender();
-    toast(CLS.name?`Joined as ${CLS.name} (${CLS.classCode})`:`Joined ${CLS.classCode}`);return 'ok';}
+  if(d&&d.ok&&d.studentId){CLS={classCode:d.classCode||cls,studentId:d.studentId,name:d.name||'',joinedAt:new Date().toISOString()};classSave();classOwn();classRender();progressRender();
+    toast(CLS.name?`Joined as ${CLS.name} (${CLS.classCode})`:`Joined ${CLS.classCode}`);classProgress();return 'ok';}
   return d&&d.error==='not_found'?'not_found':'try_later';}
 const MSG_NOT_FOUND="That join link didn't work. Ask your coach for a new one.";
 const MSG_TRY_LATER="Couldn't reach the class right now. Your link will work later.";
@@ -1456,11 +1483,12 @@ async function flushQueue(){if(flushing)return;flushing=true;let removed=false;
     if(!d||(!d.ok&&d.retry))break;
     // ok (incl. duplicate), or a rejection that will never succeed: drop it
     queueStore(queueLoad().filter(r=>r.resultId!==item.resultId));
-    if(!d.ok&&d.error==='unknown_student'&&CLS&&CLS.studentId===item.studentId){removed=true;
-      try{localStorage.removeItem(CLASS_KEY);}catch(e){}CLS=null;}}}
+    if(d.ok&&CLS&&CLS.studentId===item.studentId){CLS.lastSent=newer(CLS.lastSent,new Date().toISOString());classSave();}
+    if(!d.ok&&d.error==='unknown_student'&&CLS&&CLS.studentId===item.studentId){removed=true;classLeave();}}}
   finally{flushing=false;}
-  if(removed){toast('Your coach removed this join. Ask for a new link.');classRender();}
-  if(view.name==='results')render();}
+  if(removed){toast('Your coach removed this join. Ask for a new link.');classRender();progressRender();return;}
+  if(view.name==='results')render();
+  await classProgress();}
 addEventListener('online',flushQueue);
 async function classBoot(){classLoad();classRender();let u;try{u=new URL(location.href);}catch(e){return;}
   const cls=(u.searchParams.get('class')||'').trim().toUpperCase(),code=(u.searchParams.get('code')||'').trim().toUpperCase();
@@ -1471,14 +1499,14 @@ async function classBoot(){classLoad();classRender();let u;try{u=new URL(locatio
   else if(res==='not_found')toast(MSG_NOT_FOUND);
   else toast(MSG_TRY_LATER);}
 
-const COACH_WORD='EUROPE2015'; // ?coach=<this> unlocks all levels
+const COACH_WORD='EUROPE2015'; // ?coach=<this> unlocks all levels for this page load only
 function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
   if(!u.searchParams.has('coach'))return;
   const ok=u.searchParams.get('coach')===COACH_WORD;
   if(!ok)return;
-  S.unlocked=ACTIVE_LEVELS;save();document.getElementById('coachNote').hidden=false;
+  COACH=true;document.getElementById('coachNote').hidden=false;
   u.searchParams.delete('coach');history.replaceState(null,'',u.pathname+u.search+u.hash);}
-load();classLoad();classSyncName();coachUnlock();render();classBoot();flushQueue();
+load();classLoad();classOwn();classSyncName();coachUnlock();render();classBoot();flushQueue();
 window.__CB={GEN,S,posDesc,cbPos};
 </script>
 </body>
