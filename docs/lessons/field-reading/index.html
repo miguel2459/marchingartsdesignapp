@@ -74,8 +74,7 @@ p{margin:.6em 0}
 .levels-list .n{font-family:var(--display);font-weight:700;font-size:1.3rem;color:var(--turf)}
 :root:not([data-theme="light"]) .levels-list .n{color:inherit}
 .name-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:14px}
-.name-row label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:.95rem}
-.name-row input{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;min-width:220px}
+.name-row p{flex-basis:100%;margin:0}
 
 /* buttons */
 .btn{border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:10px 16px;cursor:pointer;font-weight:700}
@@ -186,16 +185,30 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .foot select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 6px}
 .coach-note{max-width:880px;margin:10px auto 0;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--signal);border-radius:8px}
 .coach-note[hidden]{display:none}
+.brand-r{display:flex;align-items:baseline;gap:10px;min-width:0}
+.cls-chip{flex:none;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:2px 10px;font-size:.8rem;cursor:pointer;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}
+.cls-panel{position:absolute;top:100%;right:max(16px,calc((100% - 880px) / 2 + 16px));z-index:6;width:min(360px,calc(100vw - 32px));padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 8px 20px rgba(0,0,0,.18);font-size:.95rem}
+@media (max-width:520px){.cls-panel{left:16px;right:16px;width:auto}}
+.cls-panel[hidden]{display:none}
+.cls-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.cls-form label{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--muted)}
+.cls-form input{border:1.5px solid var(--line);background:var(--paper);border-radius:6px;padding:7px 9px;text-transform:uppercase;width:10ch}
+.cls-form .btn{padding:7px 14px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:20;max-width:calc(100vw - 32px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:.95rem;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.toast[hidden]{display:none}
 @media (max-width:520px){.tempo{margin-left:0}.opts.pick .opt{font-size:1.3rem}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
 <header class="top"><div class="top-in">
-  <div class="brand"><button class="brand-title" data-act="home">Field Reading &amp; Step Size</button><span class="who" id="who"></span></div>
+  <div class="brand"><button class="brand-title" data-act="home">Field Reading &amp; Step Size</button><span class="brand-r"><span class="who" id="who"></span><button class="cls-chip" id="clsChip" data-act="clsopen" aria-expanded="false" aria-controls="clsPanel">Join a class</button></span></div>
   <nav class="track" id="track" aria-label="Levels"></nav>
-</div></header>
+</div>
+<div class="cls-panel" id="clsPanel" hidden></div>
+</header>
 <div class="coach-note" id="coachNote" role="status" hidden><span>Coach mode: all levels unlocked</span><button class="linkbtn" data-act="coachx" aria-label="Dismiss">✕</button></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <main id="app"></main>
 <footer class="foot">
   <label>Field <select id="hashSel"><option value="college">College hashes (32 steps)</option><option value="hs">High school hashes (28 steps)</option></select></label>
@@ -205,6 +218,9 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 'use strict';
 const DEPTH=85.33, QN=8, PASS=6, KEY='cb-lesson-v1';
 const ACTIVE_LEVELS = 4; // levels past this are hidden (code kept)
+const RESULTS_URL = 'https://script.google.com/macros/s/AKfycbz615SkdpqE7nBRc185t21znFZLjKnR7_vadW_L_WEXDEohgY9ZHUJEyO7nbOvOt4swzQ/exec';
+const LESSON_ID = 'field-reading'; const APP_VERSION = '1.0';
+const CLASS_KEY = 'mpr-class-v1'; // {classCode, studentId, name, joinedAt}; separate from KEY so leaving a class keeps progress
 const qnFor=n=>n===2||n===3?10:QN;
 const passFor=n=>n===2||n===3?8:PASS;
 const S={name:'',hash:'college',grid:true,best:{},unlocked:1};
@@ -1267,17 +1283,17 @@ ${!calc3.shown&&!same?`<div class="btn-row"><button class="btn primary" data-act
 
 /* ---------- app state + views ---------- */
 let view={name:'intro'};let quiz=null;let hero=0;
-function startQuiz(n){quiz={n,i:0,score:0,answered:false,choice:null,used:new Set(),done:false};quiz.q=GEN[n](quiz);}
+function startQuiz(n){quiz={n,i:0,score:0,answered:false,choice:null,used:new Set(),missed:new Set(),done:false};quiz.q=GEN[n](quiz);}
 function trackHTML(){return ACTIVE.map(L=>{const locked=L.n>S.unlocked;const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=passFor(L.n);
   return `<button class="trk${passed?' passed':''}${cur?' cur':''}" data-act="goto" data-n="${L.n}"${locked?' disabled':''}${cur?' aria-current="step"':''} aria-label="Level ${L.n}: ${L.title}${passed?', passed':''}${locked?', locked':''}"><span class="trk-n">${L.n}</span><span class="trk-t">${L.title}</span></button>`;}).join('')+
   `<button class="trk${view.name==='results'?' cur':''}" data-act="results" aria-label="Results"><span class="trk-n">✓</span><span class="trk-t">Results</span></button>`;}
-function introHTML(){const h=H();const cont=S.name&&S.unlocked>1;
+function introHTML(){const h=H();const cont=S.unlocked>1;
   const a={x:HERO.x1,y:h},b={x:HERO.x2,y:h};
   return `<section class="hero"><figure class="hero-fig">${fieldSVG({id:'hero',paths:[{pts:[a,b]}],pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],marcher:{...a},ruler:{x1:a.x,x2:b.x,y:h},minW:48,grid:false,aria:'A marcher moving from 3 outside the S1 25 to 2 inside the S1 35 on the front hash, 21 steps'})}</figure>
 <h1>Field Reading &amp; Step Size</h1>
 <p class="lede">Prep for the Blue Devils A Corps audition. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
 <ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
-<div class="name-row"><label for="nameIn">Your name<input id="nameIn" autocomplete="given-name" value="${esc(S.name)}"></label>
+<div class="name-row">${CLS?`<p>${CLS.name?`Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})`:`Practicing with class <b>${esc(CLS.classCode)}</b>`}</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
 function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of ${ACTIVE_LEVELS}</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
@@ -1311,10 +1327,11 @@ ${promptHTML(q)}${card}${field}<div class="opts${q.pick?' pick':''}" role="group
 ${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p>${!ok&&q.why&&q.why[q.options[quiz.choice]]?`<p>${q.why[q.options[quiz.choice]]}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
 function resultsHTML(){const tot=ACTIVE.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
-<div class="report"><p><b>${esc(S.name||'Student')}</b><br><span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
+<div class="report"><p>${S.name?`<b>${esc(S.name)}</b><br>`:''}<span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
 <div class="tw"><table class="t"><thead><tr><th>Level</th><th>Best</th><th>Status</th></tr></thead><tbody>
 ${ACTIVE.map(L=>{const b=S.best[L.n];return `<tr><td>${L.n}. ${L.title}</td><td class="c">${b===undefined?'–':`${b} / ${qnFor(L.n)}`}</td><td>${b===undefined?'Not taken':b>=passFor(L.n)?'Passed':'Not passed yet'}</td></tr>`;}).join('')}
-</tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${ACTIVE.reduce((s,L)=>s+qnFor(L.n),0)}</span></div></div></section>`;}
+</tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${ACTIVE.reduce((s,L)=>s+qnFor(L.n),0)}</span></div></div>
+${CLS?`<p class="muted">${queuePending()?"Saved; will send when you're back online":'Sent to your coach ✓'}</p>`:''}</section>`;}
 
 function render(){
   playerStop();cancelAnimationFrame(hero);
@@ -1333,14 +1350,15 @@ function go(v){view=v;render();window.scrollTo(0,0);}
 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
   if(a==='home')return go({name:'intro'});
-  if(a==='start'){const ni=document.getElementById('nameIn');if(ni)S.name=ni.value.trim();save();return go({name:'level',n:Math.min(ACTIVE_LEVELS,S.unlocked),tab:'learn'});}
+  if(a==='start')return go({name:'level',n:Math.min(ACTIVE_LEVELS,S.unlocked),tab:'learn'});
   if(a==='goto'){const n=+el.dataset.n;if(n>S.unlocked||n>ACTIVE_LEVELS)return;return go({name:'level',n,tab:'learn'});}
   if(a==='results')return go({name:'results'});
   if(a==='tab'){view.tab=el.dataset.tab;render();return;}
   if(a==='begin'){startQuiz(view.n);view.tab='practice';render();return;}
-  if(a==='answer'&&quiz&&!quiz.answered){quiz.answered=true;quiz.choice=+el.dataset.i;if(quiz.choice===quiz.q.correct)quiz.score++;render();const nb=document.getElementById('nextBtn');if(nb)nb.focus({preventScroll:true});return;}
+  if(a==='answer'&&quiz&&!quiz.answered){quiz.answered=true;quiz.choice=+el.dataset.i;if(quiz.choice===quiz.q.correct)quiz.score++;else quiz.missed.add(skillLabel(quiz.n,quiz.i));render();const nb=document.getElementById('nextBtn');if(nb)nb.focus({preventScroll:true});return;}
   if(a==='next'&&quiz){quiz.i++;quiz.answered=false;quiz.choice=null;
-    if(quiz.i>=qnFor(quiz.n)){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);if(quiz.score>=passFor(n)&&S.unlocked<=n)S.unlocked=Math.min(ACTIVE_LEVELS,n+1);save();}
+    if(quiz.i>=qnFor(quiz.n)){quiz.done=true;const n=quiz.n;S.best[n]=Math.max(S.best[n]||0,quiz.score);if(quiz.score>=passFor(n)&&S.unlocked<=n)S.unlocked=Math.min(ACTIVE_LEVELS,n+1);save();
+      if(CLS)queueResult({level:n,score:quiz.score,total:qnFor(n),passed:quiz.score>=passFor(n),missed:[...quiz.missed]});}
     else quiz.q=GEN[quiz.n](quiz);
     render();window.scrollTo(0,0);return;}
   if(a==='pv'){player.mode=el.dataset.v;if(player.mode==='main')player.v={...V_MAIN};else if(player.mode==='mid')player.v={...V_MID};else player.v={fwd:player.v.fwd,over:player.v.over,leg:player.v.leg};player.t=0;playerRefresh();return;}
@@ -1350,6 +1368,9 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
   if(a==='calcshow'){calc.shown=true;calcRefresh();return;}
   if(a==='calc3show'){calc3.shown=true;calc3Refresh();return;}
   if(a==='coachx'){document.getElementById('coachNote').hidden=true;return;}
+  if(a==='clsopen'){const p=document.getElementById('clsPanel');p.hidden?classPanelOpen():classPanelClose();return;}
+  if(a==='clsjoin'){classSubmit();return;}
+  if(a==='clsleave'){try{localStorage.removeItem(CLASS_KEY);}catch(e){}CLS=null;classRender();classPanelOpen();return;}
   if(a==='reset'){if(el.dataset.armed){S.best={};S.unlocked=1;quiz=null;save();el.dataset.armed='';el.textContent='Reset progress';return go({name:'intro'});}
     el.dataset.armed='1';el.textContent='Click again to erase all scores';setTimeout(()=>{el.dataset.armed='';el.textContent='Reset progress';},4000);return;}
 });
@@ -1360,7 +1381,95 @@ document.addEventListener('change',e=>{const t=e.target;
   if(t.dataset&&t.dataset.calc3){calc3[t.dataset.calc3]=+t.value;calc3.shown=false;calc3Refresh();}
 });
 document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nameIn'){const b=document.querySelector('[data-act="start"]');if(b)b.click();}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='clsClass'||e.target.id==='clsCode'))classSubmit();});
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='clsClass'||t.id==='clsCode'){const p=t.selectionStart;t.value=t.value.toUpperCase().replace(t.id==='clsCode'?/[^A-Z0-9]/g:/[^A-Z0-9-]/g,'');try{t.setSelectionRange(p,p);}catch(_){}}});
+
+// ---- Class joining (mpr-class-v1). Students join with their coach's class code + their own join code; the name comes from the roster.
+let CLS=null,joining=false,toastT=0;
+function classLoad(){try{const r=localStorage.getItem(CLASS_KEY);CLS=r?JSON.parse(r):null;}catch(e){CLS=null;}
+  if(CLS&&!(CLS.studentId&&CLS.classCode))CLS=null;}
+function classSave(){try{localStorage.setItem(CLASS_KEY,JSON.stringify(CLS));}catch(e){}}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},5000);}
+// The only source of S.name: the roster name when joined, otherwise empty (clears names typed in older versions).
+function classSyncName(){const nm=CLS&&CLS.name||'';if(S.name!==nm){S.name=nm;save();}}
+function classRender(){const c=document.getElementById('clsChip');
+  classSyncName();
+  if(view.name==='intro')render();else document.getElementById('who').textContent=S.name||'';
+  c.textContent=!CLS?'Join a class':CLS.name?`Joined: ${CLS.name} · ${CLS.classCode}`:`Joined · ${CLS.classCode}`;
+  const p=document.getElementById('clsPanel');if(!p.hidden)classPanelFill();}
+function classPanelFill(){const p=document.getElementById('clsPanel');
+  p.innerHTML=CLS?`<p style="margin:0">Joined ${CLS.name?`as <b>${esc(CLS.name)}</b> in `:''}<b>${esc(CLS.classCode)}</b>. <button class="linkbtn" data-act="clsleave">Not you? Leave class</button></p>`
+    :`<div class="cls-form"><label for="clsClass">Class code<input id="clsClass" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20"></label>
+<label for="clsCode">Join code<input id="clsCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="5"></label>
+<button class="btn primary" data-act="clsjoin" id="clsBtn">Join</button></div>`;}
+function classPanelOpen(){const p=document.getElementById('clsPanel');p.hidden=false;classPanelFill();
+  document.getElementById('clsChip').setAttribute('aria-expanded','true');const i=document.getElementById('clsClass');if(i)i.focus();}
+function classPanelClose(){document.getElementById('clsPanel').hidden=true;document.getElementById('clsChip').setAttribute('aria-expanded','false');}
+// Dropdown dismissal. Capture phase so it sees the target before other handlers re-render the panel or page.
+document.addEventListener('click',e=>{const p=document.getElementById('clsPanel'),t=e.target;
+  if(p.hidden||p.contains(t)||t.closest('[data-act="clsopen"]'))return;classPanelClose();},true);
+document.addEventListener('keydown',e=>{const p=document.getElementById('clsPanel');
+  if(e.key==='Escape'&&!p.hidden){classPanelClose();document.getElementById('clsChip').focus();}});
+// Resolves to 'ok' | 'not_found' | 'try_later'. Unknown server errors count as try_later so a link is never thrown away.
+async function classJoin(cls,code){
+  const u=RESULTS_URL+'?'+new URLSearchParams({action:'join',class:cls,code});
+  let d;try{const r=await fetch(u);d=await r.json();}catch(e){return 'try_later';}
+  if(d&&d.ok&&d.studentId){CLS={classCode:d.classCode||cls,studentId:d.studentId,name:d.name||'',joinedAt:new Date().toISOString()};classSave();classRender();
+    toast(CLS.name?`Joined as ${CLS.name} (${CLS.classCode})`:`Joined ${CLS.classCode}`);return 'ok';}
+  return d&&d.error==='not_found'?'not_found':'try_later';}
+const MSG_NOT_FOUND="That join link didn't work. Ask your coach for a new one.";
+const MSG_TRY_LATER="Couldn't reach the class right now. Your link will work later.";
+async function classSubmit(){if(joining)return;const ci=document.getElementById('clsClass'),ji=document.getElementById('clsCode');if(!ci||!ji)return;
+  const cls=ci.value.trim().toUpperCase(),code=ji.value.trim().toUpperCase();
+  if(!cls||code.length!==5){toast('Enter your class code and your 5-character join code.');return;}
+  const b=document.getElementById('clsBtn');joining=true;if(b){b.disabled=true;b.textContent='Joining…';}
+  const res=await classJoin(cls,code);joining=false;
+  if(res==='ok'){classPanelClose();return;}
+  if(b){b.disabled=false;b.textContent='Join';}
+  toast(res==='not_found'?"That code didn't work. Check it with your coach.":"Couldn't reach the class right now. Try again in a minute.");}
+// ---- Practice-check results (mpr-queue-v1). Queued first so nothing is lost offline; the hub dedupes on resultId.
+const QUEUE_KEY='mpr-queue-v1', QUEUE_MAX=200;
+// Skill labels for missed questions, keyed by level then the question type from P1–P4. Hub keeps letters, numbers, spaces and &'()-; max 40 chars.
+const SKILLS={
+  1:{name:'Naming a spot',find:'Finding a spot',concept:'Field reading basics'},
+  2:{countLine:'Counting steps',gut:'Step size by eye',sizeLine:'Step size',countOffset:'Counting steps off a line',sizeOffOn:'Step size off a line',
+     sizeOffOff:'Step size off a line',cross50:'Crossing the 50',countsNeeded:'Counts needed',land:'Where you land',compare:'Comparing moves'},
+  3:{findA:'Find A and B',findB:'Find A and B',cRange:'Pythagorean C',cClean:'Pythagorean C',cReal:'Pythagorean C',gut:'Diagonal step size by eye',
+     ssClean:'Diagonal step size',ssReal:'Diagonal step size',ssFull:'Full diagonal problem',compare:'Comparing diagonal moves'},
+  4:{text:'Checkpoint',pick:'Checkpoint',when:'Crossing a yard line'}};
+const PLANS={1:P1,2:P2,3:P3,4:P4,5:P5,6:P6};
+function skillLabel(n,i){const t=PLANS[n]&&PLANS[n][i];return ((SKILLS[n]&&SKILLS[n][t])||`Level ${n}`).replace(/[^A-Za-z0-9 &'()-]/g,'').slice(0,40);}
+function queueLoad(){try{const q=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');return Array.isArray(q)?q:[];}catch(e){return [];}}
+function queueStore(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q.slice(-QUEUE_MAX)));}catch(e){}}
+function queuePending(){return CLS?queueLoad().some(r=>r.studentId===CLS.studentId):false;}
+const uuid=()=>crypto.randomUUID?crypto.randomUUID():'r-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
+function queueResult({level,score,total,passed,missed}){if(!CLS)return;
+  CLS.attempts=CLS.attempts||{};const attempt=CLS.attempts[level]=(CLS.attempts[level]||0)+1;classSave();
+  const q=queueLoad();q.push({type:'result',resultId:uuid(),lesson:LESSON_ID,classCode:CLS.classCode,studentId:CLS.studentId,level,score,total,passed,
+    attempt,missed,field:S.hash==='hs'?'hs':'college',clientTime:new Date().toISOString(),appVersion:APP_VERSION});
+  queueStore(q);flushQueue();}
+let flushing=false;
+async function flushQueue(){if(flushing)return;flushing=true;let removed=false;
+  try{for(;;){const item=queueLoad()[0];if(!item)break;let d;
+    try{const r=await fetch(RESULTS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item)});d=await r.json();}
+    catch(e){break;} // offline or unreadable reply: keep it for next time
+    if(!d||(!d.ok&&d.retry))break;
+    // ok (incl. duplicate), or a rejection that will never succeed: drop it
+    queueStore(queueLoad().filter(r=>r.resultId!==item.resultId));
+    if(!d.ok&&d.error==='unknown_student'&&CLS&&CLS.studentId===item.studentId){removed=true;
+      try{localStorage.removeItem(CLASS_KEY);}catch(e){}CLS=null;}}}
+  finally{flushing=false;}
+  if(removed){toast('Your coach removed this join. Ask for a new link.');classRender();}
+  if(view.name==='results')render();}
+addEventListener('online',flushQueue);
+async function classBoot(){classLoad();classRender();let u;try{u=new URL(location.href);}catch(e){return;}
+  const cls=(u.searchParams.get('class')||'').trim().toUpperCase(),code=(u.searchParams.get('code')||'').trim().toUpperCase();
+  if(!cls||!code)return;
+  const strip=()=>{u.searchParams.delete('class');u.searchParams.delete('code');history.replaceState(null,'',u.pathname+u.search+u.hash);};
+  const res=await classJoin(cls,code);
+  if(res==='ok')strip();
+  else if(res==='not_found')toast(MSG_NOT_FOUND);
+  else toast(MSG_TRY_LATER);}
 
 const COACH_WORD='EUROPE2015'; // ?coach=<this> unlocks all levels
 function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
@@ -1369,7 +1478,7 @@ function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
   if(!ok)return;
   S.unlocked=ACTIVE_LEVELS;save();document.getElementById('coachNote').hidden=false;
   u.searchParams.delete('coach');history.replaceState(null,'',u.pathname+u.search+u.hash);}
-load();coachUnlock();render();
+load();classLoad();classSyncName();coachUnlock();render();classBoot();flushQueue();
 window.__CB={GEN,S,posDesc,cbPos};
 </script>
 </body>
