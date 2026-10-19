@@ -187,7 +187,8 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .coach-note[hidden]{display:none}
 .brand-r{display:flex;align-items:baseline;gap:10px;min-width:0}
 .cls-chip{flex:none;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:2px 10px;font-size:.8rem;cursor:pointer;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}
-.cls-panel{max-width:880px;margin:10px auto 0;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;font-size:.95rem}
+.cls-panel{position:absolute;top:100%;right:max(16px,calc((100% - 880px) / 2 + 16px));z-index:6;width:min(360px,calc(100vw - 32px));padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 8px 20px rgba(0,0,0,.18);font-size:.95rem}
+@media (max-width:520px){.cls-panel{left:16px;right:16px;width:auto}}
 .cls-panel[hidden]{display:none}
 .cls-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .cls-form label{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--muted)}
@@ -203,9 +204,10 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 <header class="top"><div class="top-in">
   <div class="brand"><button class="brand-title" data-act="home">Field Reading &amp; Step Size</button><span class="brand-r"><span class="who" id="who"></span><button class="cls-chip" id="clsChip" data-act="clsopen" aria-expanded="false" aria-controls="clsPanel">Join a class</button></span></div>
   <nav class="track" id="track" aria-label="Levels"></nav>
-</div></header>
-<div class="coach-note" id="coachNote" role="status" hidden><span>Coach mode: all levels unlocked</span><button class="linkbtn" data-act="coachx" aria-label="Dismiss">✕</button></div>
+</div>
 <div class="cls-panel" id="clsPanel" hidden></div>
+</header>
+<div class="coach-note" id="coachNote" role="status" hidden><span>Coach mode: all levels unlocked</span><button class="linkbtn" data-act="coachx" aria-label="Dismiss">✕</button></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <main id="app"></main>
 <footer class="foot">
@@ -1291,7 +1293,7 @@ function introHTML(){const h=H();const cont=S.unlocked>1;
 <h1>Field Reading &amp; Step Size</h1>
 <p class="lede">Prep for the Blue Devils A Corps audition. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
 <ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
-<div class="name-row">${CLS?`<p>Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
+<div class="name-row">${CLS?`<p>${CLS.name?`Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})`:`Practicing with class <b>${esc(CLS.classCode)}</b>`}</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
 function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of ${ACTIVE_LEVELS}</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
@@ -1391,22 +1393,27 @@ function classSyncName(){const nm=CLS&&CLS.name||'';if(S.name!==nm){S.name=nm;sa
 function classRender(){const c=document.getElementById('clsChip');
   classSyncName();
   if(view.name==='intro')render();else document.getElementById('who').textContent=S.name||'';
-  c.textContent=CLS?`Joined: ${CLS.name} · ${CLS.classCode}`:'Join a class';
+  c.textContent=!CLS?'Join a class':CLS.name?`Joined: ${CLS.name} · ${CLS.classCode}`:`Joined · ${CLS.classCode}`;
   const p=document.getElementById('clsPanel');if(!p.hidden)classPanelFill();}
 function classPanelFill(){const p=document.getElementById('clsPanel');
-  p.innerHTML=CLS?`<p style="margin:0">Joined as <b>${esc(CLS.name)}</b> in <b>${esc(CLS.classCode)}</b>. <button class="linkbtn" data-act="clsleave">Not you? Leave class</button></p>`
+  p.innerHTML=CLS?`<p style="margin:0">Joined ${CLS.name?`as <b>${esc(CLS.name)}</b> in `:''}<b>${esc(CLS.classCode)}</b>. <button class="linkbtn" data-act="clsleave">Not you? Leave class</button></p>`
     :`<div class="cls-form"><label for="clsClass">Class code<input id="clsClass" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20"></label>
 <label for="clsCode">Join code<input id="clsCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="5"></label>
 <button class="btn primary" data-act="clsjoin" id="clsBtn">Join</button></div>`;}
 function classPanelOpen(){const p=document.getElementById('clsPanel');p.hidden=false;classPanelFill();
   document.getElementById('clsChip').setAttribute('aria-expanded','true');const i=document.getElementById('clsClass');if(i)i.focus();}
 function classPanelClose(){document.getElementById('clsPanel').hidden=true;document.getElementById('clsChip').setAttribute('aria-expanded','false');}
+// Dropdown dismissal. Capture phase so it sees the target before other handlers re-render the panel or page.
+document.addEventListener('click',e=>{const p=document.getElementById('clsPanel'),t=e.target;
+  if(p.hidden||p.contains(t)||t.closest('[data-act="clsopen"]'))return;classPanelClose();},true);
+document.addEventListener('keydown',e=>{const p=document.getElementById('clsPanel');
+  if(e.key==='Escape'&&!p.hidden){classPanelClose();document.getElementById('clsChip').focus();}});
 // Resolves to 'ok' | 'not_found' | 'try_later'. Unknown server errors count as try_later so a link is never thrown away.
 async function classJoin(cls,code){
   const u=RESULTS_URL+'?'+new URLSearchParams({action:'join',class:cls,code});
   let d;try{const r=await fetch(u);d=await r.json();}catch(e){return 'try_later';}
   if(d&&d.ok&&d.studentId){CLS={classCode:d.classCode||cls,studentId:d.studentId,name:d.name||'',joinedAt:new Date().toISOString()};classSave();classRender();
-    toast(`Joined as ${CLS.name} (${CLS.classCode})`);return 'ok';}
+    toast(CLS.name?`Joined as ${CLS.name} (${CLS.classCode})`:`Joined ${CLS.classCode}`);return 'ok';}
   return d&&d.error==='not_found'?'not_found':'try_later';}
 const MSG_NOT_FOUND="That join link didn't work. Ask your coach for a new one.";
 const MSG_TRY_LATER="Couldn't reach the class right now. Your link will work later.";
