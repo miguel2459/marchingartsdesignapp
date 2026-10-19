@@ -74,8 +74,7 @@ p{margin:.6em 0}
 .levels-list .n{font-family:var(--display);font-weight:700;font-size:1.3rem;color:var(--turf)}
 :root:not([data-theme="light"]) .levels-list .n{color:inherit}
 .name-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:14px}
-.name-row label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:.95rem}
-.name-row input{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;min-width:220px}
+.name-row p{flex-basis:100%;margin:0}
 
 /* buttons */
 .btn{border:1.5px solid var(--ink);background:transparent;border-radius:8px;padding:10px 16px;cursor:pointer;font-weight:700}
@@ -1286,13 +1285,13 @@ function startQuiz(n){quiz={n,i:0,score:0,answered:false,choice:null,used:new Se
 function trackHTML(){return ACTIVE.map(L=>{const locked=L.n>S.unlocked;const cur=view.name==='level'&&view.n===L.n;const passed=(S.best[L.n]||0)>=passFor(L.n);
   return `<button class="trk${passed?' passed':''}${cur?' cur':''}" data-act="goto" data-n="${L.n}"${locked?' disabled':''}${cur?' aria-current="step"':''} aria-label="Level ${L.n}: ${L.title}${passed?', passed':''}${locked?', locked':''}"><span class="trk-n">${L.n}</span><span class="trk-t">${L.title}</span></button>`;}).join('')+
   `<button class="trk${view.name==='results'?' cur':''}" data-act="results" aria-label="Results"><span class="trk-n">✓</span><span class="trk-t">Results</span></button>`;}
-function introHTML(){const h=H();const cont=S.name&&S.unlocked>1;
+function introHTML(){const h=H();const cont=S.unlocked>1;
   const a={x:HERO.x1,y:h},b={x:HERO.x2,y:h};
   return `<section class="hero"><figure class="hero-fig">${fieldSVG({id:'hero',paths:[{pts:[a,b]}],pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],marcher:{...a},ruler:{x1:a.x,x2:b.x,y:h},minW:48,grid:false,aria:'A marcher moving from 3 outside the S1 25 to 2 inside the S1 35 on the front hash, 21 steps'})}</figure>
 <h1>Field Reading &amp; Step Size</h1>
 <p class="lede">Prep for the Blue Devils A Corps audition. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
 <ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
-<div class="name-row">${CLS?`<p style="flex-basis:100%;margin:0">Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})</p>`:`<label for="nameIn">Your name<input id="nameIn" autocomplete="given-name" value="${esc(S.name)}"></label>`}
+<div class="name-row">${CLS?`<p>Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
 function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of ${ACTIVE_LEVELS}</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
@@ -1326,7 +1325,7 @@ ${promptHTML(q)}${card}${field}<div class="opts${q.pick?' pick':''}" role="group
 ${quiz.answered?`<div class="fb ${ok?'ok':'no'}" role="status"><p class="fb-h">${fbHeader(quiz.n,ok)}</p><p>${q.explain}</p>${!ok&&q.why&&q.why[q.options[quiz.choice]]?`<p>${q.why[q.options[quiz.choice]]}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="next" id="nextBtn">${quiz.i===qn-1?'See your score':'Next question'}</button></div>`:''}`;}
 function resultsHTML(){const tot=ACTIVE.reduce((s,L)=>s+(S.best[L.n]||0),0);const d=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   return `<section><h2>Results</h2><p class="sub muted">Screenshot this and send it to your coach.</p>
-<div class="report"><p><b>${esc(S.name||'Student')}</b><br><span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
+<div class="report"><p>${S.name?`<b>${esc(S.name)}</b><br>`:''}<span class="muted">${d}, ${S.hash==='hs'?'high school':'college'} hashes</span></p>
 <div class="tw"><table class="t"><thead><tr><th>Level</th><th>Best</th><th>Status</th></tr></thead><tbody>
 ${ACTIVE.map(L=>{const b=S.best[L.n];return `<tr><td>${L.n}. ${L.title}</td><td class="c">${b===undefined?'–':`${b} / ${qnFor(L.n)}`}</td><td>${b===undefined?'Not taken':b>=passFor(L.n)?'Passed':'Not passed yet'}</td></tr>`;}).join('')}
 </tbody></table></div><div class="score"><span class="big">${tot}</span><span class="of">/ ${ACTIVE.reduce((s,L)=>s+qnFor(L.n),0)}</span></div></div></section>`;}
@@ -1348,7 +1347,7 @@ function go(v){view=v;render();window.scrollTo(0,0);}
 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
   if(a==='home')return go({name:'intro'});
-  if(a==='start'){const ni=document.getElementById('nameIn');if(ni)S.name=ni.value.trim();save();return go({name:'level',n:Math.min(ACTIVE_LEVELS,S.unlocked),tab:'learn'});}
+  if(a==='start')return go({name:'level',n:Math.min(ACTIVE_LEVELS,S.unlocked),tab:'learn'});
   if(a==='goto'){const n=+el.dataset.n;if(n>S.unlocked||n>ACTIVE_LEVELS)return;return go({name:'level',n,tab:'learn'});}
   if(a==='results')return go({name:'results'});
   if(a==='tab'){view.tab=el.dataset.tab;render();return;}
@@ -1378,7 +1377,6 @@ document.addEventListener('change',e=>{const t=e.target;
   if(t.dataset&&t.dataset.calc3){calc3[t.dataset.calc3]=+t.value;calc3.shown=false;calc3Refresh();}
 });
 document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nameIn'){const b=document.querySelector('[data-act="start"]');if(b)b.click();}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='clsClass'||e.target.id==='clsCode'))classSubmit();});
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='clsClass'||t.id==='clsCode'){const p=t.selectionStart;t.value=t.value.toUpperCase().replace(t.id==='clsCode'?/[^A-Z0-9]/g:/[^A-Z0-9-]/g,'');try{t.setSelectionRange(p,p);}catch(_){}}});
 
@@ -1388,8 +1386,10 @@ function classLoad(){try{const r=localStorage.getItem(CLASS_KEY);CLS=r?JSON.pars
   if(CLS&&!(CLS.studentId&&CLS.classCode))CLS=null;}
 function classSave(){try{localStorage.setItem(CLASS_KEY,JSON.stringify(CLS));}catch(e){}}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},5000);}
+// The only source of S.name: the roster name when joined, otherwise empty (clears names typed in older versions).
+function classSyncName(){const nm=CLS&&CLS.name||'';if(S.name!==nm){S.name=nm;save();}}
 function classRender(){const c=document.getElementById('clsChip');
-  if(CLS&&S.name!==CLS.name){S.name=CLS.name;save();} // roster name wins so the results card matches the coach's sheet
+  classSyncName();
   if(view.name==='intro')render();else document.getElementById('who').textContent=S.name||'';
   c.textContent=CLS?`Joined: ${CLS.name} · ${CLS.classCode}`:'Join a class';
   const p=document.getElementById('clsPanel');if(!p.hidden)classPanelFill();}
@@ -1434,7 +1434,7 @@ function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
   if(!ok)return;
   S.unlocked=ACTIVE_LEVELS;save();document.getElementById('coachNote').hidden=false;
   u.searchParams.delete('coach');history.replaceState(null,'',u.pathname+u.search+u.hash);}
-load();coachUnlock();render();classBoot();
+load();classLoad();classSyncName();coachUnlock();render();classBoot();
 window.__CB={GEN,S,posDesc,cbPos};
 </script>
 </body>
