@@ -21,7 +21,8 @@ const CONFIG = {
   GOOGLE_SIGNUP_URL: 'https://accounts.google.com/signup',
   SCHEMA_VERSION: 1,
   ACTIVE_LEVELS: 4,
-  COACH_FOLDER: 'MPR Lessons - Coach Sheets',
+  COACH_FOLDER_PATH: ['MADA Lessons', 'Coach Sheets'], // Drive > MADA Lessons > Coach Sheets
+  OLD_COACH_FOLDER: 'MPR Lessons - Coach Sheets',     // moved into the path above automatically
   CODE_ALPHABET: 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', // no 0/O, 1/I/L
   CODE_LENGTH: 5,
   JOIN_LIMIT_PER_CLASS_PER_10_MIN: 60,
@@ -35,7 +36,7 @@ const SECTIONS = {
   'Front ensemble': 'FE', 'Color guard': 'CG', 'Leadership': 'LEAD', 'Other': 'GRP',
 };
 
-const TABS = { REQUESTS: 'Requests', CLASSES: 'Classes', STUDENTS: 'Students', RESULTS: 'Results', LOG: 'Log' };
+const TABS = { DELETED: 'Deleted classes', REQUESTS: 'Requests', CLASSES: 'Classes', STUDENTS: 'Students', RESULTS: 'Results', LOG: 'Log' };
 const HUB_HEADERS = {
   Requests: ['Received', 'Coach name', 'Coach email', 'Group name', 'Section', 'Location', 'Est. students',
              'Access', 'Student names', 'Notes', 'Class code', 'Approve', 'Status', 'Coach sheet link'],
@@ -44,6 +45,8 @@ const HUB_HEADERS = {
   Results: ['Received', 'Result ID', 'Schema', 'Lesson', 'Class code', 'Student ID', 'Name', 'Level',
             'Score', 'Out of', 'Passed', 'Attempt', 'Missed skills', 'Field', 'Client time', 'App version'],
   Log: ['Time', 'Type', 'Detail'],
+  'Deleted classes': ['Deleted', 'Class code', 'Coach name', 'Coach email', 'Access', 'Created', 'Students',
+                      'Results removed', 'Requests removed', 'Coach sheet (in Drive Trash)', 'Note'],
 };
 const REQ = { CODE: 11, APPROVE: 12, STATUS: 13, LINK: 14 }; // 1-based columns on Requests
 const ACCESS = { GOOGLE: 'Google sheet', EMAIL: 'Email reports' };
@@ -79,9 +82,12 @@ function onOpen() {
     .addItem('2. Turn on automations (safe to re-run)', 'installAutomations')
     .addSeparator()
     .addItem('Add class…', 'addClass')
+    .addItem('Delete class…', 'deleteClass')
     .addItem('Sync rosters now', 'syncRostersNow')
     .addItem('Rebuild all summaries', 'rebuildAllSummaries')
     .addItem('Send email reports now', 'sendEmailReportsNow')
+    .addItem('Preview a report PDF…', 'previewReport')
+    .addItem('Organize coach sheets folder', 'organizeCoachFolder')
     .addSeparator()
     .addItem('Send a test result (MPR-TEST)', 'sendTestResult')
     .addToUi();
@@ -321,7 +327,7 @@ function sendEmailReportsNow() {
   SpreadsheetApp.getUi().alert(n + ' email report(s) sent.');
 }
 
-/** Weekly (Mondays): progress summary to every active "Email reports" coach. */
+/** Weekly (Mondays): progress summary + branded PDF report + CSV to every active "Email reports" coach. */
 function sendEmailReports() {
   let sent = 0;
   getClasses_().filter(c => c.active && c.access === ACCESS.EMAIL && c.sheetId).forEach(cls => {
@@ -332,17 +338,198 @@ function sendEmailReports() {
       const table = '<table cellpadding="6" style="border-collapse:collapse;font-size:14px">' + vals.map((r, i) =>
         '<tr>' + r.map(c => (i === 0 ? '<th style="text-align:left;border-bottom:2px solid #333">' : '<td style="border-bottom:1px solid #ddd">') +
           esc_(c) + (i === 0 ? '</th>' : '</td>')).join('') + '</tr>').join('') + '</table>';
+      const files = vals.length > 1 ? [buildReportPdf_(cls, ss), buildReportCsv_(cls, ss)] : [];
       mail_(cls.coachEmail, 'Weekly progress: ' + cls.code,
         '<p>Hi ' + esc_(String(cls.coachName).split(' ')[0]) + ', here\'s where your students stand this week.</p>' +
-        (vals.length > 1 ? table : '<p>No students on the roster yet.</p>') + rosterLinksHtml_(cls) + '<p>— MPR Studios</p>');
+        (vals.length > 1 ? table + '<p>Attached: a printable PDF report and a CSV of every practice check (opens in Excel or Google Sheets).</p>'
+          : '<p>No students on the roster yet.</p>') + rosterLinksHtml_(cls) + '<p>— MPR Studios</p>', files);
       sent++;
     } catch (e) { log_('report_error', cls.code + ': ' + e); }
   });
   return sent;
 }
 
-function mail_(to, subject, html) {
-  MailApp.sendEmail({ to: to, subject: subject, htmlBody: html, name: CONFIG.SENDER_NAME, replyTo: CONFIG.ADMIN_EMAIL });
+/* ============================== Branded report files ============================== */
+
+const BRAND = { INK: '#14141F', BLUE: '#6EC8FF', PURPLE: '#C77DFF', GREEN: '#2E9E5B', RED: '#D93636', MUTED: '#6B6B7B', LINE: '#E3E3EA' };
+
+/** One-page-per-class printable PDF: header, class stats, student table, weak-skill notes. */
+function buildReportPdf_(cls, ss) {
+  const tz = Session.getScriptTimeZone();
+  const today = Utilities.formatDate(new Date(), tz, 'MMMM d, yyyy');
+  const sum = ss.getSheetByName(COACH.SUMMARY).getDataRange().getDisplayValues();
+  const head = sum[0], rows = sum.slice(1);
+  const week = recentChecks_(ss, 7);
+  const started = rows.filter(r => r[head.length - 1] !== 'Not started').length;
+  const allPassed = rows.filter(r => r[1] !== 'None yet' && r[1].split(',').length >= CONFIG.ACTIVE_LEVELS).length;
+
+  const stat = (n, label) => '<td style="padding:10px 14px;border:1px solid ' + BRAND.LINE + ';text-align:center">' +
+    '<div style="font-size:22px;font-weight:bold;color:' + BRAND.INK + '">' + n + '</div>' +
+    '<div style="font-size:10px;color:' + BRAND.MUTED + ';text-transform:uppercase;letter-spacing:1px">' + label + '</div></td>';
+
+  const cell = (c, j) => {
+    let color = BRAND.INK;
+    if (c === 'Not started' || c === '–' || c === 'None yet') color = BRAND.MUTED;
+    if (j >= 2 && j < 2 + CONFIG.ACTIVE_LEVELS && /^(\d+) of (\d+)$/.test(c)) {
+      const m = c.match(/^(\d+) of (\d+)$/);
+      color = Number(m[1]) >= passFor_(j - 1, Number(m[2])) ? BRAND.GREEN : BRAND.RED;
+    }
+    return '<td style="padding:6px 8px;border-bottom:1px solid ' + BRAND.LINE + ';color:' + color + ';font-size:11px">' + esc_(c) + '</td>';
+  };
+
+  const html =
+    '<html><body style="font-family:Arial,Helvetica,sans-serif;color:' + BRAND.INK + ';margin:0">' +
+    '<table width="100%" cellspacing="0" cellpadding="0"><tr>' +
+    '<td style="background:' + BRAND.INK + ';padding:18px 22px">' +
+    '<div style="color:#fff;font-size:20px;font-weight:bold;letter-spacing:3px">MPR STUDIOS</div>' +
+    '<div style="color:' + BRAND.BLUE + ';font-size:12px;letter-spacing:1px">LESSONS · PROGRESS REPORT</div></td>' +
+    '<td style="background:' + BRAND.INK + ';padding:18px 22px;text-align:right;color:#fff;font-size:12px">' +
+    esc_(cls.code) + '<br><span style="color:#bbb">' + today + '</span></td></tr>' +
+    '<tr><td style="height:5px;background:' + BRAND.BLUE + '"></td><td style="height:5px;background:' + BRAND.PURPLE + '"></td></tr></table>' +
+    '<div style="padding:18px 22px">' +
+    '<div style="font-size:16px;font-weight:bold">Field Reading &amp; Step Size</div>' +
+    '<div style="font-size:12px;color:' + BRAND.MUTED + ';margin-bottom:14px">Coach: ' + esc_(cls.coachName) + '</div>' +
+    '<table cellspacing="0" style="border-collapse:collapse;margin-bottom:18px"><tr>' +
+    stat(rows.length, 'Students') + stat(started, 'Started') + stat(week.length, 'Checks this week') +
+    stat(allPassed, 'Passed all ' + CONFIG.ACTIVE_LEVELS + ' levels') + '</tr></table>' +
+    '<table width="100%" cellspacing="0" style="border-collapse:collapse">' +
+    '<tr>' + head.map(h => '<th style="text-align:left;padding:6px 8px;border-bottom:2px solid ' + BRAND.INK +
+      ';font-size:10px;text-transform:uppercase;letter-spacing:.5px">' + esc_(h) + '</th>').join('') + '</tr>' +
+    rows.map(r => '<tr>' + r.map(cell).join('') + '</tr>').join('') + '</table>' +
+    '<p style="font-size:10px;color:' + BRAND.MUTED + ';margin-top:14px">' +
+    '<span style="color:' + BRAND.GREEN + '">Green</span> = passing score, <span style="color:' + BRAND.RED + '">red</span> = ' +
+    'not yet passing. "Weakest skills" counts misses over each student\'s last ' + CONFIG.RECENT_ATTEMPTS_FOR_WEAK_SKILLS +
+    ' checks, so it shows what to rehearse next.</p>' +
+    '<p style="font-size:10px;color:' + BRAND.MUTED + '">Lesson: ' + CONFIG.LESSON_URL + ' · Questions: reply to the weekly email.</p>' +
+    '</div></body></html>';
+
+  return Utilities.newBlob(html, 'text/html', 'report.html').getAs('application/pdf')
+    .setName(cls.code + ' Progress Report ' + Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd') + '.pdf');
+}
+
+/** Every practice check for the class, for coaches who want to sort/filter in Excel. */
+function buildReportCsv_(cls, ss) {
+  const vals = ss.getSheetByName(COACH.RESULTS).getDataRange().getDisplayValues()
+    .map(r => r.slice(0, COACH.RESULTS_HEADERS.length - 1)); // drop hidden Student ID
+  const csv = vals.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  return Utilities.newBlob('﻿' + csv, 'text/csv',
+    cls.code + ' Practice Checks ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd') + '.csv');
+}
+
+function recentChecks_(ss, days) {
+  const sh = ss.getSheetByName(COACH.RESULTS);
+  const n = sh.getLastRow() - 1;
+  if (n < 1) return [];
+  const since = Date.now() - days * 86400000;
+  return sh.getRange(2, 1, n, 1).getValues().filter(v => v[0] instanceof Date && v[0].getTime() >= since);
+}
+
+/** Pass mark per level, matching the lesson (Levels 2–3: 8 of 10; others: 6 of 8). Scales if totals differ. */
+function passFor_(level, total) {
+  const base = (level === 2 || level === 3) ? 0.8 : 0.75;
+  return Math.ceil(total * base);
+}
+
+/** Menu: save a sample PDF for one class into the coach folder so you can check the design. */
+function previewReport() {
+  const ui = SpreadsheetApp.getUi();
+  const code = ask_(ui, 'Preview report', 'Class code:');
+  if (code === null) return;
+  const cls = findClass_(normCode_(code));
+  if (!cls) return ui.alert('No class ' + normCode_(code) + '.');
+  const ss = SpreadsheetApp.openById(cls.sheetId);
+  rebuildSummary_(cls, ss);
+  const file = coachFolder_().createFile(buildReportPdf_(cls, ss));
+  ui.alert('Preview saved:\n' + file.getUrl());
+}
+
+function mail_(to, subject, html, attachments) {
+  const opts = { to: to, subject: subject, htmlBody: html, name: CONFIG.SENDER_NAME, replyTo: CONFIG.ADMIN_EMAIL };
+  if (attachments && attachments.length) opts.attachments = attachments;
+  MailApp.sendEmail(opts);
+}
+
+/* ============================== Delete class ============================== */
+
+/**
+ * Menu: removes a class everywhere in one step, and records it on the "Deleted classes" tab.
+ *  - Coach sheet + its report PDFs -> Drive Trash (restorable for 30 days)
+ *  - Rows removed from Classes, Requests, Results; Students tab refreshed
+ */
+function deleteClass() {
+  const ui = SpreadsheetApp.getUi();
+  const raw = ask_(ui, 'Delete class', 'Class code to delete:');
+  if (raw === null) return;
+  const code = normCode_(raw);
+  const cls = findClass_(code);
+  const reqCount = countRows_(hub_().getSheetByName(TABS.REQUESTS), REQ.CODE, code);
+  if (!cls && !reqCount) return ui.alert('Nothing found for ' + code + '.');
+
+  const results = countRows_(hub_().getSheetByName(TABS.RESULTS), 5, code);
+  const students = getStudents_().filter(s => s.classCode === code).length;
+  const check = ask_(ui, 'Delete ' + code + '?',
+    (cls ? 'Coach: ' + cls.coachName + ' (' + cls.coachEmail + ')\n' : 'Not approved yet (request only).\n') +
+    'This removes ' + students + ' student(s), ' + results + ' result(s), ' + reqCount + ' request row(s)' +
+    (cls ? ', and moves the coach sheet to Drive Trash (restorable for 30 days)' : '') + '.\n\n' +
+    'Type ' + code + ' to confirm:');
+  if (check === null || normCode_(check) !== code) return ui.alert('Not deleted.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  let trashed = '', note = '';
+  try {
+    if (cls && cls.sheetId) {
+      try {
+        const file = DriveApp.getFileById(cls.sheetId);
+        trashed = file.getUrl();
+        file.setTrashed(true);
+      } catch (e) { note = 'Coach sheet not found: ' + e.message; }
+      const pdfs = coachFolder_().getFiles();
+      let n = 0;
+      while (pdfs.hasNext()) {
+        const f = pdfs.next();
+        if (f.getName().indexOf(code + ' Progress Report') === 0) { f.setTrashed(true); n++; }
+      }
+      if (n) note += (note ? ' ' : '') + n + ' report PDF(s) trashed.';
+    }
+    deleteRowsWhere_(hub_().getSheetByName(TABS.RESULTS), 5, code);
+    deleteRowsWhere_(hub_().getSheetByName(TABS.REQUESTS), REQ.CODE, code);
+    deleteRowsWhere_(hub_().getSheetByName(TABS.CLASSES), 1, code);
+
+    const del = ensureSheet_(hub_(), TABS.DELETED, HUB_HEADERS[TABS.DELETED]);
+    del.appendRow([new Date(), code, cls ? cls.coachName : '', cls ? cls.coachEmail : '', cls ? cls.access : 'Request only',
+      cls ? cls.created : '', students, results, reqCount, trashed, note]);
+    log_('class_deleted', code + ' (' + students + ' students, ' + results + ' results)');
+  } finally { lock.releaseLock(); }
+
+  syncRosters(); // rebuilds the Students tab without this class
+  ui.alert(code + ' deleted. A record is on the "Deleted classes" tab.' +
+    (trashed ? '\n\nTo undo within 30 days: restore the sheet from Drive Trash and re-add the Classes row.' : ''));
+}
+
+function countRows_(sh, col, code) {
+  const n = sh.getLastRow() - 1;
+  if (n < 1) return 0;
+  return sh.getRange(2, col, n, 1).getValues().filter(v => normCode_(v[0]) === code).length;
+}
+
+/** Deletes every data row whose column `col` matches `code`, bottom-up, in contiguous blocks. */
+function deleteRowsWhere_(sh, col, code) {
+  const n = sh.getLastRow() - 1;
+  if (n < 1) return 0;
+  const vals = sh.getRange(2, col, n, 1).getValues();
+  const rows = [];
+  vals.forEach((v, i) => { if (normCode_(v[0]) === code) rows.push(i + 2); });
+  if (!rows.length) return 0;
+  if (sh.getMaxRows() - rows.length <= sh.getFrozenRows()) sh.insertRowsAfter(sh.getMaxRows(), 1); // can't delete every row
+  let end = rows.length - 1;
+  while (end >= 0) {
+    let start = end;
+    while (start > 0 && rows[start - 1] === rows[start] - 1) start--;
+    sh.deleteRows(rows[start], end - start + 1);
+    end = start - 1;
+  }
+  return rows.length;
 }
 
 /* ============================== Rosters ============================== */
@@ -584,7 +771,7 @@ function getClasses_() {
     .filter(v => String(v[0]).trim())
     .map(v => ({
       code: String(v[0]).trim().toUpperCase(), coachName: v[1], coachEmail: v[2], sheetId: String(v[3]).trim(),
-      url: v[4], active: v[5] === true, access: String(v[7]).trim() || ACCESS.GOOGLE,
+      url: v[4], active: v[5] === true, created: v[6], access: String(v[7]).trim() || ACCESS.GOOGLE,
     }));
 }
 function findClass_(code) { return getClasses_().find(c => c.code === code) || null; }
@@ -613,9 +800,36 @@ function nextEmptyRow_(sh) {
 
 function normCode_(x) { return String(x || '').trim().toUpperCase().replace(/[_\s]+/g, '-'); }
 
+/** Drive > MADA Lessons > Coach Sheets (created if missing). Moves sheets from the old folder the first time. */
 function coachFolder_() {
-  const it = DriveApp.getFoldersByName(CONFIG.COACH_FOLDER);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(CONFIG.COACH_FOLDER);
+  const props = PropertiesService.getScriptProperties();
+  const saved = props.getProperty('COACH_FOLDER_ID');
+  if (saved) {
+    try { const f = DriveApp.getFolderById(saved); if (!f.isTrashed()) return f; } catch (e) { /* recreate below */ }
+  }
+  let folder = DriveApp.getRootFolder();
+  CONFIG.COACH_FOLDER_PATH.forEach(name => {
+    const it = folder.getFoldersByName(name);
+    folder = it.hasNext() ? it.next() : folder.createFolder(name);
+  });
+  const old = DriveApp.getFoldersByName(CONFIG.OLD_COACH_FOLDER);
+  while (old.hasNext()) {
+    const o = old.next();
+    if (o.getId() === folder.getId()) continue;
+    const files = o.getFiles();
+    while (files.hasNext()) files.next().moveTo(folder);
+    if (!o.getFiles().hasNext() && !o.getFolders().hasNext()) o.setTrashed(true);
+    log_('folder_moved', CONFIG.OLD_COACH_FOLDER + ' -> ' + CONFIG.COACH_FOLDER_PATH.join(' / '));
+  }
+  props.setProperty('COACH_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+/** Menu: run once to create Drive > MADA Lessons > Coach Sheets and move existing sheets there. */
+function organizeCoachFolder() {
+  PropertiesService.getScriptProperties().deleteProperty('COACH_FOLDER_ID');
+  const f = coachFolder_();
+  SpreadsheetApp.getUi().alert('Coach sheets are in Drive > ' + CONFIG.COACH_FOLDER_PATH.join(' > ') + '\n' + f.getUrl());
 }
 
 function ensureSheet_(ss, name, headers) {
