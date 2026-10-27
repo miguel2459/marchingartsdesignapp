@@ -661,6 +661,7 @@ function dashboard_(p) {
   if (!cls) return { ok: false, error: 'not_found' };
   const ss = SpreadsheetApp.openById(cls.sheetId);
   const tz = Session.getScriptTimeZone();
+  rebuildSummary_(cls, ss); // so students with no results yet still appear
   const sum = ss.getSheetByName(COACH.SUMMARY).getDataRange().getDisplayValues();
   const roster = readRoster_(ss.getSheetByName(COACH.ROSTER)).filter(r => r.name)
     .map(r => ({ name: r.name, code: r.code, link: r.link, active: r.active }));
@@ -701,6 +702,7 @@ function syncRosters() {
       const sh = ss.getSheetByName(COACH.ROSTER);
       const rows = readRoster_(sh);
       const taken = new Set(rows.map(r => r.code).filter(Boolean));
+      let changed = false;
       rows.forEach(r => {
         if (!r.name) return;
         if (!r.id) {
@@ -711,11 +713,13 @@ function syncRosters() {
         const link = CONFIG.LESSON_URL + '?class=' + encodeURIComponent(cls.code) + '&code=' + r.code;
         if (r.link !== link) { r.link = link; r.dirty = true; }
         if (r.dirty) {
+          changed = true;
           sh.getRange(r.row, 2, 1, 4).setValues([[r.code, r.link, r.active, r.id]]);
           sh.getRange(r.row, 4).insertCheckboxes();
         }
         all.push([r.id, cls.code, r.name, r.code, r.active, new Date()]);
       });
+      if (changed) { try { rebuildSummary_(cls, ss); } catch (e) { log_('summary_error', cls.code + ': ' + e); } }
     });
     const st = hub_().getSheetByName(TABS.STUDENTS);
     if (st.getLastRow() > 1) st.getRange(2, 1, st.getLastRow() - 1, HUB_HEADERS.Students.length).clearContent();
