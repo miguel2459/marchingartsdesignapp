@@ -18,6 +18,8 @@ const CONFIG = {
   LESSON_ID: 'field-reading',
   LESSON_URL: 'https://mada.mprstudios.com/lessons/field-reading/',
   SIGNUP_URL: 'https://mada.mprstudios.com/coach/',
+  DASHBOARD_URL: 'https://mada.mprstudios.com/coach/dashboard/',
+  DASHBOARD_LIMIT_PER_CLASS_PER_10_MIN: 120,
   GOOGLE_SIGNUP_URL: 'https://accounts.google.com/signup',
   SCHEMA_VERSION: 1,
   ACTIVE_LEVELS: 4,
@@ -40,7 +42,7 @@ const TABS = { DELETED: 'Deleted classes', REQUESTS: 'Requests', CLASSES: 'Class
 const HUB_HEADERS = {
   Requests: ['Received', 'Coach name', 'Coach email', 'Group name', 'Section', 'Location', 'Est. students',
              'Access', 'Student names', 'Notes', 'Class code', 'Approve', 'Status', 'Coach sheet link'],
-  Classes: ['Class code', 'Coach name', 'Coach email', 'Coach sheet ID', 'Coach sheet link', 'Active', 'Created', 'Access'],
+  Classes: ['Class code', 'Coach name', 'Coach email', 'Coach sheet ID', 'Coach sheet link', 'Active', 'Created', 'Access', 'Coach key'],
   Students: ['Student ID', 'Class code', 'Name', 'Join code', 'Active', 'Updated'],
   Results: ['Received', 'Result ID', 'Schema', 'Lesson', 'Class code', 'Student ID', 'Name', 'Level',
             'Score', 'Out of', 'Passed', 'Attempt', 'Missed skills', 'Field', 'Client time', 'App version'],
@@ -83,6 +85,8 @@ function onOpen() {
     .addSeparator()
     .addItem('Add class…', 'addClass')
     .addItem('Delete class…', 'deleteClass')
+    .addItem('Coach links: set up for all classes', 'setupCoachLinks')
+    .addItem('Coach links: reset one class…', 'resetCoachLink')
     .addItem('Sync rosters now', 'syncRostersNow')
     .addItem('Rebuild all summaries', 'rebuildAllSummaries')
     .addItem('Send email reports now', 'sendEmailReportsNow')
@@ -140,7 +144,7 @@ function createClass_(classCode, coachName, coachEmail, access, studentNames) {
   const sheet = createCoachSheet_(classCode, coachEmail, access === ACCESS.GOOGLE);
   const cs = hub_().getSheetByName(TABS.CLASSES);
   const row = nextEmptyRow_(cs);
-  cs.getRange(row, 1, 1, 8).setValues([[classCode, coachName, coachEmail, sheet.id, sheet.url, true, new Date(), access]]);
+  cs.getRange(row, 1, 1, 9).setValues([[classCode, coachName, coachEmail, sheet.id, sheet.url, true, new Date(), access, newCoachKey_()]]);
   cs.getRange(row, 6).insertCheckboxes();
   log_('class_added', classCode + ' -> ' + coachEmail + ' (' + access + ')' + (sheet.shareNote ? ' ' + sheet.shareNote : ''));
 
@@ -150,6 +154,7 @@ function createClass_(classCode, coachName, coachEmail, access, studentNames) {
     syncRosters();
   }
   const cls = findClass_(classCode);
+  writeStartHere_(cls);
   sendWelcome_(cls, sheet.shareNote);
   return cls;
 }
@@ -310,7 +315,7 @@ function sendWelcome_(cls, shareNote) {
     '<p>To add or remove students, just reply to this email with the changes.</p>';
   mail_(cls.coachEmail, 'Your MPR Studios Lessons class is ready (' + cls.code + ')',
     '<p>Hi ' + esc_(first) + ',</p><p>Welcome to MPR Studios Lessons! Your class code is <b>' + esc_(cls.code) + '</b>.</p>' + steps +
-    '<p>The lesson: <a href="' + CONFIG.LESSON_URL + '">Field Reading &amp; Step Size</a></p><p>— MPR Studios</p>');
+    coachLinksHtml_(cls) + '<p>— MPR Studios</p>');
   if (shareNote) mail_(CONFIG.ADMIN_EMAIL, 'Sharing problem for ' + cls.code, '<p>' + esc_(shareNote) + '</p><p>Sheet: ' + cls.url + '</p>');
 }
 
@@ -342,7 +347,8 @@ function sendEmailReports() {
       mail_(cls.coachEmail, 'Weekly progress: ' + cls.code,
         '<p>Hi ' + esc_(String(cls.coachName).split(' ')[0]) + ', here\'s where your students stand this week.</p>' +
         (vals.length > 1 ? table + '<p>Attached: a printable PDF report and a CSV of every practice check (opens in Excel or Google Sheets).</p>'
-          : '<p>No students on the roster yet.</p>') + rosterLinksHtml_(cls) + '<p>— MPR Studios</p>', files);
+          : '<p>No students on the roster yet.</p>') + '<p>Live dashboard (any time): <a href="' + coachLinks_(cls).dashboard +
+        '">open your dashboard</a></p>' + rosterLinksHtml_(cls) + '<p>— MPR Studios</p>', files);
       sent++;
     } catch (e) { log_('report_error', cls.code + ': ' + e); }
   });
@@ -532,6 +538,149 @@ function deleteRowsWhere_(sh, col, code) {
   return rows.length;
 }
 
+/* ============================== Coach links & dashboard ============================== */
+
+/** Each class has a secret coach key. It unlocks the private dashboard and a full-access lesson preview. */
+function newCoachKey_() {
+  return (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').slice(0, 40);
+}
+
+function coachLinks_(cls) {
+  const c = encodeURIComponent(cls.code), k = encodeURIComponent(cls.key || '');
+  return {
+    dashboard: CONFIG.DASHBOARD_URL + '#class=' + c + '&key=' + k,
+    preview: CONFIG.LESSON_URL + '#coachclass=' + c + '&coachkey=' + k,
+  };
+}
+
+function coachLinksHtml_(cls) {
+  const l = coachLinks_(cls);
+  return '<p><b>Your coach links</b> (private — don\'t share with students):</p><ul>' +
+    '<li><a href="' + l.dashboard + '">Your class dashboard</a>: see every student\'s progress from any device, no Google account needed.</li>' +
+    '<li><a href="' + l.preview + '">Coach preview of the lesson</a>: all levels unlocked so you can try it yourself. Nothing you do there is recorded.</li>' +
+    '</ul><p>Student lesson link (no class attached): <a href="' + CONFIG.LESSON_URL + '">' + CONFIG.LESSON_URL + '</a></p>';
+}
+
+/** "Start here" tab at the front of the coach sheet with the coach's links. */
+function writeStartHere_(cls) {
+  if (!cls || !cls.sheetId) return;
+  const ss = SpreadsheetApp.openById(cls.sheetId);
+  let sh = ss.getSheetByName('Start here');
+  if (!sh) { sh = ss.insertSheet('Start here', 0); lockProtection_(sh.protect().setDescription('Written by MPR Studios')); }
+  const l = coachLinks_(cls);
+  sh.clear();
+  const rows = [
+    ['MPR Studios Lessons — ' + cls.code, ''],
+    ['', ''],
+    ['Your dashboard', l.dashboard],
+    ['Coach preview of the lesson', l.preview],
+    ['Student lesson (no class)', CONFIG.LESSON_URL],
+    ['', ''],
+    ['How it works', '1. Type student names on the Roster tab.  2. Join codes + links appear within ~5 minutes.  ' +
+      '3. Send each student their own join link.  4. Results fill the Summary and Results tabs automatically.'],
+    ['Keep private', 'The dashboard and preview links are for coaches only. Students should only get their own join link.'],
+  ];
+  sh.getRange(1, 1, rows.length, 2).setValues(rows);
+  sh.getRange('A1').setFontSize(14).setFontWeight('bold');
+  sh.getRange('A3:A8').setFontWeight('bold');
+  sh.setColumnWidth(1, 220).setColumnWidth(2, 640);
+  sh.getRange('B7:B8').setWrap(true);
+}
+
+/** Menu: gives every class a coach key and a "Start here" tab (safe to re-run; keeps existing keys). */
+function setupCoachLinks() {
+  const ui = SpreadsheetApp.getUi();
+  const cs = hub_().getSheetByName(TABS.CLASSES);
+  writeHeaders_(cs, HUB_HEADERS.Classes);
+  const n = cs.getLastRow() - 1;
+  let made = 0;
+  if (n > 0) {
+    const vals = cs.getRange(2, 1, n, 9).getValues();
+    vals.forEach((v, i) => { if (String(v[0]).trim() && !String(v[8]).trim()) { cs.getRange(i + 2, 9).setValue(newCoachKey_()); made++; } });
+  }
+  getClasses_().filter(c => c.sheetId).forEach(c => { try { writeStartHere_(c); } catch (e) { log_('start_here_error', c.code + ': ' + e); } });
+  const send = ui.alert('Coach links', made + ' new coach key(s) created and "Start here" tabs updated.\n\n' +
+    'Email every active coach their dashboard + preview links now?', ui.ButtonSet.YES_NO);
+  if (send === ui.Button.YES) {
+    let sent = 0;
+    getClasses_().filter(c => c.active && c.key).forEach(c => { sendCoachLinks_(c, false); sent++; });
+    ui.alert(sent + ' email(s) sent.');
+  }
+}
+
+/** Menu: new coach key for one class (old links stop working) and email the coach the new links. */
+function resetCoachLink() {
+  const ui = SpreadsheetApp.getUi();
+  const raw = ask_(ui, 'Reset coach link', 'Class code:');
+  if (raw === null) return;
+  const code = normCode_(raw);
+  const cs = hub_().getSheetByName(TABS.CLASSES);
+  const n = cs.getLastRow() - 1;
+  const vals = n > 0 ? cs.getRange(2, 1, n, 1).getValues() : [];
+  const idx = vals.findIndex(v => normCode_(v[0]) === code);
+  if (idx < 0) return ui.alert('No class ' + code + '.');
+  cs.getRange(idx + 2, 9).setValue(newCoachKey_());
+  const cls = findClass_(code);
+  writeStartHere_(cls);
+  sendCoachLinks_(cls, true);
+  log_('coach_key_reset', code);
+  ui.alert('New coach links for ' + code + ' were emailed to ' + cls.coachEmail + '. The old links no longer work.');
+}
+
+function sendCoachLinks_(cls, isReset) {
+  mail_(cls.coachEmail, (isReset ? 'Your new coach links' : 'Your coach dashboard') + ' (' + cls.code + ')',
+    '<p>Hi ' + esc_(String(cls.coachName).split(' ')[0] || 'Coach') + ',</p>' +
+    (isReset ? '<p>Your coach links were reset, so your old ones no longer work. Here are the new ones.</p>' :
+      '<p>You now have a private dashboard for <b>' + esc_(cls.code) + '</b> that works on any device.</p>') +
+    coachLinksHtml_(cls) + '<p>— MPR Studios</p>');
+}
+
+function coachAuth_(p) {
+  const code = normCode_(p.class);
+  const key = String(p.key || '').trim();
+  if (!/^[A-Z0-9-]{3,20}$/.test(code) || !/^[a-f0-9]{40}$/.test(key)) return null;
+  const cache = CacheService.getScriptCache(), ck = 'd:' + code;
+  const tries = Number(cache.get(ck) || 0) + 1;
+  cache.put(ck, String(tries), 600);
+  if (tries > CONFIG.DASHBOARD_LIMIT_PER_CLASS_PER_10_MIN) return 'limited';
+  const cls = findClass_(code);
+  if (!cls || !cls.active || !cls.key || cls.key !== key) { log_('coach_auth_failed', code); return null; }
+  return cls;
+}
+
+function coachCheck_(p) {
+  const cls = coachAuth_(p);
+  if (cls === 'limited') return { ok: false, error: 'try_later' };
+  return cls ? { ok: true, classCode: cls.code } : { ok: false, error: 'not_found' };
+}
+
+/** Everything the coach dashboard shows, read from the coach sheet. */
+function dashboard_(p) {
+  const cls = coachAuth_(p);
+  if (cls === 'limited') return { ok: false, error: 'try_later' };
+  if (!cls) return { ok: false, error: 'not_found' };
+  const ss = SpreadsheetApp.openById(cls.sheetId);
+  const tz = Session.getScriptTimeZone();
+  const sum = ss.getSheetByName(COACH.SUMMARY).getDataRange().getDisplayValues();
+  const roster = readRoster_(ss.getSheetByName(COACH.ROSTER)).filter(r => r.name)
+    .map(r => ({ name: r.name, code: r.code, link: r.link, active: r.active }));
+  const rs = ss.getSheetByName(COACH.RESULTS);
+  const n = rs.getLastRow() - 1;
+  const recent = n > 0 ? rs.getRange(Math.max(2, rs.getLastRow() - 99), 1, Math.min(n, 100), COACH.RESULTS_HEADERS.length - 1).getValues()
+    .reverse().map(r => ({
+      when: r[0] instanceof Date ? r[0].toISOString() : String(r[0]), student: r[1], level: r[2], score: r[3], total: r[4],
+      passed: r[5] === 'Yes', attempt: r[6], missed: String(r[7] || ''), field: r[8],
+    })) : [];
+  const levels = [];
+  for (let L = 1; L <= CONFIG.ACTIVE_LEVELS; L++) levels.push({ n: L, passMark: passFor_(L, (L === 2 || L === 3) ? 10 : 8) });
+  return {
+    ok: true, classCode: cls.code, coachName: cls.coachName, access: cls.access, lessonUrl: CONFIG.LESSON_URL,
+    sheetUrl: cls.access === ACCESS.GOOGLE ? cls.url : '', levels: levels,
+    summary: { header: sum[0] || [], rows: sum.slice(1) }, roster: roster, recent: recent,
+    generated: Utilities.formatDate(new Date(), tz, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+  };
+}
+
 /* ============================== Rosters ============================== */
 
 function syncRostersNow() {
@@ -601,6 +750,8 @@ function doGet(e) {
   try {
     if (p.action === 'join') return json_(join_(p));
     if (p.action === 'progress') return json_(progress_(p));
+    if (p.action === 'dashboard') return json_(dashboard_(p));
+    if (p.action === 'coachcheck') return json_(coachCheck_(p));
     if (p.action === 'ping') return json_({ ok: true });
     return json_({ ok: false, error: 'unknown_action' });
   } catch (err) {
@@ -800,7 +951,7 @@ function getClasses_() {
     .filter(v => String(v[0]).trim())
     .map(v => ({
       code: String(v[0]).trim().toUpperCase(), coachName: v[1], coachEmail: v[2], sheetId: String(v[3]).trim(),
-      url: v[4], active: v[5] === true, created: v[6], access: String(v[7]).trim() || ACCESS.GOOGLE,
+      url: v[4], active: v[5] === true, created: v[6], access: String(v[7]).trim() || ACCESS.GOOGLE, key: String(v[8] || '').trim(),
     }));
 }
 function findClass_(code) { return getClasses_().find(c => c.code === code) || null; }
