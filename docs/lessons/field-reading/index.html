@@ -1145,15 +1145,59 @@ ${triFig(p6a,p6b,true,'6 over, 8 back, C = 10')}
 <div class="prose"><h3>Try it yourself</h3>
 <p>Pick a start, an end, and your counts. Work it out on your phone first, then hit "Show me."</p></div>
 <div class="player" id="calc3">${calc3Inner()}</div>`;}
-function learn4(){const h=H();const a={x:40,y:h},b={x:56,y:h-8};const cps=[4,8,12].map(c=>({c,p:{x:a.x+c,y:a.y-c/2}}));
-  return `<div class="prose"><p>A checkpoint is where you should be on a specific count. The formula:</p>
-<p><b>checkpoint = start + (count ÷ total counts) × the move</b>, done separately for lateral and depth.</p></div>
-${fig({pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'},...cps.map(c=>({...c.p,cls:'cp',r:0.6,label:String(c.c)}))],paths:[{pts:[a,b]}]},'S1 25 front hash to S1 35, 8 in front of the hash, in 16 counts. Checkpoints on 4, 8 and 12.')}
+function learn4(){const h=H();
+  const a={x:40,y:h},b={x:56,y:h-8};const cps=[4,8,12].map(c=>({c,p:{x:a.x+16*c/16,y:a.y-8*c/16}}));
+  const la={x:48,y:h},lb={x:64,y:h},l8={x:56,y:h};
+  const da={x:48,y:h},db={x:64,y:h+8},d4={x:52,y:h+2};
+  const ra={x:42,y:h},rb={x:54,y:h},r8={x:48,y:h};
+  const cpDot=(p,label)=>({...p,cls:'cp',r:0.6,label}),lc=t=>t.charAt(0).toLowerCase()+t.slice(1);
+  return `<div class="prose">
+<h3>Why it matters</h3>
+<p>Your form has to be right <i>between</i> sets, not just when you land on the dot. If you check yourself on counts 4, 8 and 12, a mistake shows up within 4 counts, while it's still small enough to fix.</p>
+<h3>The big idea</h3>
+<p>A checkpoint is where you should be on a specific count. Here's the whole idea in one sentence:</p>
+<p><b>The fraction of the counts is the fraction of the move.</b></p>
+<p>Count 4 of 16 is ¼ of the counts, so you're ¼ of the way there. Count 8 is ½, so you're halfway. Count 12 is ¾. That's it. It's just fractions.</p></div>
+${fig({pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'},...cps.map(c=>cpDot(c.p,String(c.c)))],paths:[{pts:[a,b]}]},`${posDesc(a)} → ${lc(posDesc(b))}, 16 counts. Checkpoints on 4 (¼), 8 (½) and 12 (¾).`)}
 ${cpTable([{c:0,p:a},...cps,{c:16,p:b}])}
-<div class="prose"><h3>The habit</h3>
-<ul><li>Before you step off, know your count 4, 8 and 12 checkpoints.</li>
-<li>While you march, confirm each one against the yard lines and hash ticks.</li>
-<li>If a checkpoint is off, you find out within 4 counts, not at the end of the move.</li></ul></div>`;}
+<div id="cpPlayer"></div>
+<div class="prose">
+<h3>Worked example: straight side to side</h3>
+<p><b>S1 30 to S1 40 in 16 counts.</b> That's 16 steps (8 + 8, your Level 2 ruler).</p>
+<p>Where are you on count 8?</p>
+<ul><li>Fraction: 8 ÷ 16 = <b>½</b> of the move.</li>
+<li>Steps: 16 × ½ = <b>8 steps</b> from the start.</li>
+<li>8 steps past the S1 30 puts you right on the next yard line: <b>${the(l8.x/8)}</b>.</li></ul></div>
+${fig({pts:[{...la,label:'Start'},{...lb,cls:'end',label:'End'},cpDot(l8,'8')],paths:[{pts:[la,lb]}],ruler:{x1:la.x,x2:l8.x,y:h}},'S1 30 → S1 40 in 16 counts. Count 8 is halfway: the S1 35.')}
+<div class="prose">
+<h3>Worked example: diagonal</h3>
+<p>Same move, but now you also go <b>8 steps back</b>: S1 30 on the front hash to the S1 40, 8 behind the front hash, still in 16 counts. So A = 16 (over) and B = 8 (back).</p>
+<p>Where are you on count 4?</p>
+<ul><li>Fraction: 4 ÷ 16 = <b>¼</b> of the move.</li>
+<li>Lateral: 16 × ¼ = <b>4 steps</b> over. From the S1 30 that's <b>${lc(latDesc(d4.x))}</b>.</li>
+<li>Depth: 8 × ¼ = <b>2 steps</b> back. From the front hash that's <b>${depDesc(d4.y)}</b>.</li></ul>
+<p>Say it lateral first, then depth: <b>${posDesc(d4)}</b>.</p></div>
+${fig({pts:[{...da,label:'Start',lx:-5.6,ly:-0.7},{...db,cls:'end',label:'End'},cpDot(d4,'4')],paths:[{pts:[da,db]}]},'S1 30, front hash → S1 40, 8 behind the front hash, in 16 counts. Count 4 is ¼ of the way.')}
+<div class="prose">
+<h3>The 5-step method</h3>
+<ol><li><b>Know the move.</b> A = steps over, B = steps forward or back, and the total counts.</li>
+<li><b>Find the fraction.</b> Count ÷ total counts.</li>
+<li><b>Split each direction.</b> A × fraction for lateral, B × fraction for depth.</li>
+<li><b>Place it and say it.</b> Count each piece from the start and name the field position. If it isn't a whole step, round to one decimal.</li>
+<li><b>Sanity check.</b> The checkpoint has to be on your path, between the start and the end. If it isn't, redo the math.</li></ol>
+<p>On diagonals you never need C for a checkpoint. A and B do all the work. C is only for step size (Level 3).</p>
+<h3>Flip it: when do I cross a yard line?</h3>
+<p>Sometimes the question runs backwards. You know the spot, and you want the count.</p>
+<p><b>Count = total counts × (steps to the line ÷ total lateral steps)</b></p>
+<p>Say you go <b>12 steps over in 16 counts</b>, and the yard line is <b>6 steps</b> from your start. 6 ÷ 12 = ½ of the move, and ½ × 16 = <b>count 8</b>. You should be right on the line on count 8.</p></div>
+${fig({pts:[{...ra,label:'Start'},{...rb,cls:'end',label:'End'},cpDot(r8,'8')],paths:[{pts:[ra,rb]}],ruler:{x1:ra.x,x2:r8.x,y:h}},`${latDesc(ra.x)} → ${lc(latDesc(rb.x))} in 16 counts. You cross the S1 30 on count 8.`)}
+<div class="fcard" aria-label="Formula reference"><p><b>Checkpoint = Start + (count ÷ total counts) × Move</b></p><p>Do it once for lateral (A) and once for depth (B).</p></div>
+<div class="prose">
+<h3>The habit</h3>
+<ul><li>Before you step off, know where you'll be on <b>count 4, 8 and 12</b>.</li>
+<li>While you march, confirm each one with your eyes up, using the yard lines and hash ticks.</li>
+<li>If one is off, fix it with a new step size for the counts you have left, using your Level 2 formula: <b>8 × counts left ÷ steps left</b>. On count 8 of S1 30 → S1 40, if you're 2 short you have 10 steps left in 8 counts: 8 × 8 ÷ 10 = a <b>6.4-to-5</b>.</li>
+<li>Spread the fix across every count you have left. One big catch-up step is the first thing an instructor sees.</li></ul></div>`;}
 function learn5(){return `<div class="prose">
 <p>Start on the <b>S1 20, front hash</b>. Leg 1: 8 forward and 8 over in 8 counts, to the point on the S1 25. Leg 2: 8 back and 8 over in 8 counts, back to the front hash on the S1 30. That's one 16-count cycle. Repeat.</p>
 <p>The <b>midpoint version</b> keeps 8 forward and 8 back but only goes 4 over per leg, so the point lands halfway between the lines. Same counts, steeper angle, smaller step. Instructors will change the numbers; the method stays the same.</p>
