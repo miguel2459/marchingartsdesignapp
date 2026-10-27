@@ -231,8 +231,9 @@ function load(){try{const r=localStorage.getItem(KEY);if(r)Object.assign(S,JSON.
 // 1 + consecutive passed levels from Level 1, capped at ACTIVE_LEVELS.
 function calcUnlocked(){let u=1;while(u<ACTIVE_LEVELS&&(S.best[u]||0)>=passFor(u))u++;return u;}
 let COACH=false; // ?coach= unlock; session only, never saved
+let PREVIEW=false; // #coachclass=&coachkey= coach preview: COACH plus no class join, no results, nothing saved
 const levelOpen=n=>n<=ACTIVE_LEVELS&&(n<=S.unlocked||COACH);
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){if(PREVIEW)return;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const H=()=>S.hash==='hs'?28:32;
 const hashName=()=>S.hash==='hs'?'a high school field':'a college field';
 const reduced=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -1297,7 +1298,7 @@ function introHTML(){const h=H();const cont=S.unlocked>1;
 <h1>Field Reading &amp; Step Size</h1>
 <p class="lede">Prep for the Blue Devils A Corps audition. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
 <ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
-<div class="name-row">${CLS?`<p>${CLS.name?`Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})`:`Practicing with class <b>${esc(CLS.classCode)}</b>`}</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
+<div class="name-row">${PREVIEW?`<p><b>Coach preview.</b> <span class="muted">Nothing here is recorded.</span></p>`:CLS?`<p>${CLS.name?`Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})`:`Practicing with class <b>${esc(CLS.classCode)}</b>`}</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
 function levelHTML(){const L=LEVELS[view.n-1];return `<section class="lvl"><div class="lvl-head"><p class="num">Level ${L.n} of ${ACTIVE_LEVELS}</p><h2>${L.title}</h2><p class="sub">${L.sub}</p></div>
 <div class="tabs" role="tablist"><button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${view.tab==='learn'}">Learn</button><button class="tab" role="tab" data-act="tab" data-tab="practice" aria-selected="${view.tab==='practice'}">Practice check</button></div>
@@ -1394,7 +1395,7 @@ document.addEventListener('input',e=>{const t=e.target;if(t.id==='clsClass'||t.i
 
 // ---- Class joining (mpr-class-v1). Students join with their coach's class code + their own join code; the name comes from the roster.
 let CLS=null,joining=false,toastT=0;
-function classLoad(){try{const r=localStorage.getItem(CLASS_KEY);CLS=r?JSON.parse(r):null;}catch(e){CLS=null;}
+function classLoad(){if(PREVIEW){CLS=null;return;}try{const r=localStorage.getItem(CLASS_KEY);CLS=r?JSON.parse(r):null;}catch(e){CLS=null;}
   if(CLS&&!(CLS.studentId&&CLS.classCode))CLS=null;}
 function classSave(){try{localStorage.setItem(CLASS_KEY,JSON.stringify(CLS));}catch(e){}}
 // Leaving (or being removed) clears local progress; the student's progress stays on the hub.
@@ -1422,10 +1423,10 @@ function classSyncName(){const nm=CLS&&CLS.name||'';if(S.name!==nm){S.name=nm;sa
 function classRender(){const c=document.getElementById('clsChip');
   classSyncName();
   if(view.name==='intro')render();else document.getElementById('who').textContent=S.name||'';
-  c.textContent=!CLS?'Join a class':CLS.name?`Joined: ${CLS.name} · ${CLS.classCode}`:`Joined · ${CLS.classCode}`;
+  c.textContent=PREVIEW?'Coach preview':!CLS?'Join a class':CLS.name?`Joined: ${CLS.name} · ${CLS.classCode}`:`Joined · ${CLS.classCode}`;
   const p=document.getElementById('clsPanel');if(!p.hidden)classPanelFill();}
 function classPanelFill(){const p=document.getElementById('clsPanel');
-  p.innerHTML=CLS?`<p style="margin:0">Joined ${CLS.name?`as <b>${esc(CLS.name)}</b> in `:''}<b>${esc(CLS.classCode)}</b>. <button class="linkbtn" data-act="clsleave">Not you? Leave class</button></p>`
+  p.innerHTML=PREVIEW?`<p style="margin:0">Coach preview: all levels unlocked. Nothing here is recorded or sent to a class.</p>`:CLS?`<p style="margin:0">Joined ${CLS.name?`as <b>${esc(CLS.name)}</b> in `:''}<b>${esc(CLS.classCode)}</b>. <button class="linkbtn" data-act="clsleave">Not you? Leave class</button></p>`
     :`<div class="cls-form"><label for="clsClass">Class code<input id="clsClass" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20"></label>
 <label for="clsCode">Join code<input id="clsCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="5"></label>
 <button class="btn primary" data-act="clsjoin" id="clsBtn">Join</button></div>`;}
@@ -1470,13 +1471,13 @@ function queueLoad(){try{const q=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]
 function queueStore(q){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(q.slice(-QUEUE_MAX)));}catch(e){}}
 function queuePending(){return CLS?queueLoad().some(r=>r.studentId===CLS.studentId):false;}
 const uuid=()=>crypto.randomUUID?crypto.randomUUID():'r-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
-function queueResult({level,score,total,passed,missed}){if(!CLS)return;
+function queueResult({level,score,total,passed,missed}){if(!CLS||PREVIEW)return;
   CLS.attempts=CLS.attempts||{};const attempt=CLS.attempts[level]=(CLS.attempts[level]||0)+1;classSave();
   const q=queueLoad();q.push({type:'result',resultId:uuid(),lesson:LESSON_ID,classCode:CLS.classCode,studentId:CLS.studentId,level,score,total,passed,
     attempt,missed,field:S.hash==='hs'?'hs':'college',clientTime:new Date().toISOString(),appVersion:APP_VERSION});
   queueStore(q);flushQueue();}
 let flushing=false;
-async function flushQueue(){if(flushing)return;flushing=true;let removed=false;
+async function flushQueue(){if(flushing||PREVIEW)return;flushing=true;let removed=false;
   try{for(;;){const item=queueLoad()[0];if(!item)break;let d;
     try{const r=await fetch(RESULTS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item)});d=await r.json();}
     catch(e){break;} // offline or unreadable reply: keep it for next time
@@ -1506,7 +1507,21 @@ function coachUnlock(){let u;try{u=new URL(location.href);}catch(e){return;}
   if(!ok)return;
   COACH=true;document.getElementById('coachNote').hidden=false;
   u.searchParams.delete('coach');history.replaceState(null,'',u.pathname+u.search+u.hash);}
-load();classLoad();classOwn();classSyncName();coachUnlock();render();classBoot();flushQueue();
+// Coach preview link (#coachclass=CODE&coachkey=KEY): checked with the hub; the hash stays so a reload stays in preview.
+// A student join on this device is ignored for this page load only (mpr-class-v1 is left alone).
+async function coachPreview(){const h=new URLSearchParams(location.hash.slice(1));
+  const cls=(h.get('coachclass')||'').trim().toUpperCase(),key=(h.get('coachkey')||'').trim();
+  if(!cls||!key)return false;
+  classRender();
+  let d;try{const r=await fetch(RESULTS_URL+'?'+new URLSearchParams({action:'coachcheck',class:cls,key}),{referrerPolicy:'no-referrer'});d=await r.json();}catch(e){d=null;}
+  if(d&&d.ok){PREVIEW=COACH=true;CLS=null;quiz=null;Object.assign(S,{best:{},unlocked:1,name:''});
+    const n=document.getElementById('coachNote');n.firstElementChild.textContent='Coach preview: all levels unlocked. Nothing here is recorded.';n.hidden=false;
+    classPanelClose();classRender();progressRender();return true;}
+  if(d&&d.error==='not_found'){toast("That coach link isn't valid anymore.");history.replaceState(null,'',location.pathname+location.search);}
+  else toast("Couldn't check the coach link. Reload to try again.");
+  return false;}
+load();classLoad();classOwn();classSyncName();coachUnlock();render();
+coachPreview().then(on=>{if(!on){classBoot();flushQueue();}});
 window.__CB={GEN,S,posDesc,cbPos};
 </script>
 </body>
