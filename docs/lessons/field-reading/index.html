@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Field Reading &amp; Step Size</title>
-<meta name="description" content="Learn to read the field, find your step size, and hit every checkpoint. Practice for marching auditions.">
+<meta name="description" content="Learn to read the field, find your step size, and hit every checkpoint. Practice for auditions, camps, and rehearsals.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MPR Studios">
 <meta property="og:title" content="Field Reading &amp; Step Size">
-<meta property="og:description" content="Learn to read the field, find your step size, and hit every checkpoint. Practice for marching auditions.">
+<meta property="og:description" content="Learn to read the field, find your step size, and hit every checkpoint. Practice for auditions, camps, and rehearsals.">
 <meta property="og:url" content="https://mada.mprstudios.com/lessons/field-reading/">
 <meta property="og:image" content="https://mada.mprstudios.com/assets/og/field-reading-v3.png">
 <meta property="og:image:width" content="1200">
@@ -16,7 +16,7 @@
 <meta property="og:image:alt" content="A marcher's path across the 50 from Start to End, with checkpoints on counts 4, 8 and 12. Field Reading &amp; Step Size, MADA Lessons.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Field Reading &amp; Step Size">
-<meta name="twitter:description" content="Learn to read the field, find your step size, and hit every checkpoint. Practice for marching auditions.">
+<meta name="twitter:description" content="Learn to read the field, find your step size, and hit every checkpoint. Practice for auditions, camps, and rehearsals.">
 <meta name="twitter:image" content="https://mada.mprstudios.com/assets/og/field-reading-v3.png">
 <meta name="twitter:image:alt" content="A marcher's path across the 50 from Start to End, with checkpoints on counts 4, 8 and 12. Field Reading &amp; Step Size, MADA Lessons.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -493,7 +493,7 @@ function randDot(){const h=H();const k=rnd(2,18),off=rnd(-3,3);const y=Math.rand
 const C1=[
  ()=>cq('How many 8-to-5 steps are between two yard lines?','8',['5','6','10'],'Yard lines are 5 yards apart, and at an 8-to-5 that takes <b>8 steps</b>. Every coordinate on the field is built on that number.'),
  ()=>cq('Which direction is "inside"?','Toward the 50',['Toward the goal line','Toward the front sideline','Toward the back sideline'],'<b>Inside</b> always means toward the 50, on either side of the field. <b>Outside</b> means toward the goal line.'),
- ()=>{const h=H();return cq('On this field, how many steps is the front hash from the front sideline?',String(h),[String(h===32?28:32),'24','36'],`On ${hashName()} the front hash is <b>${h} steps</b> off the front sideline. Find out which hashes the audition field has; it changes your depth numbers.`);},
+ ()=>{const h=H();return cq('On this field, how many steps is the front hash from the front sideline?',String(h),[String(h===32?28:32),'24','36'],`On ${hashName()} the front hash is <b>${h} steps</b> off the front sideline. Find out which hashes your field has; it changes your depth numbers.`);},
  ()=>cq('You are exactly halfway between the S1 30 and the S1 35. Which pair of names describes that spot?','4 inside the S1 30, or 4 outside the S1 35',['4 outside the S1 30, or 4 inside the S1 35','2.5 inside the S1 30, or 2.5 outside the S1 35','8 inside the S1 30, or 8 outside the S1 35'],"Halfway is 4 of the 8 steps. From the 30 you're heading toward the 50 (<b>inside</b>). From the 35 you're heading toward the goal line (<b>outside</b>). Same dot, two names."),
  ()=>cq('"4 behind the front hash" means you are…','4 steps toward the back sideline from the hash',['4 steps toward the audience from the hash','4 steps toward the 50 from the hash','4 steps toward the goal line from the hash'],'<b>Behind</b> is away from the audience, toward the back sideline. <b>In front of</b> is toward the audience.'),
  ()=>cq('The small hash ticks are 1 yard apart. How many 8-to-5 steps is that?','1.6',['1','2','0.8'],'8 steps cover 5 yards, so 1 yard is 8 ÷ 5 = <b>1.6 steps</b>. Use the ticks to estimate when you\'re between yard lines.'),
@@ -1460,7 +1460,7 @@ function introHTML(){const h=H();const cont=S.unlocked>1;
   const a={x:HERO.x1,y:h},b={x:HERO.x2,y:h};
   return `<section class="hero"><figure class="hero-fig">${fieldSVG({id:'hero',paths:[{pts:[a,b]}],pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],marcher:{...a},ruler:{x1:a.x,x2:b.x,y:h},minW:48,grid:false,aria:'A marcher moving from 3 outside the S1 25 to 2 inside the S1 35 on the front hash, 21 steps'})}</figure>
 <h1>Field Reading &amp; Step Size</h1>
-<p class="lede">Prep for the Blue Devils A Corps audition. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
+<p class="lede">Built for marchers who want to read the field like the best: fast, accurate, and confident. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
 <ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
 <div class="name-row">${PREVIEW?`<p><b>Coach preview.</b> <span class="muted">Nothing here is recorded.</span></p>`:CLS?`<p>${CLS.name?`Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})`:`Practicing with class <b>${esc(CLS.classCode)}</b>`}</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
