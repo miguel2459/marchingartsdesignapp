@@ -954,7 +954,9 @@ function cpMove(o){const h=H();
     if(Math.min(x,bx)<4||Math.max(x,bx)>156||Math.min(y,by)<2||Math.max(y,by)>DEPTH-2)continue;
     return {L:o.L,D:Math.abs(o.D||0),dd:Math.sign(o.D||0),s,C:o.C,a:{x,y},b:{x:bx,y:by}};}
   return {L:o.L,D:0,dd:0,s:1,C:o.C,a:{x:48,y:h},b:{x:48+o.L,y:h}};}
-const cpAt=(m,X)=>p1({x:m.a.x+(m.b.x-m.a.x)*X/m.C,y:m.a.y+(m.b.y-m.a.y)*X/m.C});
+// Start + the one-decimal steps shown in the explanation, so the spot always matches line 2.
+const cpOff=(n,X,C)=>r1(n*X/C);
+const cpAt=(m,X)=>p1({x:m.a.x+m.s*cpOff(m.L,X,m.C),y:m.a.y+m.dd*cpOff(m.D,X,m.C)});
 const cpGivens=m=>[gStart(posDesc(m.a)),G('Lateral',m.L?`${m.L} steps ${sideTxt(m.s)}`:'none'),...(m.D?[G('Depth',`${m.D} steps ${m.dd>0?'back':'forward'}`)]:[]),gCounts(m.C)];
 const cpField=m=>({pts:[{...m.a,label:'Start'},{...m.b,cls:'end',label:'End'}],paths:[{pts:[m.a,m.b]}],place:true});
 const cpReveal=(p,X)=>[{...p,cls:'reveal',label:`Count ${X}`}];
@@ -973,10 +975,10 @@ const cpExplain=(m,X,p)=>[cpLead(X,m.C),
   `2. That's ${fracTxt(X,m.C)} of the way through the move. `+[m.L?cpSplit('Lateral',m.L,X,m.C,sideTxt(m.s)):'',m.D?cpSplit('Depth',m.D,X,m.C,m.dd>0?'back':'forward'):''].filter(Boolean).join(' '),
   `3. Count that off from your start dot, ${lc(posDesc(m.a))}: <b>${posDesc(p)}</b>.`].join('<br>');
 // Common mistakes as distractor spots: counts used as steps, wrong direction, measured from the end, depth forgotten, A and B swapped.
-function cpExtra(m,X,p){const f=X/m.C,dx=(m.b.x-m.a.x)*f,dy=(m.b.y-m.a.y)*f;const out=[];
+function cpExtra(m,X,p){const dx=m.s*cpOff(m.L,X,m.C),dy=m.dd*cpOff(m.D,X,m.C);const out=[];
   if(m.L)out.push({x:m.a.x+m.s*X,y:p.y},{x:m.a.x-dx,y:p.y},{x:m.b.x-dx,y:p.y});
   if(m.D)out.push({x:p.x,y:m.a.y-dy},{x:p.x,y:m.b.y-dy},{x:p.x,y:m.a.y+m.dd*X});
-  if(m.L&&m.D)out.push({x:p.x,y:m.a.y},{x:m.a.x+m.s*m.D*f,y:m.a.y+m.dd*m.L*f});
+  if(m.L&&m.D)out.push({x:p.x,y:m.a.y},{x:m.a.x+m.s*cpOff(m.D,X,m.C),y:m.a.y+m.dd*cpOff(m.L,X,m.C)});
   return out.map(p1).filter(q=>q.x!==p.x||q.y!==p.y);}
 function cpPosQ(m,X,type){const p=cpAt(m,X);const o={prompt:`Where should you be on count ${X}?`,givens:cpGivens(m),field:cpField(m),p,extra:cpExtra(m,X,p),explain:cpExplain(m,X,p)};
   return Object.assign(type==='pick'?pickPosQ(o):textPosQ({...o,reveal:cpReveal(p,X)}),{formula:'cp'});}
@@ -1016,7 +1018,7 @@ function gen4_cross(){
       [C/2,`Halfway through the counts is only the line if the line is halfway along the move. Here it's ${s0} of ${L} steps.`],
       [L*s0/C,`The fraction got built from the wrong numbers. It's total counts × (steps to the line ÷ total lateral steps) = ${C} × ${fracTxt(s0,L)}.`],
       [C-N,`That's the counts left after you cross, not the count you cross on.`]].filter(([v])=>Number.isInteger(v)&&v>0&&v<=C&&v!==N);
-    const cross=p1({x:8*k,y:m.a.y+(m.b.y-m.a.y)*N/C});
+    const cross=p1({x:8*k,y:m.a.y+m.dd*cpOff(m.D,N,C)});
     return Object.assign({prompt:`On which count do you cross ${the(k)}?`,givens:cpGivens(m),field:cpField(m),reveal:cpReveal(cross,N)},
       mcWhy(String(N),pairs.map(([v,t])=>[String(v),t]),{kind:'count'}),
       {explain:`The three questions, run backwards.<br>1. How far through the move is the line? ${lineName(k)==='50'?'The 50':'The '+lineName(k)} is ${steps(s0)} from your start dot, out of ${L} lateral steps: ${s0} ÷ ${L} = <b>${fracTxt(s0,L)}</b> of the move.<br>2. That's how far through the counts: ${fracTxt(s0,L)}.<br>3. ${fracTxt(s0,L)} × ${C} counts = <b>count ${N}</b>.${m.D?" Depth doesn't change when you cross a yard line; only the lateral fraction does.":''}`,formula:'cp'});}
