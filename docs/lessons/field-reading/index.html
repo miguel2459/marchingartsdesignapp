@@ -191,6 +191,7 @@ table.t tr.on td{background:rgba(242,194,48,.28)}
 .foot select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 6px}
 .coach-note{max-width:880px;margin:10px auto 0;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--signal);border-radius:8px}
 .coach-note[hidden]{display:none}
+a.dash-btn{display:block;text-align:center;text-decoration:none;margin-bottom:10px}
 .brand-r{display:flex;align-items:baseline;gap:10px;min-width:0}
 .cls-chip{flex:none;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:2px 10px;font-size:.8rem;cursor:pointer;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}
 .cls-panel{position:absolute;top:100%;right:max(16px,calc((100% - 880px) / 2 + 16px));z-index:6;width:min(360px,calc(100vw - 32px));padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 8px 20px rgba(0,0,0,.18);font-size:.95rem}
@@ -225,6 +226,7 @@ table.t tr.on td{background:rgba(242,194,48,.28)}
 const DEPTH=85.33, QN=8, PASS=6, KEY='cb-lesson-v1';
 const ACTIVE_LEVELS = 4; // levels past this are hidden (code kept)
 const RESULTS_URL = 'https://script.google.com/macros/s/AKfycbz615SkdpqE7nBRc185t21znFZLjKnR7_vadW_L_WEXDEohgY9ZHUJEyO7nbOvOt4swzQ/exec';
+const DASHBOARD_URL = '/coach/dashboard/'; // relative so it works on mada.mprstudios.com and localhost
 const LESSON_ID = 'field-reading'; const APP_VERSION = '1.0';
 const CLASS_KEY = 'mpr-class-v1'; // {classCode, studentId, name, joinedAt, attempts, lastSent}; progress in KEY is tied to the student via S.owner
 const qnFor=n=>n===2||n===3?10:QN;
@@ -238,6 +240,7 @@ function load(){try{const r=localStorage.getItem(KEY);if(r)Object.assign(S,JSON.
 function calcUnlocked(){let u=1;while(u<ACTIVE_LEVELS&&(S.best[u]||0)>=passFor(u))u++;return u;}
 let COACH=false; // ?coach= unlock; session only, never saved
 let PREVIEW=false; // #coachclass=&coachkey= coach preview: COACH plus no class join, no results, nothing saved
+let DASH=''; // dashboard link, set only once the hub verifies the coach preview
 const levelOpen=n=>n<=ACTIVE_LEVELS&&(n<=S.unlocked||COACH);
 function save(){if(PREVIEW)return;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const H=()=>S.hash==='hs'?28:32;
@@ -1578,7 +1581,7 @@ function classRender(){const c=document.getElementById('clsChip');
   c.textContent=PREVIEW?'Coach preview':!CLS?'Join a class':CLS.name?`Joined: ${CLS.name} · ${CLS.classCode}`:`Joined · ${CLS.classCode}`;
   const p=document.getElementById('clsPanel');if(!p.hidden)classPanelFill();}
 function classPanelFill(){const p=document.getElementById('clsPanel');
-  p.innerHTML=PREVIEW?`<p style="margin:0">Coach preview: all levels unlocked. Nothing here is recorded or sent to a class.</p>`:CLS?`<p style="margin:0">Joined ${CLS.name?`as <b>${esc(CLS.name)}</b> in `:''}<b>${esc(CLS.classCode)}</b>. <button class="linkbtn" data-act="clsleave">Not you? Leave class</button></p>`
+  p.innerHTML=PREVIEW?`${DASH?`<a class="btn primary dash-btn" href="${esc(DASH)}">Back to your dashboard</a>`:''}<p style="margin:0">Coach preview: all levels unlocked. Nothing here is recorded or sent to a class.</p>`:CLS?`<p style="margin:0">Joined ${CLS.name?`as <b>${esc(CLS.name)}</b> in `:''}<b>${esc(CLS.classCode)}</b>. <button class="linkbtn" data-act="clsleave">Not you? Leave class</button></p>`
     :`<div class="cls-form"><label for="clsClass">Class code<input id="clsClass" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20"></label>
 <label for="clsCode">Join code<input id="clsCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="5"></label>
 <button class="btn primary" data-act="clsjoin" id="clsBtn">Join</button></div>`;}
@@ -1668,7 +1671,9 @@ async function coachPreview(){const h=new URLSearchParams(location.hash.slice(1)
   classRender();
   let d;try{const r=await fetch(RESULTS_URL+'?'+new URLSearchParams({action:'coachcheck',class:cls,key}),{referrerPolicy:'no-referrer'});d=await r.json();}catch(e){d=null;}
   if(d&&d.ok){PREVIEW=COACH=true;CLS=null;quiz=null;Object.assign(S,{best:{},unlocked:1,name:''});
-    const n=document.getElementById('coachNote');n.firstElementChild.textContent='Coach preview: all levels unlocked. Nothing here is recorded.';n.hidden=false;
+    DASH=DASHBOARD_URL+'#'+new URLSearchParams({class:cls,key});
+    const n=document.getElementById('coachNote'),t=n.firstElementChild,a=document.createElement('a');
+    t.textContent='Coach preview: all levels unlocked. Nothing here is recorded. ';a.className='linkbtn';a.href=DASH;a.textContent='← Back to dashboard';t.append(a);n.hidden=false;
     classPanelClose();classRender();progressRender();return true;}
   if(d&&d.error==='not_found'){toast("That coach link isn't valid anymore.");history.replaceState(null,'',location.pathname+location.search);}
   else toast("Couldn't check the coach link. Reload to try again.");
