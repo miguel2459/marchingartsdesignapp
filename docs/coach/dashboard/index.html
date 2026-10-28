@@ -301,7 +301,7 @@ function render(){
   // footer links
   const lesson = safeUrl(d.lessonUrl), sheet = safeUrl(d.sheetUrl);
   h += '<div class="links">' +
-    (lesson ? '<a href="' + esc(lesson + '#coachclass=' + encodeURIComponent(CODE) + '&coachkey=' + encodeURIComponent(KEY)) + '" target="_blank" rel="noopener noreferrer">Open the lesson (coach preview)</a>' : '') +
+    (lesson ? '<a href="' + esc(lesson + '#coachclass=' + encodeURIComponent(CODE) + '&coachkey=' + encodeURIComponent(KEY)) + '">Open the lesson (coach preview)</a>' : '') +
     (sheet ? '<a href="' + esc(sheet) + '" target="_blank" rel="noopener noreferrer">Open your Google Sheet</a>' : '') + '</div>';
 
   app.innerHTML = h;
