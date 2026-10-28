@@ -383,7 +383,8 @@ function fieldSVG(spec){
   const tris=triSpecs.map((t,i)=>triSVG(t,id+'t'+i));tris.forEach(t=>s+=t.under);
   (spec.paths||[]).forEach((pa,i)=>{s+=gradPath(pa.pts,id+'p'+i,pa.cls);});
   placeLabels(spec.pts||[],{x0:vbX,x1:vbX+vbW,y0:0,y1:top},spec.place,
-    spec.place?[{x0:vbX,x1:vbX+9.5,y0:h+0.5,y1:h+2.6},...(spec.marcher?[{x0:spec.marcher.x-0.9,x1:spec.marcher.x+0.9,y0:spec.marcher.y-0.9,y1:spec.marcher.y+0.9}]:[])]:null); // "Front hash" label, marcher(spec.pts||[]).forEach(p=>{s+=xDot(p);});
+    spec.place?[{x0:vbX,x1:vbX+9.5,y0:h+0.5,y1:h+2.6},...(spec.marcher?[{x0:spec.marcher.x-0.9,x1:spec.marcher.x+0.9,y0:spec.marcher.y-0.9,y1:spec.marcher.y+0.9}]:[])]:null); // avoid Front hash label + marcher
+  (spec.pts||[]).forEach(p=>{s+=xDot(p);});
   if(spec.marcher)s+=`<g class="marcher" id="${id}m" data-y="${-spec.marcher.y}" transform="translate(${spec.marcher.x},${-spec.marcher.y})"><circle class="mo" r=".75"/><circle class="mr" r=".75"/><circle class="mc" r=".17"/></g>`;
   tris.forEach(t=>s+=t.over);
   [spec.ruler,...(spec.rulers||[])].filter(Boolean).forEach(r=>{const segs=rulerSegments(r.x1,r.x2);const dir=r.x2>r.x1?1:-1;
