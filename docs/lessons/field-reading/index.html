@@ -745,13 +745,6 @@ function gen2(qz){
   return gen2_sizeLine();
 }
 
-/* ---------- straight-line moves (used by level 4 checkpoints) ---------- */
-const COMBOS=[[16,8,16],[16,16,16],[8,8,8],[8,4,8],[4,8,8],[16,4,16],[8,16,16],[8,8,16],[4,4,8]];
-function randMove(){const h=H();const [L,D,C]=pick(COMBOS);const dir=pick([1,-1]);const k=rnd(3,15-Math.ceil(L/8));
-  const a={x:8*k+pick([0,0,2,-2]),y:h+(dir>0?pick([-4,0]):pick([0,4]))};const b={x:a.x+L,y:a.y+dir*D};return {L,D,C,dir,a,b};}
-const moveTxt=m=>`<b>${m.L} steps toward Side 2</b> and <b>${m.D} ${m.dir>0?'back':'forward'}</b> in <b>${m.C} counts</b>`;
-const moveField=m=>({pts:[{...m.a,label:'Start'},{...m.b,cls:'end',label:'End'}],paths:[{pts:[m.a,m.b]}],legs:legsFor(m.a,m.b,m.L,m.D,m.dir)});
-
 /* ---------- level 3: diagonal step size ---------- */
 // Shared gen3 helpers
 const CLEAN_TRI=[[6,8],[8,6],[12,16],[16,12],[9,12],[12,9],[5,12],[12,5],[8,15],[15,8]];
@@ -944,24 +937,101 @@ const GEN3={findA:gen3_findA,findB:gen3_findB,cRange:gen3_cRange,cClean:gen3_cCl
 function gen3(qz){return (GEN3[P3[qz.i]]||gen3_ssFull)();}
 
 /* ---------- level 4: checkpoints ---------- */
-function cpMove(){for(let g=0;g<200;g++){const m=randMove();const X=pick(m.C===8?[2,4,6]:[4,8,12,2,6,10,14]);if((X*m.L)%m.C||(X*m.D)%m.C)continue;
-  m.X=X;m.p={x:m.a.x+m.L*X/m.C,y:m.a.y+m.dir*m.D*X/m.C};return m;}return null;}
-const P4=['text','pick','text','when','pick','text','pick','when'];
-function gen4(qz){const t=P4[qz.i];const h=H();
-  if(t==='when'){const L=pick([16,8]),C=16,r=L/C;const s=pick([2,4,6]);const tc=(8-s)/r;const k=rnd(3,13);const D=pick([0,8]);const dir=pick([1,-1]);
-    const a={x:8*k+s,y:h+(D?(dir>0?-4:4):pick([0,4,-4]))};const b={x:a.x+L,y:a.y+dir*D};const cross={x:8*(k+1),y:a.y+dir*D*tc/C};
-    return Object.assign({prompt:`On which count do you cross ${the(k+1)}?`,
-      givens:[gStart(posDesc(a)),G('Lateral',`${L} steps toward Side 2`),...(D?[G('Depth',`${D} ${dir>0?'back':'forward'}`)]:[]),gCounts(C)],
-      field:{pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],paths:[{pts:[a,b]}]},reveal:[{...cross,cls:'reveal',label:`Count ${tc}`}],
-      explain:`You start ${steps(8-s)} from ${the(k+1)} and travel ${fmtFrac(r)} lateral step${r===1?'':'s'} per count. ${8-s} ÷ ${fmtFrac(r)} = <b>count ${tc}</b>. Depth doesn't matter for when you cross a yard line; only the lateral rate does.`},
-      mc(`Count ${tc}`,[tc+2,tc-2,tc*2,C/2,tc+4].filter(x=>x>0&&x<=C&&x!==tc).map(x=>`Count ${x}`)));}
-  const m=cpMove();const field=moveField(m);delete field.legs;
-  const extra=[{x:m.p.x,y:m.a.y},{x:m.p.x,y:m.b.y},{x:m.a.x+m.D*m.X/m.C,y:m.a.y+m.dir*m.L*m.X/m.C}];
-  const explain=`Count ${m.X} of ${m.C} is ${fracStr(m.X,m.C)} of the move. Lateral: ${m.L} × ${fracStr(m.X,m.C)} = ${fmt(m.L*m.X/m.C)} steps toward Side 2. Depth: ${m.D} × ${fracStr(m.X,m.C)} = ${fmt(m.D*m.X/m.C)} steps ${m.dir>0?'back':'forward'}. Add both to the start: <b>${posDesc(m.p)}</b>.`;
-  const prompt=`Where should you be on count ${m.X}?`;
-  const givens=[gStart(posDesc(m.a)),G('Lateral',`${m.L} steps toward Side 2`),G('Depth',`${m.D} ${m.dir>0?'back':'forward'}`),gCounts(m.C)];
-  if(t==='text')return textPosQ({prompt,givens,field,p:m.p,extra,explain,reveal:[{...m.p,cls:'reveal',label:`Count ${m.X}`}]});
-  return pickPosQ({prompt,givens,field,p:m.p,extra,explain});}
+// Positions to one decimal (Level 4 only); latDesc/depDesc keep their two-decimal rounding elsewhere.
+const r1=v=>Math.round(v*10)/10,p1=p=>({x:r1(p.x),y:r1(p.y)});
+const fracVal=s=>{const [a,b]=s.split('/').map(Number);return b?a/b:a;};
+const fracTxt=(a,b)=>{const s=fracStr(a,b);return s.endsWith('/1')?s.slice(0,-2):s;};
+const sideTxt=s=>`toward Side ${s>0?2:1}`;
+// o: L lateral steps, D depth steps (+ back, − forward), C counts, y start depth (optional).
+function cpMove(o){const h=H();
+  for(let g=0;g<500;g++){const s=pick([1,-1]);const x=8*rnd(2,18)+pick([0,0,2,-2,4,-4,1,-3]);const bx=x+s*o.L;
+    const y=o.y!==undefined?o.y:h+pick([0,0,-4,4,-2,2]);const by=y+(o.D||0);
+    if(Math.min(x,bx)<4||Math.max(x,bx)>156||Math.min(y,by)<2||Math.max(y,by)>DEPTH-2)continue;
+    return {L:o.L,D:Math.abs(o.D||0),dd:Math.sign(o.D||0),s,C:o.C,a:{x,y},b:{x:bx,y:by}};}
+  return {L:o.L,D:0,dd:0,s:1,C:o.C,a:{x:48,y:h},b:{x:48+o.L,y:h}};}
+const cpAt=(m,X)=>p1({x:m.a.x+(m.b.x-m.a.x)*X/m.C,y:m.a.y+(m.b.y-m.a.y)*X/m.C});
+const cpGivens=m=>[gStart(posDesc(m.a)),...(m.L?[G('Lateral',`${m.L} steps ${sideTxt(m.s)}`)]:[]),...(m.D?[G('Depth',`${m.D} steps ${m.dd>0?'back':'forward'}`)]:[]),gCounts(m.C)];
+const cpField=m=>({pts:[{...m.a,label:'Start'},{...m.b,cls:'end',label:'End'}],paths:[{pts:[m.a,m.b]}]});
+const cpReveal=(p,X)=>[{...p,cls:'reveal',label:`Count ${X}`}];
+const cpSteps=v=>{const r=r1(v);return r===1?'1 step':String(r)+' steps';};
+// "Lateral: 16 × 1/4 = 4 steps toward Side 2." Shows the unrounded product when rounding changes it.
+function cpSplit(label,n,X,C,dirTxt){const v=n*X/C,r=r1(v),raw=round2(v);
+  return `${label}: ${n} × ${fracTxt(X,C)} = ${raw!==r?`${raw}, about `:''}<b>${cpSteps(r)}</b> ${dirTxt}.`;}
+const cpLead=(X,C)=>`Count ${X} of ${C} is ${X} ÷ ${C} = <b>${fracTxt(X,C)}</b> of the move.`;
+const cpExplain=(m,X,p)=>[cpLead(X,m.C),m.L?cpSplit('Lateral',m.L,X,m.C,sideTxt(m.s)):'',m.D?cpSplit('Depth',m.D,X,m.C,m.dd>0?'back':'forward'):'',
+  `From the start, that puts you <b>${posDesc(p)}</b>.`].filter(Boolean).join(' ');
+// Common mistakes as distractor spots: counts used as steps, wrong direction, measured from the end, depth forgotten, A and B swapped.
+function cpExtra(m,X,p){const f=X/m.C,dx=(m.b.x-m.a.x)*f,dy=(m.b.y-m.a.y)*f;const out=[];
+  if(m.L)out.push({x:m.a.x+m.s*X,y:p.y},{x:m.a.x-dx,y:p.y},{x:m.b.x-dx,y:p.y});
+  if(m.D)out.push({x:p.x,y:m.a.y-dy},{x:p.x,y:m.b.y-dy},{x:p.x,y:m.a.y+m.dd*X});
+  if(m.L&&m.D)out.push({x:p.x,y:m.a.y},{x:m.a.x+m.s*m.D*f,y:m.a.y+m.dd*m.L*f});
+  return out.map(p1).filter(q=>q.x!==p.x||q.y!==p.y);}
+function cpPosQ(m,X,type){const p=cpAt(m,X);const o={prompt:`Where should you be on count ${X}?`,givens:cpGivens(m),field:cpField(m),p,extra:cpExtra(m,X,p),explain:cpExplain(m,X,p)};
+  return Object.assign(type==='pick'?pickPosQ(o):textPosQ({...o,reveal:cpReveal(p,X)}),{formula:'cp'});}
+
+function gen4_half(){const C=pick([8,12,16,24]),L=pick([6,8,10,12,16,20,24]);return cpPosQ(cpMove({L,C}),C/2,'text');}
+function gen4_quarter(){const C=pick([8,16]),L=pick([6,8,10,12,14,16,20,24]);return cpPosQ(cpMove({L,C}),pick([C/4,3*C/4]),'pick');}
+function gen4_fraction(){
+  for(let g=0;g<200;g++){const C=pick([8,12,16,24]);const X=rnd(2,C-2);if(2*X===C)continue;
+    const ans=fracTxt(X,C);
+    const pairs=[[fracTxt(X,C-X),`That's counts done ÷ counts left (${X} ÷ ${C-X}). Divide by the total counts instead: ${X} ÷ ${C}.`],
+      [fracTxt(C-X,C),`That's the part you still have to go. On count ${X}, ${X} counts are done, so it's ${X} ÷ ${C}.`],
+      [fracTxt(1,X),`It's the count over the total counts, ${X} ÷ ${C}, not 1 over the count.`],
+      [fracTxt(C,X),`Flipped: total ÷ count is more than the whole move. It's count ÷ total counts, ${X} ÷ ${C}.`],
+      ...(C!==8?[[fracTxt(X,8),`That's out of 8 counts, but this move has ${C}. Use ${X} ÷ ${C}.`]]:[]),
+      [fracTxt(X+1,C),`Off by one. On count ${X} you've done ${X} counts, not ${X+1}.`]];
+    const seen=new Set([X/C]);const good=pairs.filter(([w])=>{const v=fracVal(w);if(seen.has(v))return false;seen.add(v);return true;});
+    if(good.length<3)continue;
+    return Object.assign({prompt:'What fraction of the move have you done?',givens:[G('Count',X),gCounts(C)],field:null},
+      mcWhy(ans,good),{explain:`${X} ÷ ${C} = <b>${ans}</b>${ans!==`${X}/${C}`?` (${X}/${C} reduced)`:''}. The fraction of the counts is the fraction of the move, so you've done ${ans} of it.`,formula:'cp'});}
+}
+function gen4_diag(){
+  for(let g=0;g<200;g++){const C=pick([8,16]),L=pick([8,12,16,20,24]),D=pick([4,6,8,12]);const X=pick([C/2,C/4]);
+    if((2*L*X)%C||(2*D*X)%C)continue; // whole or half steps
+    return cpPosQ(cpMove({L,D:pick([1,-1])*D,C,y:H()+pick([0,-4,4])}),X,'text');}
+}
+function gen4_depth(){const h=H();
+  for(let g=0;g<200;g++){const C=pick([8,16]),D=pick([4,6,8,12,16]);const X=pick([C/4,C/2,3*C/4]);if((2*D*X)%C)continue;
+    const y=h+pick([-8,-4,0,0,4,8]),dd=pick([1,-1]);if(y+dd*D<h/2)continue; // keep every spot called off the hash
+    return cpPosQ(cpMove({L:0,D:dd*D,C,y}),X,'pick');}
+}
+function gen4_cross(){
+  for(let g=0;g<500;g++){const C=pick([8,12,16,24]),L=pick([8,12,16,20,24]);const m=cpMove({L,C,D:pick([0,0,8,-8])});
+    const k=m.s>0?Math.floor(m.a.x/8)+1:Math.ceil(m.a.x/8)-1;const s0=Math.abs(8*k-m.a.x);
+    if(s0>=L||(C*s0)%L||k<0||k>20)continue;const N=C*s0/L;
+    const pairs=[[s0,`That's the steps to the line, not the count. Steps and counts only match at an 8-to-5.`],
+      [C*(L-s0)/L,`That measures from the end dot. Count the steps to the line from your start: ${s0} of ${L}.`],
+      [C/2,`Halfway through the counts is only the line if the line is halfway along the move. Here it's ${s0} of ${L} steps.`],
+      [L*s0/C,`The fraction got built from the wrong numbers. It's total counts × (steps to the line ÷ total lateral steps) = ${C} × ${fracTxt(s0,L)}.`],
+      [C-N,`That's the counts left after you cross, not the count you cross on.`]].filter(([v])=>Number.isInteger(v)&&v>0&&v<=C&&v!==N);
+    const cross=p1({x:8*k,y:m.a.y+(m.b.y-m.a.y)*N/C});
+    return Object.assign({prompt:`On which count do you cross ${the(k)}?`,givens:cpGivens(m),field:cpField(m),reveal:cpReveal(cross,N)},
+      mcWhy(String(N),pairs.map(([v,t])=>[String(v),t]),{kind:'count'}),
+      {explain:`${lineName(k)==='50'?'The 50':'The '+lineName(k)} is ${steps(s0)} from your start, out of ${L} lateral steps: ${s0} ÷ ${L} = ${fracTxt(s0,L)} of the move. ${C} × ${fracTxt(s0,L)} = <b>count ${N}</b>.${m.D?" Depth doesn't change when you cross a yard line; only the lateral fraction does.":''}`,formula:'cp'});}
+}
+function gen4_odd(){
+  for(let g=0;g<500;g++){const C=pick([8,16]);const X=C===16?pick([6,10,2,14]):pick([3,5]);const L=pick([4,6,10,12,14,20]);const D=pick([0,0,4,6,10]);
+    if(Number.isInteger(L*X/C)&&Number.isInteger(D*X/C))continue; // must land off the grid
+    return cpPosQ(cpMove({L,D:pick([1,-1])*D,C,y:H()+pick([0,-4,4])}),X,'text');}
+}
+function gen4_recover(){
+  for(let g=0;g<500;g++){const C=pick([12,16,24]),L=pick([12,16,20,24]);const X=pick([4,8,12].filter(x=>x<C));const N=pick([1,2,3]);
+    const done=L*X/C;if(!Number.isInteger(done))continue;const left=L-done,st=left+N,co=C-X,ss=8*co/st;
+    if(ss<4||ss>16||N>=done)continue; // N < done keeps the marcher past the start dot
+    const m=cpMove({L,C});const cp=cpAt(m,X),me=p1({x:cp.x-m.s*N,y:cp.y});const ans=fmtSS(ss);
+    const pairs=[[fmtSS(8*C/L),`That's the step size for the whole move. You're behind now, so it has to change for the counts you have left.`],
+      [fmtSS(8*C/st),`Use the counts you have left (${C} − ${X} = ${co}), not the whole move's ${C}.`],
+      [fmtSS(8*co/left),`That ignores the ${steps(N)} you're short. Add them: ${left} + ${N} = ${st} steps left.`],
+      [fmtSS(8*st/co),`Flipped. It's 8 × counts ÷ steps: 8 × ${co} ÷ ${st}.`]];
+    return Object.assign({prompt:`What step size gets you to the end dot on count ${C}?`,
+      givens:[gStart(posDesc(m.a)),gEnd(posDesc(m.b)),gCounts(C),G(`On count ${X}`,`${steps(N)} short of your checkpoint`)],
+      field:{pts:[{...m.a,label:'Start'},{...m.b,cls:'end',label:'End'},{...cp,cls:'cp',r:0.6,label:String(X)}],paths:[{pts:[m.a,m.b],cls:'ghost'}],marcher:me}},
+      mcWhy(ans,pairs,{kind:'ss'}),
+      {explain:`Your count ${X} checkpoint is ${fracTxt(X,C)} of the way: ${L} × ${fracTxt(X,C)} = ${done} steps, leaving ${left}. You're ${steps(N)} short, so you have ${left} + ${N} = <b>${st} steps</b> left in ${C} − ${X} = <b>${co} counts</b>. 8 × ${co} ÷ ${st} = <b>${ans}</b>. Spread it across all ${co} counts instead of lunging to catch up.`,formula:'ss'});}
+}
+const P4=['half','quarter','fraction','diag','depth','cross','odd','recover'];
+const GEN4={half:gen4_half,quarter:gen4_quarter,fraction:gen4_fraction,diag:gen4_diag,depth:gen4_depth,cross:gen4_cross,odd:gen4_odd,recover:gen4_recover};
+function gen4(qz){return (GEN4[P4[qz.i]]||gen4_half)();}
 
 /* ---------- level 5: Charlie Brown ---------- */
 const C5=[
@@ -1382,9 +1452,8 @@ function practiceHTML(){
   const q=quiz.q;let field='',card='';
   if(q.formula&&quiz.n===3){const on=k=>q.formula===k?' class="on"':''; // keys: 'ab' find A/B, 'c' solve C, 'ss' step size, 'gut' gut check & compare
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ab')}>A = steps over · B = steps forward or back</p><p${on('c')}>C = √(A² + B²) (your Distance)</p><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (C)</p><p${on('gut')}><i>Reminder: bigger than 8 = smaller step. Smaller than 8 = bigger step.</i></p></div>`;}
-  else if(quiz.n===4){ // always open: checkpoint formula on 1–7, step size on 8 (recovery)
-    card=quiz.i<7?`<div class="fcard" aria-label="Formula reference"><p><b>Checkpoint = Start + (count ÷ total counts) × Move</b></p><p>Do it once for lateral (A) and once for depth (B).</p></div>`
-      :`<div class="fcard" aria-label="Formula reference"><p><b>Step Size = Ruler (8) × Time (counts left) ÷ Distance (steps left)</b></p></div>`;}
+  else if(q.formula==='cp'){ // Level 4 checkpoints
+    card=`<div class="fcard" aria-label="Formula reference"><p><b>Checkpoint = Start + (count ÷ total counts) × Move</b></p><p>Do it once for lateral (A) and once for depth (B).</p></div>`;}
   else if(q.formula){const on=k=>q.formula===k?' class="on"':'';
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</p><p${on('counts')}>Counts = Step Size × Distance ÷ 8</p><p${on('dist')}>Distance = 8 × Counts ÷ Step Size</p></div>`;}
   if(q.field){const spec=JSON.parse(JSON.stringify(q.field));spec.pts=spec.pts||[];spec.extra=q.reveal||[];
@@ -1536,7 +1605,8 @@ const SKILLS={
      sizeOffOff:'Step size off a line',cross50:'Crossing the 50',countsNeeded:'Counts needed',land:'Where you land',compare:'Comparing moves'},
   3:{findA:'Find A and B',findB:'Find A and B',cRange:'Pythagorean C',cClean:'Pythagorean C',cReal:'Pythagorean C',gut:'Diagonal step size by eye',
      ssClean:'Diagonal step size',ssReal:'Diagonal step size',ssFull:'Full diagonal problem',compare:'Comparing diagonal moves'},
-  4:{text:'Checkpoint',pick:'Checkpoint',when:'Crossing a yard line'}};
+  4:{half:'Halfway checkpoint',quarter:'Quarter checkpoint',fraction:'Finding the fraction',diag:'Diagonal checkpoint',
+     depth:'Depth checkpoint',cross:'Crossing a yard line',odd:'Odd-count checkpoint',recover:'Recovering on time'}};
 const PLANS={1:P1,2:P2,3:P3,4:P4,5:P5,6:P6};
 function skillLabel(n,i){const t=PLANS[n]&&PLANS[n][i];return ((SKILLS[n]&&SKILLS[n][t])||`Level ${n}`).replace(/[^A-Za-z0-9 &'()-]/g,'').slice(0,40);}
 function queueLoad(){try{const q=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');return Array.isArray(q)?q:[];}catch(e){return [];}}
