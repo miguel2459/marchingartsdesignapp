@@ -145,6 +145,7 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .fcard p{margin:2px 0;padding:2px 8px;border-left:3px solid transparent}
 .fcard.hl p{color:var(--muted)}
 .fcard.hl p.on{color:var(--ink);font-weight:700;border-left-color:var(--signal)}
+.fcard .hint{display:block;color:var(--muted);font-size:.85em}
 .opts{display:grid;gap:8px;margin:14px 0;max-width:620px}
 .opts.pick{grid-template-columns:repeat(4,1fr)}
 .opt{text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;line-height:1.35}
@@ -945,6 +946,7 @@ const r1=v=>Math.round(v*10)/10,p1=p=>({x:r1(p.x),y:r1(p.y)});
 const fracVal=s=>{const [a,b]=s.split('/').map(Number);return b?a/b:a;};
 const fracTxt=(a,b)=>{const s=fracStr(a,b);return s.endsWith('/1')?s.slice(0,-2):s;};
 const sideTxt=s=>`toward Side ${s>0?2:1}`;
+const lc=t=>t.charAt(0).toLowerCase()+t.slice(1);
 // o: L lateral steps, D depth steps (+ back, − forward), C counts, y start depth (optional).
 function cpMove(o){const h=H();
   for(let g=0;g<500;g++){const s=pick([1,-1]);const x=8*rnd(2,18)+pick([0,0,2,-2,4,-4,1,-3]);const bx=x+s*o.L;
@@ -952,22 +954,31 @@ function cpMove(o){const h=H();
     if(Math.min(x,bx)<4||Math.max(x,bx)>156||Math.min(y,by)<2||Math.max(y,by)>DEPTH-2)continue;
     return {L:o.L,D:Math.abs(o.D||0),dd:Math.sign(o.D||0),s,C:o.C,a:{x,y},b:{x:bx,y:by}};}
   return {L:o.L,D:0,dd:0,s:1,C:o.C,a:{x:48,y:h},b:{x:48+o.L,y:h}};}
-const cpAt=(m,X)=>p1({x:m.a.x+(m.b.x-m.a.x)*X/m.C,y:m.a.y+(m.b.y-m.a.y)*X/m.C});
+// Start + the one-decimal steps shown in the explanation, so the spot always matches line 2.
+const cpOff=(n,X,C)=>r1(n*X/C);
+const cpAt=(m,X)=>p1({x:m.a.x+m.s*cpOff(m.L,X,m.C),y:m.a.y+m.dd*cpOff(m.D,X,m.C)});
 const cpGivens=m=>[gStart(posDesc(m.a)),G('Lateral',m.L?`${m.L} steps ${sideTxt(m.s)}`:'none'),...(m.D?[G('Depth',`${m.D} steps ${m.dd>0?'back':'forward'}`)]:[]),gCounts(m.C)];
 const cpField=m=>({pts:[{...m.a,label:'Start'},{...m.b,cls:'end',label:'End'}],paths:[{pts:[m.a,m.b]}],place:true});
 const cpReveal=(p,X)=>[{...p,cls:'reveal',label:`Count ${X}`}];
 const cpSteps=v=>{const r=r1(v);return r===1?'1 step':String(r)+' steps';};
-// "Lateral: 16 × 1/4 = 4 steps toward Side 2." Shows the unrounded product when rounding changes it.
+// "Lateral: 1/4 of 16 steps = 4 steps toward Side 2." Shows the unrounded product when rounding changes it.
 function cpSplit(label,n,X,C,dirTxt){const v=n*X/C,r=r1(v),raw=round2(v);
-  return `${label}: ${n} × ${fracTxt(X,C)} = ${raw!==r?`${raw}, about `:''}<b>${cpSteps(r)}</b> ${dirTxt}.`;}
-const cpLead=(X,C)=>`Count ${X} of ${C} is ${X} ÷ ${C} = <b>${fracTxt(X,C)}</b> of the move.`;
-const cpExplain=(m,X,p)=>[cpLead(X,m.C),m.L?cpSplit('Lateral',m.L,X,m.C,sideTxt(m.s)):'',m.D?cpSplit('Depth',m.D,X,m.C,m.dd>0?'back':'forward'):'',
-  `From the start, that puts you <b>${posDesc(p)}</b>.`].filter(Boolean).join(' ');
+  return `${label}: ${fracTxt(X,C)} of ${n} steps = ${raw!==r?`${raw}, about `:''}<b>${cpSteps(r)}</b> ${dirTxt}.`;}
+// The three quick questions, used by the Learn tab and the practice check (questions 1–7).
+const CP_CARD=`<div class="fcard" aria-label="Formula reference"><p><b>Where's my dot on count ___?</b></p>
+<p>1. How far through the counts am I? <span class="hint">count ÷ total counts</span></p>
+<p>2. How far through the move is that? <span class="hint">× the steps, lateral and depth separately</span></p>
+<p>3. Where does that put me? <span class="hint">count it off from my start dot</span></p></div>`;
+const cpLead=(X,C)=>`1. Count ${X} of ${C}: ${X} ÷ ${C} = <b>${fracTxt(X,C)}</b> of the way through the counts.`;
+// Explanation as the three quick questions; line 2 shows lateral and depth on diagonals.
+const cpExplain=(m,X,p)=>[cpLead(X,m.C),
+  `2. That's ${fracTxt(X,m.C)} of the way through the move. `+[m.L?cpSplit('Lateral',m.L,X,m.C,sideTxt(m.s)):'',m.D?cpSplit('Depth',m.D,X,m.C,m.dd>0?'back':'forward'):''].filter(Boolean).join(' '),
+  `3. Count that off from your start dot, ${lc(posDesc(m.a))}: <b>${posDesc(p)}</b>.`].join('<br>');
 // Common mistakes as distractor spots: counts used as steps, wrong direction, measured from the end, depth forgotten, A and B swapped.
-function cpExtra(m,X,p){const f=X/m.C,dx=(m.b.x-m.a.x)*f,dy=(m.b.y-m.a.y)*f;const out=[];
+function cpExtra(m,X,p){const dx=m.s*cpOff(m.L,X,m.C),dy=m.dd*cpOff(m.D,X,m.C);const out=[];
   if(m.L)out.push({x:m.a.x+m.s*X,y:p.y},{x:m.a.x-dx,y:p.y},{x:m.b.x-dx,y:p.y});
   if(m.D)out.push({x:p.x,y:m.a.y-dy},{x:p.x,y:m.b.y-dy},{x:p.x,y:m.a.y+m.dd*X});
-  if(m.L&&m.D)out.push({x:p.x,y:m.a.y},{x:m.a.x+m.s*m.D*f,y:m.a.y+m.dd*m.L*f});
+  if(m.L&&m.D)out.push({x:p.x,y:m.a.y},{x:m.a.x+m.s*cpOff(m.D,X,m.C),y:m.a.y+m.dd*cpOff(m.L,X,m.C)});
   return out.map(p1).filter(q=>q.x!==p.x||q.y!==p.y);}
 function cpPosQ(m,X,type){const p=cpAt(m,X);const o={prompt:`Where should you be on count ${X}?`,givens:cpGivens(m),field:cpField(m),p,extra:cpExtra(m,X,p),explain:cpExplain(m,X,p)};
   return Object.assign(type==='pick'?pickPosQ(o):textPosQ({...o,reveal:cpReveal(p,X)}),{formula:'cp'});}
@@ -986,7 +997,7 @@ function gen4_fraction(){
     const seen=new Set([X/C]);const good=pairs.filter(([w])=>{const v=fracVal(w);if(seen.has(v))return false;seen.add(v);return true;});
     if(good.length<3)continue;
     return Object.assign({prompt:`You're on count ${X}. What fraction of the move have you done?`,givens:[gCounts(C)],field:null},
-      mcWhy(ans,good),{explain:`${X} ÷ ${C} = ${ans!==`${X}/${C}`?`${X}/${C}, which reduces to `:''}<b>${ans}</b>. The fraction of the counts is the fraction of the move, so you've done ${ans} of it.`,formula:'cp'});}
+      mcWhy(ans,good),{explain:`This is question 1 on its own: how far through the counts am I?<br>1. Count ${X} of ${C}: ${X} ÷ ${C} = ${ans!==`${X}/${C}`?`${X}/${C}, which reduces to `:''}<b>${ans}</b> of the way through the counts.<br>However far you are through the counts, that's how far you are through the move, so you've done ${ans} of it.`,formula:'cp'});}
 }
 function gen4_diag(){
   for(let g=0;g<200;g++){const C=pick([8,16]),L=pick([8,12,16,20,24]),D=pick([4,6,8,12]);const X=pick([C/2,C/4]);
@@ -1007,10 +1018,10 @@ function gen4_cross(){
       [C/2,`Halfway through the counts is only the line if the line is halfway along the move. Here it's ${s0} of ${L} steps.`],
       [L*s0/C,`The fraction got built from the wrong numbers. It's total counts × (steps to the line ÷ total lateral steps) = ${C} × ${fracTxt(s0,L)}.`],
       [C-N,`That's the counts left after you cross, not the count you cross on.`]].filter(([v])=>Number.isInteger(v)&&v>0&&v<=C&&v!==N);
-    const cross=p1({x:8*k,y:m.a.y+(m.b.y-m.a.y)*N/C});
+    const cross=p1({x:8*k,y:m.a.y+m.dd*cpOff(m.D,N,C)});
     return Object.assign({prompt:`On which count do you cross ${the(k)}?`,givens:cpGivens(m),field:cpField(m),reveal:cpReveal(cross,N)},
       mcWhy(String(N),pairs.map(([v,t])=>[String(v),t]),{kind:'count'}),
-      {explain:`${lineName(k)==='50'?'The 50':'The '+lineName(k)} is ${steps(s0)} from your start, out of ${L} lateral steps: ${s0} ÷ ${L} = ${fracTxt(s0,L)} of the move. ${C} × ${fracTxt(s0,L)} = <b>count ${N}</b>.${m.D?" Depth doesn't change when you cross a yard line; only the lateral fraction does.":''}`,formula:'cp'});}
+      {explain:`The three questions, run backwards.<br>1. How far through the move is the line? ${lineName(k)==='50'?'The 50':'The '+lineName(k)} is ${steps(s0)} from your start dot, out of ${L} lateral steps: ${s0} ÷ ${L} = <b>${fracTxt(s0,L)}</b> of the move.<br>2. That's how far through the counts: ${fracTxt(s0,L)}.<br>3. ${fracTxt(s0,L)} × ${C} counts = <b>count ${N}</b>.${m.D?" Depth doesn't change when you cross a yard line; only the lateral fraction does.":''}`,formula:'cp'});}
 }
 function gen4_odd(){
   for(let g=0;g<500;g++){const C=pick([8,16]);const X=C===16?pick([6,10,2,14]):pick([3,5]);const L=pick([4,6,10,12,14,20]);const D=pick([0,0,4,6,10]);
@@ -1228,46 +1239,43 @@ function learn4(){const h=H();
   const la={x:48,y:h},lb={x:64,y:h},l8={x:56,y:h};
   const da={x:48,y:h},db={x:64,y:h+8},d4={x:52,y:h+2};
   const ra={x:42,y:h},rb={x:54,y:h},r8={x:48,y:h};
-  const cpDot=(p,label)=>({...p,cls:'cp',r:0.6,label}),lc=t=>t.charAt(0).toLowerCase()+t.slice(1);
+  const cpDot=(p,label)=>({...p,cls:'cp',r:0.6,label});
   return `<div class="prose">
 <h3>Why it matters</h3>
 <p>Your form has to be right <i>between</i> sets, not just when you land on the dot. If you check yourself on counts 4, 8 and 12, a mistake shows up within 4 counts, while it's still small enough to fix.</p>
 <h3>The big idea</h3>
-<p>A checkpoint is where you should be on a specific count. Here's the whole idea in one sentence:</p>
-<p><b>The fraction of the counts is the fraction of the move.</b></p>
-<p>Count 4 of 16 is ¼ of the counts, so you're ¼ of the way there. Count 8 is ½, so you're halfway. Count 12 is ¾. That's it. It's just fractions.</p></div>
+<p>Every checkpoint answers one question:</p>
+<p><b>Where's my dot on count ___?</b></p>
+<p>However far you are through the counts, that's how far you are through the move. Count 4 of 16 is ¼ of the counts, so you're ¼ of the way there. Count 8 is ½, so you're halfway. Count 12 is ¾. That's it. It's just fractions.</p></div>
 <div id="cpPlayer">${cpPlayerHTML(a,b,16,cps,`${posDesc(a)} → ${lc(posDesc(b))}, 16 counts. Checkpoints on 4 (¼), 8 (½) and 12 (¾).`)}</div>
 <div class="prose">
 <h3>Worked example: straight side to side</h3>
 <p><b>S1 30 to S1 40 in 16 counts.</b> That's 16 steps (8 + 8, your Level 2 ruler).</p>
-<p>Where are you on count 8?</p>
-<ul><li>Fraction: 8 ÷ 16 = <b>½</b> of the move.</li>
-<li>Steps: 16 × ½ = <b>8 steps</b> from the start.</li>
-<li>8 steps past the S1 30 puts you right on the next yard line: <b>${the(l8.x/8)}</b>.</li></ul></div>
+<p>Where's my dot on count 8?</p>
+<ol><li>Count 8 of 16 = <b>½</b> through the counts.</li>
+<li>½ of 16 steps = <b>8 steps</b>.</li>
+<li>8 steps from the S1 30 = <b>${the(l8.x/8)}</b>.</li></ol></div>
 ${fig({pts:[{...la,label:'Start'},{...lb,cls:'end',label:'End'},cpDot(l8,'8')],paths:[{pts:[la,lb]}],ruler:{x1:la.x,x2:l8.x,y:h}},'S1 30 → S1 40 in 16 counts. Count 8 is halfway: the S1 35.')}
 <div class="prose">
 <h3>Worked example: diagonal</h3>
 <p>Same move, but now you also go <b>8 steps back</b>: S1 30 on the front hash to the S1 40, 8 behind the front hash, still in 16 counts. So A = 16 (over) and B = 8 (back).</p>
-<p>Where are you on count 4?</p>
-<ul><li>Fraction: 4 ÷ 16 = <b>¼</b> of the move.</li>
-<li>Lateral: 16 × ¼ = <b>4 steps</b> over. From the S1 30 that's <b>${lc(latDesc(d4.x))}</b>.</li>
-<li>Depth: 8 × ¼ = <b>2 steps</b> back. From the front hash that's <b>${depDesc(d4.y)}</b>.</li></ul>
+<p>Where's my dot on count 4?</p>
+<ol><li>Count 4 of 16 = <b>¼</b> through the counts.</li>
+<li>Lateral: ¼ of 16 steps = <b>4 steps</b> over. Depth: ¼ of 8 steps = <b>2 steps</b> back.</li>
+<li>4 steps from the S1 30 = <b>${lc(latDesc(d4.x))}</b>. 2 steps back from the front hash = <b>${depDesc(d4.y)}</b>.</li></ol>
 <p>Say it lateral first, then depth: <b>${posDesc(d4)}</b>.</p></div>
 ${fig({pts:[{...da,label:'Start',lx:-5.6,ly:-0.7},{...db,cls:'end',label:'End'},cpDot(d4,'4')],paths:[{pts:[da,db]}]},'S1 30, front hash → S1 40, 8 behind the front hash, in 16 counts. Count 4 is ¼ of the way.')}
 <div class="prose">
-<h3>The 5-step method</h3>
-<ol><li><b>Know the move.</b> A = steps over, B = steps forward or back, and the total counts.</li>
-<li><b>Find the fraction.</b> Count ÷ total counts.</li>
-<li><b>Split each direction.</b> A × fraction for lateral, B × fraction for depth.</li>
-<li><b>Place it and say it.</b> Count each piece from the start and name the field position. If it isn't a whole step, round to one decimal.</li>
-<li><b>Sanity check.</b> The checkpoint has to be on your path, between the start and the end. If it isn't, redo the math.</li></ol>
+<h3>The three quick questions</h3></div>
+${CP_CARD}
+<div class="prose">
+<p><b>Sanity check:</b> your dot must sit on the path between your start and end dots. If it doesn't, redo the math. If it isn't a whole step, round to one decimal.</p>
 <p>On diagonals you never need C for a checkpoint. A and B do all the work. C is only for step size (Level 3).</p>
 <h3>Flip it: when do I cross a yard line?</h3>
-<p>Sometimes the question runs backwards. You know the spot, and you want the count.</p>
-<p><b>Count = total counts × (steps to the line ÷ total lateral steps)</b></p>
-<p>Say you go <b>12 steps over in 16 counts</b>, and the yard line is <b>6 steps</b> from your start. 6 ÷ 12 = ½ of the move, and ½ × 16 = <b>count 8</b>. You should be right on the line on count 8.</p></div>
+<p>Sometimes the question runs backwards. You know the spot, and you want the count. Run the three questions backwards:</p>
+<p><b>How far through the move is the line?</b> (steps to the line ÷ total steps) → that's how far through the counts → × total counts = the count.</p>
+<p>Say you go <b>12 steps over in 16 counts</b>, and the yard line is <b>6 steps</b> from your start. 6 ÷ 12 = ½ of the way through the move, so ½ of the way through the counts, and ½ × 16 = <b>count 8</b>. You should be right on the line on count 8.</p></div>
 ${fig({pts:[{...ra,label:'Start'},{...rb,cls:'end',label:'End'},cpDot(r8,'8')],paths:[{pts:[ra,rb]}],ruler:{x1:ra.x,x2:r8.x,y:h}},`${latDesc(ra.x)} → ${lc(latDesc(rb.x))} in 16 counts. You cross the S1 30 on count 8.`)}
-<div class="fcard" aria-label="Formula reference"><p><b>Checkpoint = Start + (count ÷ total counts) × Move</b></p><p>Do it once for lateral (A) and once for depth (B).</p></div>
 <div class="prose">
 <h3>The habit</h3>
 <ul><li>Before you step off, know where you'll be on <b>count 4, 8 and 12</b>.</li>
@@ -1446,7 +1454,7 @@ const FB_WRONG=['Not quite. Let\'s walk it.','Close! Here\'s the count.','Good t
 function fbHeader(n,ok){if(n<2||n>4)return ok?'Correct.':'Not quite.';return ok?pick(FB_RIGHT):pick(FB_WRONG);}
 function practiceHTML(){
   if(!quiz||quiz.n!==view.n){const b=S.best[view.n];const qn=qnFor(view.n),pf=passFor(view.n);
-    const intro=view.n===2?'10 questions, 8 to pass. Same three moves every time: count, gut check, calculate. You\'ve got this.':view.n===3?'10 questions, 8 to pass. Same moves every time: A, B, C, gut check, step size. Grab your phone calculator. You\'ve got this.':view.n===4?'8 questions, 6 to pass. Same moves every time: find the fraction, split each direction, place it and say it. You\'ve got this.':`${qn} questions. Get ${pf} right to pass. You'll see the reasoning after every answer, right or wrong, and the questions change every time you run it.`;
+    const intro=view.n===2?'10 questions, 8 to pass. Same three moves every time: count, gut check, calculate. You\'ve got this.':view.n===3?'10 questions, 8 to pass. Same moves every time: A, B, C, gut check, step size. Grab your phone calculator. You\'ve got this.':view.n===4?'8 questions, 6 to pass. Same three questions every time: how far through the counts, how far through the move, where does that put me. You\'ve got this.':`${qn} questions. Get ${pf} right to pass. You'll see the reasoning after every answer, right or wrong, and the questions change every time you run it.`;
     return `<div class="prose"><p>${intro}</p>${b!==undefined?`<p class="muted">Best score so far: ${b} / ${qn}</p>`:''}</div><div class="btn-row"><button class="btn primary" data-act="begin">Start the check</button></div>`;}
   if(quiz.done){const pf=passFor(quiz.n);const pass=quiz.score>=pf;const n=view.n;
     return `<div class="score"><span class="big">${quiz.score}</span><span class="of">/ ${qnFor(n)}</span></div>
@@ -1456,7 +1464,7 @@ function practiceHTML(){
   if(q.formula&&quiz.n===3){const on=k=>q.formula===k?' class="on"':''; // keys: 'ab' find A/B, 'c' solve C, 'ss' step size, 'gut' gut check & compare
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ab')}>A = steps over · B = steps forward or back</p><p${on('c')}>C = √(A² + B²) (your Distance)</p><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (C)</p><p${on('gut')}><i>Reminder: bigger than 8 = smaller step. Smaller than 8 = bigger step.</i></p></div>`;}
   else if(q.formula==='cp'){ // Level 4 checkpoints
-    card=`<div class="fcard" aria-label="Formula reference"><p><b>Checkpoint = Start + (count ÷ total counts) × Move</b></p><p>Do it once for lateral (A) and once for depth (B).</p></div>`;}
+    card=CP_CARD;}
   else if(q.formula){const on=k=>q.formula===k?' class="on"':'';
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</p><p${on('counts')}>Counts = Step Size × Distance ÷ 8</p><p${on('dist')}>Distance = 8 × Counts ÷ Step Size</p></div>`;}
   if(q.field){const spec=JSON.parse(JSON.stringify(q.field));spec.pts=spec.pts||[];spec.extra=q.reveal||[];
