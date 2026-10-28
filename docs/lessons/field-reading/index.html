@@ -1460,7 +1460,7 @@ function introHTML(){const h=H();const cont=S.unlocked>1;
   const a={x:HERO.x1,y:h},b={x:HERO.x2,y:h};
   return `<section class="hero"><figure class="hero-fig">${fieldSVG({id:'hero',paths:[{pts:[a,b]}],pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'}],marcher:{...a},ruler:{x1:a.x,x2:b.x,y:h},minW:48,grid:false,aria:'A marcher moving from 3 outside the S1 25 to 2 inside the S1 35 on the front hash, 21 steps'})}</figure>
 <h1>Field Reading &amp; Step Size</h1>
-<p class="lede">Prep for the Blue Devils A Corps audition. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
+<p class="lede">Built for marchers who want to read the field like the best: fast, accurate, and confident. Four short levels take you from naming your spot on the field to calculating the right step size for any move. Each level is a short lesson and a practice check. Pass one to unlock the next.</p>
 <ol class="levels-list">${ACTIVE.map(L=>`<li><span class="n">${L.n}</span><span><b>${L.title}.</b> ${L.sub}</span></li>`).join('')}</ol>
 <div class="name-row">${PREVIEW?`<p><b>Coach preview.</b> <span class="muted">Nothing here is recorded.</span></p>`:CLS?`<p>${CLS.name?`Practicing as <b>${esc(CLS.name)}</b> (${esc(CLS.classCode)})`:`Practicing with class <b>${esc(CLS.classCode)}</b>`}</p>`:`<p class="muted">Practicing on your own. Have a class code? <button class="linkbtn" data-act="clsopen">Join a class</button> to send results to your coach.</p>`}
 <button class="btn primary" data-act="start">${cont?`Continue with level ${Math.min(ACTIVE_LEVELS,S.unlocked)}`:'Start level 1'}</button></div></section>`;}
