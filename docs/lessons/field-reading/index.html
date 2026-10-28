@@ -1382,6 +1382,9 @@ function practiceHTML(){
   const q=quiz.q;let field='',card='';
   if(q.formula&&quiz.n===3){const on=k=>q.formula===k?' class="on"':''; // keys: 'ab' find A/B, 'c' solve C, 'ss' step size, 'gut' gut check & compare
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ab')}>A = steps over · B = steps forward or back</p><p${on('c')}>C = √(A² + B²) (your Distance)</p><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (C)</p><p${on('gut')}><i>Reminder: bigger than 8 = smaller step. Smaller than 8 = bigger step.</i></p></div>`;}
+  else if(quiz.n===4){ // always open: checkpoint formula on 1–7, step size on 8 (recovery)
+    card=quiz.i<7?`<div class="fcard" aria-label="Formula reference"><p><b>Checkpoint = Start + (count ÷ total counts) × Move</b></p><p>Do it once for lateral (A) and once for depth (B).</p></div>`
+      :`<div class="fcard" aria-label="Formula reference"><p><b>Step Size = Ruler (8) × Time (counts left) ÷ Distance (steps left)</b></p></div>`;}
   else if(q.formula){const on=k=>q.formula===k?' class="on"':'';
     card=`<div class="fcard${q.formula==='none'?'':' hl'}" aria-label="Formula reference"><p${on('ss')}>Step Size = Ruler (8) × Time (counts) ÷ Distance (steps)</p><p${on('counts')}>Counts = Step Size × Distance ÷ 8</p><p${on('dist')}>Distance = 8 × Counts ÷ Step Size</p></div>`;}
   if(q.field){const spec=JSON.parse(JSON.stringify(q.field));spec.pts=spec.pts||[];spec.extra=q.reveal||[];
