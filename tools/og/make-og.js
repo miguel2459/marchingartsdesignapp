@@ -1,4 +1,4 @@
-// Builds docs/assets/og/field-reading.png (1200×630 link-preview image) from the lesson's own field drawing.
+// Builds docs/assets/og/field-reading-v2.png (1200×630 link-preview image) from the lesson's own field drawing.
 // Usage: node tools/og/make-og.js [--chrome <path to chrome>] [--page <dir>]
 //   --page <dir>  only write the scratch page into <dir> (for previewing), no screenshot.
 // Needs Google Chrome (or Chromium/Edge); no npm packages.
@@ -6,7 +6,7 @@ const fs = require('fs'), os = require('os'), path = require('path'), { execFile
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const LESSON = path.join(ROOT, 'docs', 'lessons', 'field-reading', 'index.html');
-const OUT = path.join(ROOT, 'docs', 'assets', 'og', 'field-reading.png');
+const OUT = path.join(ROOT, 'docs', 'assets', 'og', 'field-reading-v2.png');
 // FIG_TOP_PAD sets the crop: 8.4 makes it 72 steps wide, so both edges fall between yard numbers.
 const W = 1200, H = 630, FIG_MINW = 150, FIG_TOP_PAD = 8.4;
 
@@ -53,7 +53,7 @@ body{background:var(--paper);display:flex;flex-direction:column;align-items:cent
 #fig svg{display:block;width:100%;height:100%}
 </style></head>
 <body>
-<div class="og-head"><h1>Field Reading &amp; Step Size</h1><p>MPR Studios Lessons</p></div>
+<div class="og-head"><h1>Field Reading &amp; Step Size</h1><p>Field Reading Lessons – MADA</p></div>
 <div id="fig"></div>
 <script>${script}
 ${draw}</script>
