@@ -178,6 +178,11 @@ svg.field{display:block;width:100%;height:auto;border-radius:6px}
 .ppos{font-weight:700}
 .pstats{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:.95rem;color:var(--muted)}
 .pstats b{color:var(--ink)}
+.cpread{font-family:var(--display);font-weight:700;font-size:1.6rem;margin:10px 0 0}
+.player .fig{margin:0 0 6px}
+table.t tr.on td{background:rgba(242,194,48,.28)}
+.field .dot.on .xc{stroke:#fff;stroke-width:.36}
+.field .dot.on .dot-label{font-size:2.6px}
 
 .report{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:620px}
 .foot{max-width:880px;margin:0 auto;padding:18px 16px 30px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;font-size:.9rem;color:var(--muted)}
@@ -323,7 +328,7 @@ function gradPath(pts,gid,cls){const a=pts[0],b=pts[pts.length-1];
 function xDot(p){const d=0.6/Math.SQRT2,x=p.x,y=-p.y;const cls=p.cls||'';
   const kind=/\b(end|opt|cp|reveal)\b/.test(cls)?'':' start';
   const xp=`M${x-d},${y-d}L${x+d},${y+d}M${x-d},${y+d}L${x+d},${y-d}`;
-  let s=`<g class="dot ${cls}${kind}"><path class="xo" d="${xp}"/><path class="xc" d="${xp}"/>`;
+  let s=`<g class="dot ${cls}${kind}"${p.dc!==undefined?` data-c="${p.dc}"`:''}><path class="xo" d="${xp}"/><path class="xc" d="${xp}"/>`;
   if(p.label){const opt=cls.includes('opt');const lx=p.lx!==undefined?p.lx:(opt?0:1.3),ly=p.ly!==undefined?p.ly:(opt?1.6:1.2);
     s+=`<text class="dot-label${opt?' opt':''}" x="${p.x+lx}" y="${-p.y-ly}" text-anchor="${p.anchor||(opt?'middle':'start')}">${esc(p.label)}</text>`;}
   return s+'</g>';}
@@ -1026,7 +1031,7 @@ const LEVELS=[
 ];
 const ACTIVE=LEVELS.filter(L=>L.n<=ACTIVE_LEVELS);
 function fig(spec,cap){return `<figure class="fig">${fieldSVG(spec)}${cap?`<figcaption>${cap}</figcaption>`:''}</figure>`;}
-function cpTable(rows){return `<div class="tw"><table class="t"><thead><tr><th>Count</th><th>Lateral</th><th>Depth</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="c">${r.c}</td><td>${latDesc(r.p.x)}</td><td>${depDesc(r.p.y)}</td></tr>`).join('')}</tbody></table></div>`;}
+function cpTable(rows){return `<div class="tw"><table class="t"><thead><tr><th>Count</th><th>Lateral</th><th>Depth</th></tr></thead><tbody>${rows.map(r=>`<tr data-c="${r.c}"><td class="c">${r.c}</td><td>${latDesc(r.p.x)}</td><td>${depDesc(r.p.y)}</td></tr>`).join('')}</tbody></table></div>`;}
 function learn1(){const h=H();const p={x:8*6+3,y:h+4};return `<div class="prose">
 <p>Every spot on the field has two parts: where you are <b>side to side</b> (lateral) and where you are <b>front to back</b> (depth). Say lateral first, then depth, every time. If you can't name your spot instantly, nothing else in this lesson will hold up.</p>
 <h3>Lateral: yard lines</h3>
@@ -1158,9 +1163,7 @@ function learn4(){const h=H();
 <p>A checkpoint is where you should be on a specific count. Here's the whole idea in one sentence:</p>
 <p><b>The fraction of the counts is the fraction of the move.</b></p>
 <p>Count 4 of 16 is ¼ of the counts, so you're ¼ of the way there. Count 8 is ½, so you're halfway. Count 12 is ¾. That's it. It's just fractions.</p></div>
-${fig({pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'},...cps.map(c=>cpDot(c.p,String(c.c)))],paths:[{pts:[a,b]}]},`${posDesc(a)} → ${lc(posDesc(b))}, 16 counts. Checkpoints on 4 (¼), 8 (½) and 12 (¾).`)}
-${cpTable([{c:0,p:a},...cps,{c:16,p:b}])}
-<div id="cpPlayer"></div>
+<div id="cpPlayer">${cpPlayerHTML(a,b,16,cps,`${posDesc(a)} → ${lc(posDesc(b))}, 16 counts. Checkpoints on 4 (¼), 8 (½) and 12 (¾).`)}</div>
 <div class="prose">
 <h3>Worked example: straight side to side</h3>
 <p><b>S1 30 to S1 40 in 16 counts.</b> That's 16 steps (8 + 8, your Level 2 ruler).</p>
@@ -1218,7 +1221,21 @@ ${fig({pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'},{...cp,cls:'cp',r:
 const LEARN={1:learn1,2:learn2,3:learn3,4:learn4,5:learn5,6:learn6};
 
 /* ---------- player ---------- */
-const player={mode:'main',v:{...V_MAIN},t:0,playing:false,bpm:120,raf:0,last:0,shown:-1};
+// Player state. The engine functions below take a state (default: the Level 5 player); id prefixes its element ids.
+const player={mode:'main',v:{...V_MAIN},t:0,playing:false,bpm:120,raf:0,last:0,shown:-1,
+  id:'p',pos(t){return cbPos(this.v,t);},max(){return 4*this.v.leg;}};
+// Level 4 straight-line move; holds on each checkpoint count while its dot and table row highlight.
+const cpPlayer={t:0,playing:false,bpm:120,raf:0,last:0,shown:-1,id:'cp',a:{x:0,y:0},b:{x:0,y:0},counts:16,holds:[4,8,12],holdMs:800,holdUntil:0,
+  pos(t){const f=Math.min(1,t/this.counts);return {x:round2(this.a.x+(this.b.x-this.a.x)*f),y:round2(this.a.y+(this.b.y-this.a.y)*f)};},
+  max(){return this.counts;},
+  hold(c){document.querySelectorAll('#cpPlayer .on').forEach(e=>e.classList.remove('on'));
+    if(c!=null)document.querySelectorAll(`#cpPlayer [data-c="${c}"]`).forEach(e=>e.classList.add('on'));}};
+function cpPlayerHTML(a,b,counts,cps,cap){const s=cpPlayer;Object.assign(s,{a,b,counts});
+  return `<div class="player"><figure class="fig">${fieldSVG({id:'cpf',paths:[{pts:[a,b]}],pts:[{...a,label:'Start'},{...b,cls:'end',label:'End'},...cps.map(c=>({...c.p,cls:'cp',r:0.6,label:String(c.c),dc:c.c}))],marcher:s.pos(s.t),aria:'A marcher walking the move, pausing at each checkpoint'})}<figcaption>${cap}</figcaption></figure>
+<div class="pctl"><button class="btn primary" data-act="cpplay" id="cpplay">${s.playing?'Pause':'Play'}</button><button class="btn" data-act="cprestart">Restart</button>
+<label class="tempo">Tempo <input type="range" id="cpbpm" min="60" max="180" step="4" value="${s.bpm}"> <span id="cpbpmv">${s.bpm}</span></label></div>
+<p class="cpread" aria-live="polite">Count <span id="cpcount">${Math.floor(s.t)}</span></p>
+${cpTable([{c:0,p:a},...cps,{c:counts,p:b}])}</div>`;}
 function playerHTML(){const v=player.v,h=H();const path=cbPath(v,2);
   const cps=path.slice(1).map((p,i)=>({...p,cls:'cp',r:0.55}));
   const a=v.over/v.leg,b=v.fwd/v.leg;const step=v.leg<=8&&v.leg>=4?2:1;const rows=[];for(let c=0;c<=2*v.leg;c+=(v.leg===8?2:1))rows.push({c,p:cbPos(v,c)});
@@ -1235,13 +1252,17 @@ ${fieldSVG({id:'pf',paths:[{pts:path}],pts:[{x:32,y:h,label:'Start'},...cps],mar
 <div class="readout" aria-live="polite"><div class="count" id="pcount">${Math.floor(player.t)}</div><div class="count-l">Count</div><div class="ppos" id="ppos">${posDesc(cbPos(v,Math.floor(player.t)))}</div></div>
 <div class="pstats"><span>Lateral per count <b>${fmtFrac(a)}</b></span><span>Depth per count <b>${fmtFrac(b)}</b></span><span>Real step <b>${fmtIn(22.5*Math.hypot(a,b))}</b></span></div>
 <h3>Checkpoints for one cycle</h3>${cpTable(rows)}</div>`;}
-function maxT(){return 4*player.v.leg;}
-function playerDraw(){const m=document.getElementById('pfm');if(!m)return;const p=cbPos(player.v,player.t);moveMarcher(m,p.x,-p.y);
-  const c=Math.floor(player.t+1e-6);if(c!==player.shown){player.shown=c;const pc=document.getElementById('pcount'),pp=document.getElementById('ppos');if(pc)pc.textContent=c;if(pp)pp.textContent=posDesc(cbPos(player.v,c));}}
-function playerStop(){player.playing=false;cancelAnimationFrame(player.raf);const b=document.getElementById('pplay');if(b)b.textContent='Play';}
-function playerPlay(){if(player.t>=maxT())player.t=0;player.playing=true;player.last=performance.now();const b=document.getElementById('pplay');if(b)b.textContent='Pause';
-  const loop=now=>{if(!player.playing)return;player.t+=(now-player.last)/1000*player.bpm/60;player.last=now;if(player.t>=maxT()){player.t=maxT();playerDraw();playerStop();return;}playerDraw();player.raf=requestAnimationFrame(loop);};
-  player.raf=requestAnimationFrame(loop);}
+function maxT(s=player){return s.max();}
+function playerDraw(s=player){const m=document.getElementById(s.id+'fm');if(!m)return;const p=s.pos(s.t);moveMarcher(m,p.x,-p.y);
+  const c=Math.floor(s.t+1e-6);if(c!==s.shown){s.shown=c;const pc=document.getElementById(s.id+'count'),pp=document.getElementById(s.id+'pos');if(pc)pc.textContent=c;if(pp)pp.textContent=posDesc(s.pos(c));}}
+function playerStop(s=player){s.playing=false;s.holdUntil=0;cancelAnimationFrame(s.raf);const b=document.getElementById(s.id+'play');if(b)b.textContent='Play';}
+function playerPlay(s=player){if(s.t>=maxT(s)){s.t=0;if(s.hold)s.hold(null);}s.playing=true;s.last=performance.now();const b=document.getElementById(s.id+'play');if(b)b.textContent='Pause';
+  const loop=now=>{if(!s.playing)return;
+    if(s.holdUntil){if(now<s.holdUntil){s.last=now;s.raf=requestAnimationFrame(loop);return;}s.holdUntil=0;s.hold(null);}
+    const prev=s.t;s.t+=(now-s.last)/1000*s.bpm/60;s.last=now;
+    const h=s.holds&&s.holds.find(c=>prev<c&&s.t>=c);if(h!==undefined){s.t=h;s.holdUntil=now+s.holdMs;s.hold(h);}
+    if(s.t>=maxT(s)){s.t=maxT(s);playerDraw(s);playerStop(s);return;}playerDraw(s);s.raf=requestAnimationFrame(loop);};
+  s.raf=requestAnimationFrame(loop);}
 function playerRefresh(){playerStop();player.shown=-1;const el=document.getElementById('player');if(el)el.innerHTML=playerHTML();}
 
 /* ---------- step size calculator ---------- */
@@ -1387,7 +1408,7 @@ function sendStatus(){const pending=queuePending(),checks=pending||!!CLS.lastSen
   return CLS.lastSent?`Last sent to coach: ${new Date(CLS.lastSent).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`:'Sent to your coach ✓';}
 
 function render(){
-  playerStop();cancelAnimationFrame(hero);
+  playerStop();playerStop(cpPlayer);cancelAnimationFrame(hero);
   document.getElementById('track').innerHTML=trackHTML();
   document.getElementById('who').textContent=S.name?S.name:'';
   document.getElementById('hashSel').value=S.hash;
@@ -1395,6 +1416,7 @@ function render(){
   app.innerHTML=view.name==='intro'?introHTML():view.name==='results'?resultsHTML():levelHTML();
   if(view.name==='intro')heroAnim();
   if(view.name==='level'&&view.tab==='learn'&&view.n===5){player.shown=-1;playerDraw();}
+  if(view.name==='level'&&view.tab==='learn'&&view.n===4){cpPlayer.shown=-1;playerDraw(cpPlayer);}
 }
 const HERO={x1:37,x2:58}; // 3 outside the S1 25 → 2 inside the S1 35: 3 + 8 + 8 + 2 = 21 steps
 function heroAnim(){const m=document.getElementById('herom');if(!m)return;let t=0,last=performance.now();const L=HERO.x2-HERO.x1;
@@ -1416,6 +1438,8 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
     render();window.scrollTo(0,0);return;}
   if(a==='pv'){player.mode=el.dataset.v;if(player.mode==='main')player.v={...V_MAIN};else if(player.mode==='mid')player.v={...V_MID};else player.v={fwd:player.v.fwd,over:player.v.over,leg:player.v.leg};player.t=0;playerRefresh();return;}
   if(a==='pplay'){player.playing?playerStop():playerPlay();return;}
+  if(a==='cpplay'){cpPlayer.playing?playerStop(cpPlayer):playerPlay(cpPlayer);return;}
+  if(a==='cprestart'){playerStop(cpPlayer);cpPlayer.hold(null);cpPlayer.t=0;playerDraw(cpPlayer);playerPlay(cpPlayer);return;}
   if(a==='pstep'){playerStop();player.t=Math.max(0,Math.min(maxT(),Math.round(player.t)+(+el.dataset.d)));playerDraw();return;}
   if(a==='preset'){playerStop();player.t=0;playerDraw();return;}
   if(a==='calcshow'){calc.shown=true;calcRefresh();return;}
@@ -1433,7 +1457,8 @@ document.addEventListener('change',e=>{const t=e.target;
   if(t.dataset&&t.dataset.calc){calc[t.dataset.calc]=+t.value;calc.shown=false;calcRefresh();}
   if(t.dataset&&t.dataset.calc3){calc3[t.dataset.calc3]=+t.value;calc3.shown=false;calc3Refresh();}
 });
-document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}});
+document.addEventListener('input',e=>{if(e.target.id==='bpm'){player.bpm=+e.target.value;const s=document.getElementById('bpmv');if(s)s.textContent=player.bpm;}
+  if(e.target.id==='cpbpm'){cpPlayer.bpm=+e.target.value;const s=document.getElementById('cpbpmv');if(s)s.textContent=cpPlayer.bpm;}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='clsClass'||e.target.id==='clsCode'))classSubmit();});
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='clsClass'||t.id==='clsCode'){const p=t.selectionStart;t.value=t.value.toUpperCase().replace(t.id==='clsCode'?/[^A-Z0-9]/g:/[^A-Z0-9-]/g,'');try{t.setSelectionRange(p,p);}catch(_){}}});
 
