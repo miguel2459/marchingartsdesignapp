@@ -176,7 +176,7 @@ public class SessionManager : MonoBehaviour
                 new JsonBackendService(this, backendURL, userStateSO.UserFolderId, userStateSO.AccountSheetID)
             );
 
-            sheetsService = new GoogleSheetsService(apiKey, this);
+            sheetsService = new GoogleSheetsService(this);
 
             Debug.Log("✅SessionManager: JsonService initialized after user state was loaded.");
         }

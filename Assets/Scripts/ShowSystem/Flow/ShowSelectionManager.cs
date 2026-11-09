@@ -221,7 +221,8 @@ public class ShowSelectionManager : MonoBehaviour
 
         // Construct the URL for the Google Sheets API v4
         string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B12?key={session.apiKey}";
-        Debug.Log($"🔗 Fetching show details metadata from: {url}");
+        string safeUrl = url.Replace(session.apiKey, "***");
+        Debug.Log($"🔗 Fetching show details metadata from: {safeUrl}");
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
@@ -233,7 +234,7 @@ public class ShowSelectionManager : MonoBehaviour
             // Handle network or protocol errors
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"❌ Failed to fetch show details: {request.error} (URL: {url})");
+                Debug.LogError($"❌ Failed to fetch show details: {request.error} (URL: {safeUrl})");
                 // TODO: Implement user-facing error message (e.g., "Could not load show details. Please check connection.")
                 yield break;
             }
@@ -298,7 +299,7 @@ public class ShowSelectionManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"❌ Error: Invalid show details data format or missing rows in response from {url}. Received: {jsonResponse}");
+                Debug.LogError($"❌ Error: Invalid show details data format or missing rows in response from {safeUrl}. Received: {jsonResponse}");
                  // TODO: Implement user-facing error message
             }
         } // UnityWebRequest is disposed here

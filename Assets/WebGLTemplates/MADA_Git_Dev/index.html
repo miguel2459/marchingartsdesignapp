@@ -198,7 +198,7 @@
         document.getElementById("screen-dimmer").style.display = "none";
 
         if (window.unityInstance) {
-            console.log("[JS] Sending value to Unity:", value, "for ID:", inputId);
+            console.log("[JS] Sending value to Unity for ID:", inputId);
             window.unityInstance.SendMessage("InputBridge", "ReturnFromHtmlInput", inputId + "|" + value);
         } else {
             console.warn("[JS] Unity instance not ready!");
