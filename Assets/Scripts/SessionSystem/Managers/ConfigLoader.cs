@@ -46,9 +46,8 @@ public class ConfigLoader : MonoBehaviour
             }
 
             var json = request.downloadHandler.text;
-            Debug.Log($"📦 ConfigLoader: Config raw response: {json}");
-
             ConfigResponse config = JsonUtility.FromJson<ConfigResponse>(json);
+            Debug.Log($"📦 ConfigLoader: config loaded (apiKey present: {!string.IsNullOrEmpty(config?.apiKey)}, backendURL present: {!string.IsNullOrEmpty(config?.backendURL)})");
 
             if (!string.IsNullOrEmpty(config.apiKey) && !string.IsNullOrEmpty(config.backendURL))
             {

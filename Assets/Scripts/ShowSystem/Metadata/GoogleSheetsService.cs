@@ -6,12 +6,10 @@ using SimpleJSON;
 
 public class GoogleSheetsService
 {
-    private string apiKey;
     private MonoBehaviour coroutineHost;
 
-    public GoogleSheetsService(string apiKey, MonoBehaviour coroutineHost)
+    public GoogleSheetsService(MonoBehaviour coroutineHost)
     {
-        this.apiKey = apiKey;
         this.coroutineHost = coroutineHost;
     }
 
