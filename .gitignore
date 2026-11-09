@@ -85,3 +85,5 @@ Assets/StreamingAssets/service_account.json
 **/service_account.json
 **/StreamingAssets/config.json
 
+/MADA_MasterAccounts_GS/
+/mada-unity-cloud-proxy/
