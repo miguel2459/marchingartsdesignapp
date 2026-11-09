@@ -221,7 +221,7 @@ public class ShowSelectionManager : MonoBehaviour
 
         // Construct the URL for the Google Sheets API v4
         string url = $"https://sheets.googleapis.com/v4/spreadsheets/{sheetID}/values/Show Details!B1:B12?key={session.apiKey}";
-        string safeUrl = url.Replace(session.apiKey, "***");
+        string safeUrl = string.IsNullOrEmpty(session.apiKey) ? url : url.Replace(session.apiKey, "***");
         Debug.Log($"🔗 Fetching show details metadata from: {safeUrl}");
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
