@@ -4,12 +4,26 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>MADA Progress Hub | MPR Studios</title>
-    <meta http-equiv="refresh" content="0; url=https://claude.ai/artifact/Q2h3dmwwpzi9CQ8umNDK7M">
+    <title>MADA Hub</title>
+    <meta name="apple-mobile-web-app-title" content="MADA Hub">
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96">
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
     <link rel="shortcut icon" href="/favicon/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <script>
+        (function () {
+            var HUB = 'https://claude.ai/artifact/Q2h3dmwwpzi9CQ8umNDK7M';
+            var adding = /[?&]add=1\b/.test(location.search);
+            if (adding) {
+                // Strip ?add=1 so the saved home-screen icon opens the hub directly
+                history.replaceState(null, '', location.pathname);
+                document.documentElement.className = 'adding';
+            } else {
+                location.replace(HUB);
+            }
+        })();
+    </script>
+    <noscript><meta http-equiv="refresh" content="0; url=https://claude.ai/artifact/Q2h3dmwwpzi9CQ8umNDK7M"></noscript>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, sans-serif; background: #111; color: #fff; min-height: 100vh;
@@ -21,12 +35,31 @@
                background: linear-gradient(90deg, #6EC8FF, #C77DFF); }
         p { color: #888; font-size: 0.9rem; }
         a { color: #1e90ff; font-weight: 600; }
+        .add { display: none; max-width: 360px; text-align: left; }
+        .adding .add { display: block; }
+        .adding .opening { display: none; }
+        .add ol { margin: 8px 0 16px 20px; color: #ddd; line-height: 1.7; font-size: 0.95rem; }
+        .add h2 { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: #888; margin-top: 12px; }
+        .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px 22px; }
     </style>
 </head>
 <body>
     <img src="/app/logo.png" alt="MADA logo">
     <h1>MADA Progress Hub</h1>
     <div class="bar"></div>
-    <p>Opening the hub… <a href="https://claude.ai/artifact/Q2h3dmwwpzi9CQ8umNDK7M">Open it here</a> if nothing happens.</p>
+    <p class="opening">Opening the hub… <a href="https://claude.ai/artifact/Q2h3dmwwpzi9CQ8umNDK7M">Open it here</a> if nothing happens.</p>
+    <div class="add card">
+        <h2>iPhone (Safari)</h2>
+        <ol>
+            <li>Tap the Share button.</li>
+            <li>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+        </ol>
+        <h2>Android (Chrome)</h2>
+        <ol>
+            <li>Tap the ⋮ menu.</li>
+            <li>Tap <b>Add to Home screen</b>, then <b>Add</b>.</li>
+        </ol>
+        <p>The MADA icon opens your hub. Not in Safari or Chrome? Open mada.mprstudios.com/progress/?add=1 there first.</p>
+    </div>
 </body>
 </html>
