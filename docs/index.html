@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MPR Studios | Marching Arts</title>
+    <title>MPR Studios | Marching Arts Lessons &amp; MADA</title>
+    <meta name="description" content="Interactive marching lessons for students, with a private progress dashboard for directors. From MPR Studios.">
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96">
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
     <link rel="shortcut icon" href="/favicon/favicon.ico">
@@ -90,6 +91,102 @@
             color: #1e90ff;
         }
 
+        .dir-section {
+            width: 100%;
+            max-width: 680px;
+            margin-top: 20px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 28px 24px;
+        }
+
+        .dir-section h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .dir-lead {
+            color: #888;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .dir-points {
+            list-style: none;
+            margin-top: 16px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .dir-points li {
+            position: relative;
+            padding-left: 18px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .dir-points li::before {
+            content: "";
+            position: absolute;
+            left: 2px;
+            top: 0.6em;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #1e90ff;
+        }
+
+        .dir-note {
+            margin-top: 20px;
+            padding: 10px 14px;
+            border-left: 3px solid #F2C230;
+            background: #222;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .dir-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .dir-btn {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 2px solid #1e90ff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .dir-btn-primary { background: #1e90ff; color: #fff; }
+        .dir-btn-primary:hover { background: #1878d6; border-color: #1878d6; }
+        .dir-btn-outline { background: transparent; color: #1e90ff; }
+        .dir-btn-outline:hover { background: rgba(30, 144, 255, 0.12); }
+
+        .dir-contact {
+            margin-top: 14px;
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .dir-contact a { color: #1e90ff; }
+
+        @media (max-width: 480px) {
+            .dir-actions { flex-direction: column; }
+        }
+
         footer {
             margin-top: 64px;
             color: #444;
@@ -120,6 +217,22 @@
             <span class="cta">Browse lessons →</span>
         </a>
     </main>
+
+    <section class="dir-section" aria-labelledby="dir-heading">
+        <h2 id="dir-heading">For band directors</h2>
+        <p class="dir-lead">MADA Lessons teaches your marchers to read the field, work out their own step sizes, and hit every checkpoint, in short lessons on their phones.</p>
+        <ul class="dir-points">
+            <li>Students join with a link. No accounts or student emails.</li>
+            <li>Your private dashboard shows each student's scores and weakest skills.</li>
+            <li>A progress summary lands in your inbox every Monday.</li>
+        </ul>
+        <p class="dir-note">Spring 2027 pilot: free for a small group of programs, January through March.</p>
+        <div class="dir-actions">
+            <a class="dir-btn dir-btn-primary" href="/lessons/field-reading/">Try Level 1 (5 min)</a>
+            <a class="dir-btn dir-btn-outline" href="/coach/">Set up a class</a>
+        </div>
+        <p class="dir-contact">Questions? <a href="mailto:contact@mprstudios.com">contact@mprstudios.com</a></p>
+    </section>
 
     <footer>MPR Studios · <a href="/coach/">Coaches: sign up</a></footer>
 </body>
