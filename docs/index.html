@@ -150,12 +150,13 @@
 
         .dir-actions {
             display: flex;
+            flex-wrap: wrap;
             gap: 12px;
             margin-top: 24px;
         }
 
         .dir-btn {
-            flex: 1;
+            flex: 1 1 200px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -183,7 +184,7 @@
 
         .dir-contact a { color: #1e90ff; }
 
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
             .dir-actions { flex-direction: column; }
         }
 
@@ -219,7 +220,7 @@
     </main>
 
     <section class="dir-section" aria-labelledby="dir-heading">
-        <h2 id="dir-heading">For band directors</h2>
+        <h2 id="dir-heading">For band directors and coaches</h2>
         <p class="dir-lead">MADA Lessons teaches your marchers to read the field, work out their own step sizes, and hit every checkpoint, in short lessons on their phones.</p>
         <ul class="dir-points">
             <li>Students join with a link. No accounts or student emails.</li>
@@ -234,6 +235,6 @@
         <p class="dir-contact">Questions? <a href="mailto:contact@mprstudios.com">contact@mprstudios.com</a></p>
     </section>
 
-    <footer>MPR Studios · <a href="/coach/">Coaches: sign up</a></footer>
+    <footer>MPR Studios</footer>
 </body>
 </html>
